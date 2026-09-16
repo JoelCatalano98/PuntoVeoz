@@ -1,0 +1,355 @@
+// ============================================================
+// SCHEMA - Sistema de Gestión para Comercio
+// Multi-tenant desde el día 1 (campo comercioId en tablas clave)
+// Todos los montos en DECIMAL(10,2) — nunca Float, para evitar
+// errores de redondeo en cálculos de dinero.
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql" // cambiar a "postgresql" si se decide migrar
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------
+// MULTI-TENANT: cada comercio es un cliente independiente
+// ------------------------------------------------------------
+model Comercio {
+  id            Int       @id @default(autoincrement())
+  nombre        String
+  razonSocial   String?
+  cuit          String?   @unique
+  activo        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+
+  usuarios      Usuario[]
+  puntosVenta   PuntoVenta[]
+  cajas         Caja[]
+  productos     Producto[]
+  clientes      Cliente[]
+  ventas        Venta[]
+  aperturasCaja AperturaCaja[]
+  parametros    Parametro[]
+  categorias    Categoria[]
+  unidadesMedida UnidadMedida[]
+
+  @@map("comercios")
+}
+
+model Usuario {
+  id          Int      @id @default(autoincrement())
+  comercioId  Int
+  comercio    Comercio @relation(fields: [comercioId], references: [id])
+  nombre      String
+  email       String   @unique
+  password    String
+  rol         RolUsuario @default(CAJERO)
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  ventas          Venta[]
+  aperturasCaja   AperturaCaja[]
+  cierresCaja     CierreCaja[]
+
+  @@index([comercioId])
+  @@map("usuarios")
+}
+
+enum RolUsuario {
+  SUPERADMIN // Joel / soporte
+  ADMIN      // dueño del comercio
+  CAJERO
+}
+
+// ------------------------------------------------------------
+// PRODUCTOS Y STOCK
+// ------------------------------------------------------------
+model Producto {
+  id            Int      @id @default(autoincrement())
+  comercioId    Int
+  comercio      Comercio @relation(fields: [comercioId], references: [id])
+  codigoBarras  String?  // código escaneado por el lector
+  nombre        String
+  descripcion   String?
+  precioCosto   Decimal  @db.Decimal(10, 2) @default(0)
+  precioVenta   Decimal  @db.Decimal(10, 2)
+  stockActual   Int      @default(0)
+  stockMinimo   Int      @default(0)
+  activo        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  movimientos     MovimientoStock[]
+  ventaItems      VentaItem[]
+
+  categoriaId     Int?
+  categoria       Categoria?     @relation(fields: [categoriaId], references: [id])
+  
+  unidadMedidaId  Int?
+  unidadMedida    UnidadMedida?  @relation(fields: [unidadMedidaId], references: [id])
+
+  @@index([comercioId])
+  @@index([comercioId, codigoBarras])
+  @@map("productos")
+}
+
+model MovimientoStock {
+  id           Int       @id @default(autoincrement())
+  productoId   Int
+  producto     Producto  @relation(fields: [productoId], references: [id])
+  tipo         TipoMovimientoStock
+  cantidad     Int       // siempre positivo, el "tipo" define si suma o resta
+  motivo       String?   // "compra", "ajuste", "venta", "merma", etc.
+  ventaId      Int?      // si el movimiento vino de una venta
+  venta        Venta?    @relation(fields: [ventaId], references: [id])
+  createdAt    DateTime  @default(now())
+
+  @@index([productoId])
+  @@map("movimientos_stock")
+}
+
+enum TipoMovimientoStock {
+  ENTRADA
+  SALIDA
+}
+
+// ------------------------------------------------------------
+// VENTAS
+// Campos de ARCA incluidos desde ya (nullable): no se usan
+// todavía pero evitan una migración dolorosa más adelante.
+// ------------------------------------------------------------
+model Venta {
+  id                Int          @id @default(autoincrement())
+  comercioId        Int
+  comercio          Comercio     @relation(fields: [comercioId], references: [id])
+  usuarioId         Int          // cajero que hizo la venta
+  usuario           Usuario      @relation(fields: [usuarioId], references: [id])
+
+  total             Decimal      @db.Decimal(10, 2)
+  montoRecibido     Decimal      @db.Decimal(10, 2)
+  vuelto            Decimal      @db.Decimal(10, 2)
+  medioPago         MedioPago    @default(EFECTIVO)
+
+  clienteId         Int?
+  cliente           Cliente?     @relation(fields: [clienteId], references: [id])
+  puntoVentaId      Int
+  puntoVenta        PuntoVenta   @relation(fields: [puntoVentaId], references: [id])
+
+  // --- Campos reservados para integración futura con ARCA ---
+  tipoComprobante     String?   // "Ticket", "Factura A/B/C"
+  numeroComprobante   Int?
+  cae                 String?
+  vencimientoCae      DateTime?
+  estadoFiscal        EstadoFiscal @default(NO_APLICA)
+
+  anulada           Boolean      @default(false)
+  createdAt         DateTime     @default(now())
+
+  items             VentaItem[]
+  movimientosStock  MovimientoStock[]
+  movimientoCaja    MovimientoCaja?
+
+  @@index([comercioId])
+  @@index([comercioId, createdAt])
+  @@map("ventas")
+}
+
+enum MedioPago {
+  EFECTIVO
+  TARJETA_DEBITO
+  TARJETA_CREDITO
+  TRANSFERENCIA
+  QR
+  OTRO
+}
+
+enum EstadoFiscal {
+  NO_APLICA     // hoy: solo ticket interno, sin timbrar
+  PENDIENTE     // venta hecha, falta timbrar en ARCA
+  TIMBRADA
+  ERROR
+}
+
+model VentaItem {
+  id            Int      @id @default(autoincrement())
+  ventaId       Int
+  venta         Venta    @relation(fields: [ventaId], references: [id])
+  productoId    Int
+  producto      Producto @relation(fields: [productoId], references: [id])
+  cantidad      Int
+  precioUnitario Decimal @db.Decimal(10, 2) // precio al momento de la venta
+  subtotal      Decimal  @db.Decimal(10, 2)
+
+  @@index([ventaId])
+  @@map("venta_items")
+}
+
+// ------------------------------------------------------------
+// CAJA: apertura, movimientos y cierre
+// ------------------------------------------------------------
+model AperturaCaja {
+  id              Int       @id @default(autoincrement())
+  comercioId      Int
+  comercio        Comercio  @relation(fields: [comercioId], references: [id])
+  usuarioId       Int
+  usuario         Usuario   @relation(fields: [usuarioId], references: [id])
+  cajaId          Int
+  caja            Caja      @relation(fields: [cajaId], references: [id])
+  montoInicial    Decimal   @db.Decimal(10, 2)
+  observaciones   String?
+  createdAt       DateTime  @default(now())
+
+  movimientos     MovimientoCaja[]
+  cierre          CierreCaja?
+
+  @@index([comercioId])
+  @@map("aperturas_caja")
+}
+
+model MovimientoCaja {
+  id              Int          @id @default(autoincrement())
+  aperturaCajaId  Int
+  aperturaCaja    AperturaCaja @relation(fields: [aperturaCajaId], references: [id])
+  cajaId          Int
+  caja            Caja         @relation(fields: [cajaId], references: [id])
+  ventaId         Int?         @unique // null si es un ingreso/egreso manual
+  venta           Venta?       @relation(fields: [ventaId], references: [id])
+  tipo            TipoMovimientoCaja
+  monto           Decimal      @db.Decimal(10, 2)
+  medioPago       MedioPago?   // relevante para ingresos por venta
+  descripcion     String?      // ej: "retiro para pago proveedor"
+  createdAt       DateTime     @default(now())
+
+  @@index([aperturaCajaId])
+  @@map("movimientos_caja")
+}
+
+enum TipoMovimientoCaja {
+  VENTA
+  INGRESO_MANUAL
+  EGRESO_MANUAL
+}
+
+model CierreCaja {
+  id                Int          @id @default(autoincrement())
+  aperturaCajaId    Int          @unique
+  aperturaCaja      AperturaCaja @relation(fields: [aperturaCajaId], references: [id])
+  usuarioId         Int
+  usuario           Usuario      @relation(fields: [usuarioId], references: [id])
+
+  totalEsperado     Decimal      @db.Decimal(10, 2) // calculado por el sistema
+  totalContado      Decimal      @db.Decimal(10, 2) // ingresado manualmente al cerrar
+  diferencia        Decimal      @db.Decimal(10, 2) // totalContado - totalEsperado
+  observaciones     String?
+  createdAt         DateTime     @default(now())
+
+  @@map("cierres_caja")
+}
+
+// ------------------------------------------------------------
+// CLIENTES, PUNTOS DE VENTA Y PARAMETROS
+// ------------------------------------------------------------
+model Caja {
+  id            Int         @id @default(autoincrement())
+  comercioId    Int
+  comercio      Comercio    @relation(fields: [comercioId], references: [id])
+  puntoVentaId  Int
+  puntoVenta    PuntoVenta  @relation(fields: [puntoVentaId], references: [id])
+  nombre        String
+  descripcion   String?
+  prefijo       String
+  activo        Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  
+  aperturas     AperturaCaja[]
+  movimientos   MovimientoCaja[]
+  
+  @@unique([comercioId, prefijo])
+  @@index([comercioId])
+  @@map("cajas")
+}
+
+model Cliente {
+  id          Int      @id @default(autoincrement())
+  comercioId  Int
+  comercio    Comercio @relation(fields: [comercioId], references: [id])
+  nombre      String
+  tipoDoc     String?
+  numeroDoc   String?
+  telefono    String?
+  email       String?
+  direccion   String?
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  ventas      Venta[]
+  
+  @@index([comercioId])
+  @@map("clientes")
+}
+
+model PuntoVenta {
+  id          Int      @id @default(autoincrement())
+  comercioId  Int
+  comercio    Comercio @relation(fields: [comercioId], references: [id])
+  nombre      String
+  tipo        TipoPuntoVenta @default(MANUAL)
+  numeroArca  Int?
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  ventas      Venta[]
+  cajas       Caja[]
+  
+  @@index([comercioId])
+  @@map("puntos_venta")
+}
+
+enum TipoPuntoVenta {
+  MANUAL
+  WEBSERVICE
+}
+
+model Parametro {
+  id          Int      @id @default(autoincrement())
+  comercioId  Int
+  comercio    Comercio @relation(fields: [comercioId], references: [id])
+  clave       String
+  valor       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([comercioId, clave])
+  @@map("parametros")
+}
+
+model Categoria {
+  id          Int      @id @default(autoincrement())
+  comercioId  Int
+  comercio    Comercio @relation(fields: [comercioId], references: [id])
+  nombre      String
+  color       String   // hex, ej "#F4A261"
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  productos   Producto[]
+  
+  @@unique([comercioId, nombre])
+  @@index([comercioId])
+  @@map("categorias")
+}
+
+model UnidadMedida {
+  id          Int      @id @default(autoincrement())
+  comercioId  Int
+  comercio    Comercio @relation(fields: [comercioId], references: [id])
+  nombre      String   // "Unidad", "Pack", "Bulto cerrado"
+  abreviatura String?  // "UN", "L", "KG"
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  productos   Producto[]
+  
+  @@unique([comercioId, nombre])
+  @@index([comercioId])
+  @@map("unidades_medida")
+}

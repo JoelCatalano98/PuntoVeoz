@@ -1,0 +1,139 @@
+### Flujo de prueba completo - Punto Veloz backend
+### Usar con la extensión "REST Client" o "Thunder Client" en VS Code.
+### Ejecutar en orden. Copiar el token/ids de cada respuesta a las siguientes requests.
+
+@baseUrl = http://localhost:4000/api
+
+### 1. Login (usa el usuario creado por el seed)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@puntoveloz.test",
+  "password": "admin1234"
+}
+
+### -> Copiar el "token" de la respuesta y pegarlo abajo
+@token = PEGAR_TOKEN_ACA
+
+### 2. Crear un producto de prueba (stock inicial: 5 unidades)
+POST {{baseUrl}}/productos
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "nombre": "Coca Cola 500ml",
+  "codigoBarras": "7790895000782",
+  "precioCosto": 500,
+  "precioVenta": 800,
+  "stockActual": 5,
+  "stockMinimo": 2
+}
+
+### -> Copiar el "id" del producto creado
+@productoId = PEGAR_ID_PRODUCTO_ACA
+
+### 3. Listar productos (confirmar que aparece)
+GET {{baseUrl}}/productos
+Authorization: Bearer {{token}}
+
+### 4. Abrir caja con $5000 iniciales
+POST {{baseUrl}}/caja/abrir
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "montoInicial": 5000
+}
+
+### -> Copiar el "id" de la apertura de caja
+@aperturaCajaId = PEGAR_ID_APERTURA_ACA
+
+### 5. Intentar vender SIN caja abierta debería fallar (probar esto ANTES del paso 4
+###    si querés confirmar el error "no hay caja abierta" - opcional)
+
+### 6. Crear una venta: 2 unidades a $800 = $1600, paga con $2000 -> vuelto $400
+POST {{baseUrl}}/ventas
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "items": [
+    { "productoId": {{productoId}}, "cantidad": 2 }
+  ],
+  "montoRecibido": 2000,
+  "medioPago": "EFECTIVO",
+  "puntoVentaId": 1
+}
+
+### -> Verificar en la respuesta: total = 1600, vuelto = 400
+
+### 7. Verificar que el stock bajó a 3 (era 5, vendimos 2)
+GET {{baseUrl}}/productos
+Authorization: Bearer {{token}}
+
+### 8. Probar el límite de stock: intentar vender 10 unidades cuando quedan 3
+###    Debe fallar con "No hay stock suficiente"
+POST {{baseUrl}}/ventas
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "items": [
+    { "productoId": {{productoId}}, "cantidad": 10 }
+  ],
+  "montoRecibido": 10000,
+  "medioPago": "EFECTIVO",
+  "puntoVentaId": 1
+}
+
+### 9. Probar validación: montoRecibido menor al total debe fallar
+POST {{baseUrl}}/ventas
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "items": [
+    { "productoId": {{productoId}}, "cantidad": 1 }
+  ],
+  "montoRecibido": 100,
+  "medioPago": "EFECTIVO",
+  "puntoVentaId": 1
+}
+
+### 10. Probar validación: cantidad negativa NUNCA debe sumar stock
+###     (esta es la validación que agregamos en el Paso 5 - debe devolver 400)
+POST {{baseUrl}}/ventas
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "items": [
+    { "productoId": {{productoId}}, "cantidad": -5 }
+  ],
+  "montoRecibido": 100,
+  "medioPago": "EFECTIVO",
+  "puntoVentaId": 1
+}
+
+### 11. Ver cuánto efectivo debería haber en caja ahora mismo (esperado)
+GET {{baseUrl}}/caja/{{aperturaCajaId}}/esperado
+Authorization: Bearer {{token}}
+
+### -> Debería ser 5000 (inicial) + 1600 (la venta que salió bien) = 6600
+
+### 12. Cerrar la caja contando el efectivo real
+POST {{baseUrl}}/caja/cerrar
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "aperturaCajaId": {{aperturaCajaId}},
+  "totalContado": 6600
+}
+
+### -> diferencia debería dar 0
+
+### 13. Reporte de ventas del día (requiere rol ADMIN)
+GET {{baseUrl}}/ventas?desde=2026-09-14T00:00:00.000Z&hasta=2026-09-15T00:00:00.000Z
+Authorization: Bearer {{token}}
