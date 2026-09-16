@@ -81,7 +81,7 @@ async function obtenerEstado(req, res, next) {
 
 async function registrarMovimiento(req, res, next) {
   try {
-    const { aperturaCajaId, tipo, monto, descripcion } = req.body;
+    const { aperturaCajaId, tipo, monto, concepto } = req.body;
 
     if (!aperturaCajaId || isNaN(Number(aperturaCajaId))) {
       return res.status(400).json({ error: 'aperturaCajaId es obligatorio y debe ser válido' });
@@ -90,7 +90,10 @@ async function registrarMovimiento(req, res, next) {
       return res.status(400).json({ error: 'tipo de movimiento inválido (debe ser INGRESO_MANUAL o EGRESO_MANUAL)' });
     }
     if (monto === undefined || isNaN(Number(monto)) || Number(monto) <= 0) {
-      return res.status(400).json({ error: 'monto debe ser un número positivo' });
+      return res.status(400).json({ error: 'monto debe ser un número positivo mayor a 0' });
+    }
+    if (!concepto || typeof concepto !== 'string' || concepto.trim() === '') {
+      return res.status(400).json({ error: 'El concepto es obligatorio' });
     }
 
     const comercioId = req.comercioId;
@@ -99,7 +102,7 @@ async function registrarMovimiento(req, res, next) {
       aperturaCajaId: Number(aperturaCajaId),
       tipo,
       monto,
-      descripcion
+      descripcion: concepto
     });
 
     res.status(201).json(movimiento);

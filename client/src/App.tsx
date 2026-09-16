@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
@@ -14,6 +14,8 @@ import Parametros from './pages/Parametros';
 import EtiquetasImpresion from './pages/EtiquetasImpresion';
 import Categorias from './pages/Categorias';
 import Unidades from './pages/Unidades';
+import Usuarios from './pages/Usuarios';
+import PuntosVenta from './pages/PuntosVenta';
 
 function App() {
   return (
@@ -34,6 +36,8 @@ function App() {
               <Route path="/etiquetas" element={<EtiquetasImpresion />} />
               <Route path="/categorias" element={<Categorias />} />
               <Route path="/unidades" element={<Unidades />} />
+              <Route path="/usuarios" element={<Usuarios />} />
+              <Route path="/puntos-venta" element={<PuntosVenta />} />
               <Route path="/" element={<Navigate to="/ventas" replace />} />
               
               {/* Ruta comodín para pantallas aún no implementadas */}

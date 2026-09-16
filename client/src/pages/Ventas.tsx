@@ -22,10 +22,10 @@ const Ventas = () => {
   const [items, setItems] = useState<VentaItem[]>([]);
   const [montoRecibido, setMontoRecibido] = useState('');
   const [medioPago, setMedioPago] = useState('EFECTIVO');
-  
+
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [showClienteModal, setShowClienteModal] = useState(false);
-  
+
   // Estado de Caja
   const [aperturaCajaId, setAperturaCajaId] = useState<number | null>(null);
   const [cargandoCaja, setCargandoCaja] = useState(true);
@@ -43,7 +43,7 @@ const Ventas = () => {
   // Modal Ticket
   const [showModalTicket, setShowModalTicket] = useState(false);
   const [ultimaVenta, setUltimaVenta] = useState<any>(null);
-  
+
   // Ref para botones del modal
   const btnSiRef = useRef<HTMLButtonElement>(null);
   const btnNoRef = useRef<HTMLButtonElement>(null);
@@ -56,13 +56,13 @@ const Ventas = () => {
           api.get('/caja/estado'),
           api.get('/parametros/impresionTicket')
         ]);
-        
+
         if (resCaja.data.abierta) {
           setAperturaCajaId(resCaja.data.apertura.id);
         } else {
           setAperturaCajaId(null);
         }
-        
+
         if (resConfig.data?.valor) {
           setConfigImpresion(resConfig.data.valor);
         }
@@ -108,7 +108,7 @@ const Ventas = () => {
       const newItems = [...prev];
       const newQty = newItems[index].cantidad + delta;
       if (newQty <= 0) return newItems;
-      
+
       newItems[index].cantidad = newQty;
       newItems[index].subtotal = Number((newQty * newItems[index].precioUnitario).toFixed(2));
       return newItems;
@@ -121,12 +121,12 @@ const Ventas = () => {
   };
 
   const total = Number(items.reduce((acc, item) => acc + item.subtotal, 0).toFixed(2));
-  
+
   // Manejo de pago
   const esEfectivo = medioPago === 'EFECTIVO';
   const montoRecibidoNum = esEfectivo ? (Number(montoRecibido) || 0) : total;
   const canSubmit = items.length > 0 && montoRecibidoNum >= total && !cobrando;
-  
+
   // Procesar escaneo inteligente
   const handleScan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,13 +201,13 @@ const Ventas = () => {
       };
 
       const res = await api.post('/ventas', payload);
-      
+
       const vueltoStr = esEfectivo ? res.data.vuelto.toFixed(2) : '0.00';
-      toast.success(`Venta registrada con éxito | Vuelto: $${vueltoStr}`, { 
-        duration: 5000, 
+      toast.success(`Venta registrada con éxito | Vuelto: $${vueltoStr}`, {
+        duration: 5000,
         style: { padding: '16px', fontWeight: 'bold', fontSize: '1.1rem' }
       });
-      
+
       // Armamos un objeto venta enriquecido con el cliente actual local, 
       // ya que el POST no trae el include del cliente (sí los items)
       const ventaImpresion = {
@@ -259,8 +259,8 @@ const Ventas = () => {
           <p className="text-gray-500 mb-8 text-lg leading-relaxed">
             Por favor, abrí tu turno en el módulo de Caja para poder registrar ventas y cobrar.
           </p>
-          <Link 
-            to="/caja" 
+          <Link
+            to="/caja"
             className="w-full bg-brand-light text-brand-dark px-8 py-4 rounded-xl font-bold text-lg shadow-sm hover:shadow-md hover:bg-blue-400 transition-all flex justify-center items-center gap-2 uppercase tracking-wider"
           >
             <CreditCard size={24} /> Ir a Apertura de Caja
@@ -274,7 +274,7 @@ const Ventas = () => {
     <div className="h-full flex flex-row">
       {/* COLUMNA IZQ: Carrito */}
       <div className="flex-1 flex flex-col border-r border-gray-200">
-        
+
         {/* Buscador / Escáner */}
         <div className="p-4 bg-white shadow-sm z-10">
           <form onSubmit={handleScan} className="relative max-w-xl">
@@ -292,11 +292,11 @@ const Ventas = () => {
                   montoInputRef.current?.focus();
                   return;
                 }
-                
+
                 // Atajos si el input está vacío
                 if (scanValue === '') {
                   if (items.length === 0) return;
-                  
+
                   if (e.key === 'ArrowDown') {
                     e.preventDefault();
                     setSelectedIndex(prev => (prev < items.length - 1 ? prev + 1 : prev));
@@ -342,8 +342,8 @@ const Ventas = () => {
               </thead>
               <tbody>
                 {items.map((item, idx) => (
-                  <tr 
-                    key={idx} 
+                  <tr
+                    key={idx}
                     className={`border-b border-gray-100 transition-colors cursor-default ${selectedIndex === idx ? 'bg-blue-100' : 'hover:bg-blue-50'}`}
                     onClick={() => { setSelectedIndex(idx); focusScan(); }}
                   >
@@ -352,7 +352,7 @@ const Ventas = () => {
                     <td className="p-3 text-right text-gray-600">${item.precioUnitario.toFixed(2)}</td>
                     <td className="p-3 text-right font-bold text-brand-dark">${item.subtotal.toFixed(2)}</td>
                     <td className="p-3 text-center">
-                      <button 
+                      <button
                         onClick={(e) => { e.stopPropagation(); removeItem(idx); focusScan(); }}
                         className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50"
                         title="Eliminar (Supr)"
@@ -369,14 +369,14 @@ const Ventas = () => {
       </div>
 
       {/* COLUMNA DER: Cobro */}
-      <div className="w-[350px] bg-white flex flex-col shadow-[rgba(0,0,0,0.05)_-4px_0_10px]">
+      <div className="w-[550px] bg-white flex flex-col shadow-[rgba(0,0,0,0.05)_-4px_0_10px]">
         <div className="p-6 bg-brand-dark text-white flex flex-col items-end border-b-4 border-brand-light">
           <div className="text-brand-light/80 text-sm font-semibold uppercase tracking-wider mb-1">Total a cobrar</div>
           <div className="text-5xl font-bold">${total.toFixed(2)}</div>
         </div>
 
         <div className="p-6 flex flex-col gap-6 flex-1 overflow-y-auto">
-          
+
           {/* Fila Cliente */}
           <div>
             <label className="flex items-center gap-2 text-sm font-bold text-gray-600 uppercase mb-2">
@@ -386,7 +386,7 @@ const Ventas = () => {
               <div className="flex-1 p-3 bg-gray-50 text-gray-800 font-medium whitespace-nowrap overflow-hidden text-ellipsis">
                 {cliente ? cliente.nombre : 'Consumidor Final'}
               </div>
-              <button 
+              <button
                 onClick={() => setShowClienteModal(true)}
                 className="px-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition-colors border-l"
               >
@@ -400,7 +400,7 @@ const Ventas = () => {
             <label className="flex items-center gap-2 text-sm font-bold text-gray-600 uppercase mb-2">
               <CreditCard size={16} /> Medio de pago
             </label>
-            <select 
+            <select
               value={medioPago}
               onChange={e => { setMedioPago(e.target.value); }}
               className="w-full p-3 border rounded font-medium text-gray-800 focus:outline-none focus:border-brand-light focus:ring-1 focus:ring-brand-light bg-white cursor-pointer"
@@ -419,9 +419,9 @@ const Ventas = () => {
             <label className="block text-sm font-bold text-gray-600 uppercase mb-2">Monto Recibido</label>
             <div className="relative">
               <span className={`absolute left-3 top-1/2 -translate-y-1/2 font-bold text-xl ${esEfectivo ? 'text-gray-500' : 'text-gray-300'}`}>$</span>
-              <input 
+              <input
                 ref={montoInputRef}
-                type="number" 
+                type="number"
                 min="0"
                 step="0.01"
                 disabled={!esEfectivo}
@@ -461,12 +461,12 @@ const Ventas = () => {
 
         {/* Action Button */}
         <div className="p-4 border-t border-gray-200 bg-gray-50">
-          <button 
+          <button
             onClick={handleCobrar}
             disabled={!canSubmit}
             className={`w-full py-4 text-xl font-bold rounded-lg uppercase tracking-wider transition-all
-              ${!canSubmit 
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+              ${!canSubmit
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-green-500 hover:bg-green-600 text-white shadow-md'
               }
             `}
@@ -496,7 +496,7 @@ const Ventas = () => {
               </div>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">¿Imprimir ticket?</h2>
               <p className="text-gray-500 mb-6">El cobro se realizó correctamente.</p>
-              
+
               <div className="flex gap-3">
                 <button
                   ref={btnNoRef}

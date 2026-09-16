@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wallet, DollarSign, ArrowUpCircle, ArrowDownCircle, AlertCircle, X, CreditCard } from 'lucide-react';
+import { Wallet, ArrowUpCircle, AlertCircle, X, DollarSign } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -133,11 +133,11 @@ const Caja = () => {
 
     setGuardandoMov(true);
     try {
-      await api.post('/caja/movimiento', {
+      await api.post('/caja/movimiento-manual', {
         aperturaCajaId: apertura.id,
         tipo: tipoMovimiento,
         monto: Number(montoMovimiento),
-        descripcion: descMovimiento
+        concepto: descMovimiento
       });
       toast.success('Movimiento registrado');
       setShowModalMovimiento(false);
@@ -403,9 +403,15 @@ const Caja = () => {
         <div className="flex gap-3">
           <button
             onClick={() => { setTipoMovimiento('INGRESO_MANUAL'); setShowModalMovimiento(true); }}
-            className="px-4 py-2 bg-white text-gray-700 font-bold border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 shadow-sm"
+            className="px-4 py-2 bg-green-50 text-green-700 font-bold border border-green-200 rounded-lg hover:bg-green-100 transition-colors flex items-center gap-2 shadow-sm"
           >
-            <ArrowUpCircle size={18} className="text-green-500" /> Ingreso / Retiro
+            <ArrowUpCircle size={18} /> Registrar Ingreso
+          </button>
+          <button
+            onClick={() => { setTipoMovimiento('EGRESO_MANUAL'); setShowModalMovimiento(true); }}
+            className="px-4 py-2 bg-orange-50 text-orange-700 font-bold border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors flex items-center gap-2 shadow-sm"
+          >
+            <ArrowUpCircle size={18} className="transform rotate-180" /> Registrar Retiro
           </button>
           <button
             onClick={() => setShowModalCierre(true)}
@@ -502,21 +508,8 @@ const Caja = () => {
             <form onSubmit={handleMovimientoManual} className="p-5 flex flex-col gap-4">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Tipo de Movimiento</label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setTipoMovimiento('INGRESO_MANUAL')}
-                    className={`flex-1 py-2 font-bold rounded-lg border-2 transition-all ${tipoMovimiento === 'INGRESO_MANUAL' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 text-gray-500'}`}
-                  >
-                    INGRESO
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTipoMovimiento('EGRESO_MANUAL')}
-                    className={`flex-1 py-2 font-bold rounded-lg border-2 transition-all ${tipoMovimiento === 'EGRESO_MANUAL' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-500'}`}
-                  >
-                    RETIRO
-                  </button>
+                <div className={`p-3 rounded-lg text-center font-bold border-2 ${tipoMovimiento === 'INGRESO_MANUAL' ? 'border-green-500 bg-green-50 text-green-700' : 'border-orange-500 bg-orange-50 text-orange-700'}`}>
+                  {tipoMovimiento === 'INGRESO_MANUAL' ? 'NUEVO INGRESO' : 'RETIRO DE EFECTIVO'}
                 </div>
               </div>
               

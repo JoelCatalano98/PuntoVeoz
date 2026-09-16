@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowUpCircle, AlertCircle, Printer, History } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { AlertCircle, Printer, History } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { imprimirTicket } from '../services/ticket.service';

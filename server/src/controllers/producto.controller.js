@@ -28,22 +28,37 @@ async function crear(req, res) {
     return res.status(400).json({ error: 'nombre y precioVenta son obligatorios' });
   }
 
-  const producto = await prisma.producto.create({
-    data: {
-      comercioId: req.comercioId,
-      nombre,
-      descripcion,
-      codigoBarras,
-      precioCosto: precioCosto ?? 0,
-      precioVenta,
-      stockActual: stockActual ?? 0,
-      stockMinimo: stockMinimo ?? 0,
-      categoriaId,
-      unidadMedidaId,
-    },
+  const result = await prisma.$transaction(async (tx) => {
+    const p = await tx.producto.create({
+      data: {
+        comercioId: req.comercioId,
+        nombre,
+        descripcion,
+        codigoBarras,
+        precioCosto: precioCosto ?? 0,
+        precioVenta,
+        stockActual: stockActual ?? 0,
+        stockMinimo: stockMinimo ?? 0,
+        categoriaId,
+        unidadMedidaId,
+      },
+    });
+
+    if (stockActual > 0) {
+      await tx.movimientoStock.create({
+        data: {
+          productoId: p.id,
+          tipo: 'ENTRADA',
+          cantidad: stockActual,
+          motivo: 'Stock Inicial',
+        }
+      });
+    }
+    
+    return p;
   });
 
-  res.status(201).json(producto);
+  res.status(201).json(result);
 }
 
 async function actualizar(req, res) {
@@ -53,10 +68,11 @@ async function actualizar(req, res) {
   });
   if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
 
-  const { nombre, descripcion, codigoBarras, precioCosto, precioVenta, stockActual, stockMinimo, activo, categoriaId, unidadMedidaId } = req.body;
+  // Omitimos stockActual para prevenir Mass Assignment
+  const { nombre, descripcion, codigoBarras, precioCosto, precioVenta, stockMinimo, activo, categoriaId, unidadMedidaId } = req.body;
   const actualizado = await prisma.producto.update({
     where: { id: producto.id },
-    data: { nombre, descripcion, codigoBarras, precioCosto, precioVenta, stockActual, stockMinimo, activo, categoriaId, unidadMedidaId },
+    data: { nombre, descripcion, codigoBarras, precioCosto, precioVenta, stockMinimo, activo, categoriaId, unidadMedidaId },
   });
 
   res.json(actualizado);
@@ -91,5 +107,68 @@ async function generarCodigoBarras(req, res, next) {
     next(error);
   }
 }
+async function ajustarStock(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { tipo, cantidad, motivo } = req.body;
 
-module.exports = { listar, buscarPorCodigoBarras, crear, actualizar, generarCodigoBarras };
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'id de producto inválido' });
+    }
+    if (!tipo || !['ENTRADA', 'SALIDA'].includes(tipo)) {
+      return res.status(400).json({ error: 'tipo debe ser ENTRADA o SALIDA' });
+    }
+    if (cantidad === undefined || isNaN(Number(cantidad)) || Number(cantidad) <= 0) {
+      return res.status(400).json({ error: 'cantidad debe ser un número mayor a 0' });
+    }
+    if (!motivo || typeof motivo !== 'string' || motivo.trim() === '') {
+      return res.status(400).json({ error: 'El motivo es obligatorio' });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const producto = await tx.producto.findFirst({
+        where: { id: Number(id), comercioId: req.comercioId },
+      });
+      
+      if (!producto) {
+        throw new Error('Producto no encontrado');
+      }
+
+      if (tipo === 'SALIDA' && producto.stockActual < cantidad) {
+        throw new Error('La cantidad de salida supera el stock actual disponible');
+      }
+
+      const nuevoStock = tipo === 'ENTRADA' 
+        ? producto.stockActual + Number(cantidad)
+        : producto.stockActual - Number(cantidad);
+
+      const actualizado = await tx.producto.update({
+        where: { id: producto.id },
+        data: { stockActual: nuevoStock }
+      });
+
+      await tx.movimientoStock.create({
+        data: {
+          productoId: producto.id,
+          tipo,
+          cantidad: Number(cantidad),
+          motivo
+        }
+      });
+
+      return actualizado;
+    });
+
+    res.json(result);
+  } catch (error) {
+    if (error.message === 'Producto no encontrado') {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message === 'La cantidad de salida supera el stock actual disponible') {
+      return res.status(400).json({ error: error.message });
+    }
+    next(error);
+  }
+}
+
+module.exports = { listar, buscarPorCodigoBarras, crear, actualizar, generarCodigoBarras, ajustarStock };

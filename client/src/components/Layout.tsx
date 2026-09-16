@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ShoppingCart, Wallet, Package, Users, LogOut } from 'lucide-react';
@@ -90,8 +90,8 @@ const Layout = () => {
             <NavDropdown 
               title="Configuraciones" 
               items={[
-                { label: 'Puntos de venta' },
-                { label: 'Usuarios' },
+                { label: 'Puntos de venta', to: '/puntos-venta' },
+                { label: 'Usuarios', to: '/usuarios' },
                 { label: 'Parámetros', to: '/parametros' }
               ]} 
             />

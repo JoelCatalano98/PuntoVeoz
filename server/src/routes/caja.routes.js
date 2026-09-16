@@ -10,7 +10,7 @@ router.use(requireAuth, attachTenant);
 
 router.get('/estado', cajaController.obtenerEstado);
 router.post('/abrir', cajaController.abrirCaja);
-router.post('/movimiento', cajaController.registrarMovimiento);
+router.post('/movimiento-manual', cajaController.registrarMovimiento);
 router.post('/cerrar', cajaController.cerrarCaja);
 router.get('/:aperturaCajaId/esperado', cajaController.obtenerEsperado);
 router.get('/:aperturaCajaId/movimientos', cajaController.listarMovimientos);

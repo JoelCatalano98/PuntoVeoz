@@ -13,6 +13,7 @@ const cajaMaestroRoutes = require('./routes/caja-maestro.routes');
 const parametroRoutes = require('./routes/parametro.routes');
 const categoriaRoutes = require('./routes/categoria.routes');
 const unidadMedidaRoutes = require('./routes/unidad-medida.routes');
+const usuarioRoutes = require('./routes/usuario.routes');
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use('/api/cajas-maestro', cajaMaestroRoutes);
 app.use('/api/parametros', parametroRoutes);
 app.use('/api/categorias', categoriaRoutes);
 app.use('/api/unidades-medida', unidadMedidaRoutes);
+app.use('/api/usuarios', usuarioRoutes);
 
 // Endpoint de prueba (Health Check)
 app.get('/api/health', (req, res) => {

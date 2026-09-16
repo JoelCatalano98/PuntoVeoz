@@ -64,11 +64,22 @@ async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, it
       });
     }
 
-    // 2.b) Total de la venta
+    // 2.b) Total de la venta re-calculado estrictamente por el backend
     const total = dinero.sumar(...subtotales);
 
-    // 2.c) Calcular vuelto (lanza error si montoRecibido < total)
-    const vuelto = dinero.calcularVuelto(total, montoRecibido);
+    // 2.c) Validar montoRecibido y calcular vuelto
+    let montoFinal = dinero.toDecimal(montoRecibido);
+    
+    // Si no es efectivo, el monto recibido debe coincidir exactamente con el total
+    if (medioPago !== 'EFECTIVO') {
+      montoFinal = total;
+    }
+
+    if (montoFinal.lessThan(total)) {
+      throw new Error(`El monto recibido ($${montoFinal.toNumber()}) no cubre el total de la venta ($${total.toNumber()})`);
+    }
+    
+    const vuelto = dinero.calcularVuelto(total, montoFinal.toNumber());
 
     // 3. ESCRITURAS
     
@@ -80,7 +91,7 @@ async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, it
         puntoVentaId,
         clienteId,
         total,
-        montoRecibido,
+        montoRecibido: montoFinal.toNumber(),
         vuelto,
         medioPago,
         items: {

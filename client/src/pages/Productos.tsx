@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, X, AlertTriangle } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, X, AlertTriangle, Package } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -154,6 +154,47 @@ const Productos = () => {
     }
   };
 
+  // AJUSTE DE STOCK
+  const [mostrarModalAjuste, setMostrarModalAjuste] = useState(false);
+  const [productoAjuste, setProductoAjuste] = useState<Producto | null>(null);
+  const [guardandoAjuste, setGuardandoAjuste] = useState(false);
+  const [ajusteData, setAjusteData] = useState({
+    tipo: 'ENTRADA',
+    cantidad: '',
+    motivo: ''
+  });
+
+  const abrirModalAjuste = (prod: Producto) => {
+    setProductoAjuste(prod);
+    setAjusteData({ tipo: 'ENTRADA', cantidad: '', motivo: '' });
+    setMostrarModalAjuste(true);
+  };
+
+  const handleAjusteStock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!productoAjuste) return;
+    if (Number(ajusteData.cantidad) <= 0) {
+      toast.error('La cantidad debe ser mayor a 0');
+      return;
+    }
+    
+    setGuardandoAjuste(true);
+    try {
+      await api.post(`/productos/${productoAjuste.id}/ajuste-stock`, {
+        tipo: ajusteData.tipo,
+        cantidad: Number(ajusteData.cantidad),
+        motivo: ajusteData.motivo
+      });
+      toast.success('Stock actualizado exitosamente');
+      setMostrarModalAjuste(false);
+      cargarProductos();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Error al ajustar stock');
+    } finally {
+      setGuardandoAjuste(false);
+    }
+  };
+
   const [generandoCodigo, setGenerandoCodigo] = useState(false);
 
   const handleGenerarCodigo = async () => {
@@ -262,6 +303,13 @@ const Productos = () => {
                         {puedeEditar && (
                           <td className="p-4">
                             <div className="flex items-center justify-center gap-2">
+                              <button 
+                                onClick={() => abrirModalAjuste(prod)}
+                                className="p-1.5 text-green-600 hover:bg-green-100 rounded transition-colors bg-white/50"
+                                title="Ajuste de Stock"
+                              >
+                                <Package size={16} />
+                              </button>
                               <button 
                                 onClick={() => abrirModalEditar(prod)}
                                 className="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors bg-white/50"
@@ -506,6 +554,78 @@ const Productos = () => {
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* MODAL AJUSTE DE STOCK */}
+      {mostrarModalAjuste && productoAjuste && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col">
+            <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-gray-50">
+              <div>
+                <h2 className="text-lg font-bold text-brand-dark flex items-center gap-2">
+                  <Package size={20} /> Ajuste Manual de Stock
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">{productoAjuste.nombre}</p>
+              </div>
+              <button onClick={() => setMostrarModalAjuste(false)} className="text-gray-400 hover:text-gray-800 transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="bg-blue-50 rounded-lg p-3 mb-5 flex justify-between items-center border border-blue-100">
+                <span className="text-sm font-semibold text-blue-800">Stock Actual:</span>
+                <span className="text-xl font-black text-blue-900">{productoAjuste.stockActual}</span>
+              </div>
+
+              <form onSubmit={handleAjusteStock} className="flex flex-col gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Tipo de Ajuste</label>
+                  <select
+                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 font-semibold"
+                    value={ajusteData.tipo}
+                    onChange={e => setAjusteData({...ajusteData, tipo: e.target.value})}
+                  >
+                    <option value="ENTRADA">ENTRADA (Sumar stock)</option>
+                    <option value="SALIDA">SALIDA (Restar stock)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Cantidad *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    autoFocus
+                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 text-lg font-bold"
+                    value={ajusteData.cantidad}
+                    onChange={e => setAjusteData({...ajusteData, cantidad: e.target.value})}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Motivo / Concepto *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder={ajusteData.tipo === 'ENTRADA' ? "Ej: Ingreso mercadería, Devolución..." : "Ej: Rotura, Vencimiento, Merma..."}
+                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50"
+                    value={ajusteData.motivo}
+                    onChange={e => setAjusteData({...ajusteData, motivo: e.target.value})}
+                  />
+                </div>
+
+                <div className="mt-4 flex gap-3">
+                  <button type="button" onClick={() => setMostrarModalAjuste(false)} className="flex-1 py-3 text-gray-600 font-bold bg-gray-100 hover:bg-gray-200 rounded-lg">Cancelar</button>
+                  <button type="submit" disabled={guardandoAjuste} className="flex-1 py-3 bg-brand-dark text-white font-bold rounded-lg hover:bg-black disabled:opacity-50 shadow-md">
+                    {guardandoAjuste ? 'Guardando...' : 'Confirmar Ajuste'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
