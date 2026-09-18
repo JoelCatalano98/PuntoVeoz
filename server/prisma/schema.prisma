@@ -38,6 +38,7 @@ model Comercio {
   proveedores   Proveedor[]
   compras       Compra[]
   movimientosStock MovimientoStock[]
+  listasPrecio  ListaPrecio[]
 
   @@map("comercios")
 }
@@ -70,6 +71,27 @@ enum RolUsuario {
   CAJERO
 }
 
+
+enum TipoModificadorPrecio {
+  PORCENTAJE
+  MONTO_FIJO
+}
+
+model ListaPrecio {
+  id               Int      @id @default(autoincrement())
+  comercioId       Int
+  comercio         Comercio @relation(fields: [comercioId], references: [id])
+  nombre           String
+  tipoModificador  TipoModificadorPrecio
+  valor            Decimal  @db.Decimal(10, 2)
+  esPredeterminada Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([comercioId])
+  @@map("listas_precio")
+}
+
 // ------------------------------------------------------------
 // PRODUCTOS Y STOCK
 // ------------------------------------------------------------
@@ -82,8 +104,12 @@ model Producto {
   descripcion   String?
   precioCosto   Decimal  @db.Decimal(10, 2) @default(0)
   precioVenta   Decimal  @db.Decimal(10, 2)
+  ivaIncluido   Boolean? @default(true)
+  rentabilidad  Decimal? @db.Decimal(10, 2)
   stockActual   Decimal  @db.Decimal(10, 2) @default(0)
   stockMinimo   Decimal  @db.Decimal(10, 2) @default(0)
+  stockIdeal    Decimal? @db.Decimal(10, 2)
+  imagenUrl     String?
   activo        Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -354,6 +380,11 @@ model Categoria {
   color       String   // hex, ej "#F4A261"
   activo      Boolean  @default(true)
   createdAt   DateTime @default(now())
+  
+  categoriaPadreId Int?
+  categoriaPadre   Categoria?  @relation("SubCategorias", fields: [categoriaPadreId], references: [id])
+  subcategorias    Categoria[] @relation("SubCategorias")
+  
   productos   Producto[]
   
   @@unique([comercioId, nombre])

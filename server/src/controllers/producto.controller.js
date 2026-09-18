@@ -47,7 +47,8 @@ async function buscarPorCodigoBarras(req, res) {
 }
 
 async function crear(req, res) {
-  const { nombre, descripcion, codigoBarras, precioCosto, precioVenta, stockActual, stockMinimo, categoriaId, unidadMedidaId } = req.body;
+  const { nombre, descripcion, codigoBarras, precioCosto, precioVenta, stockActual, stockMinimo, categoriaId, unidadMedidaId, ivaIncluido, rentabilidad, stockIdeal } = req.body;
+  const imagenUrl = req.file ? `/public/uploads/productos/${req.file.filename}` : null;
 
   if (!nombre || precioVenta == null) {
     return res.status(400).json({ error: 'nombre y precioVenta son obligatorios' });
@@ -60,12 +61,16 @@ async function crear(req, res) {
         nombre,
         descripcion,
         codigoBarras,
-        precioCosto: precioCosto ?? 0,
-        precioVenta,
-        stockActual: stockActual ?? 0,
-        stockMinimo: stockMinimo ?? 0,
-        categoriaId,
-        unidadMedidaId,
+        precioCosto: precioCosto ? Number(precioCosto) : 0,
+        precioVenta: Number(precioVenta),
+        ivaIncluido: ivaIncluido === undefined ? true : (ivaIncluido === 'true' || ivaIncluido === true),
+        rentabilidad: rentabilidad ? Number(rentabilidad) : null,
+        stockIdeal: stockIdeal ? Number(stockIdeal) : null,
+        stockActual: stockActual ? Number(stockActual) : 0,
+        stockMinimo: stockMinimo ? Number(stockMinimo) : 0,
+        categoriaId: categoriaId ? Number(categoriaId) : null,
+        unidadMedidaId: unidadMedidaId ? Number(unidadMedidaId) : null,
+        imagenUrl
       },
     });
 
@@ -96,10 +101,30 @@ async function actualizar(req, res) {
   if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
 
   // Omitimos stockActual para prevenir Mass Assignment
-  const { nombre, descripcion, codigoBarras, precioCosto, precioVenta, stockMinimo, activo, categoriaId, unidadMedidaId } = req.body;
+  const { nombre, descripcion, codigoBarras, precioCosto, precioVenta, stockMinimo, activo, categoriaId, unidadMedidaId, ivaIncluido, rentabilidad, stockIdeal } = req.body;
+  
+  const dataToUpdate = {
+    nombre, 
+    descripcion, 
+    codigoBarras,
+    precioCosto: precioCosto !== undefined ? Number(precioCosto) : undefined,
+    precioVenta: precioVenta !== undefined ? Number(precioVenta) : undefined,
+    stockMinimo: stockMinimo !== undefined ? Number(stockMinimo) : undefined,
+    stockIdeal: stockIdeal ? Number(stockIdeal) : null,
+    ivaIncluido: ivaIncluido !== undefined ? (ivaIncluido === 'true' || ivaIncluido === true) : undefined,
+    rentabilidad: rentabilidad ? Number(rentabilidad) : null,
+    activo: activo !== undefined ? (activo === 'true' || activo === true) : undefined,
+    categoriaId: categoriaId ? Number(categoriaId) : null,
+    unidadMedidaId: unidadMedidaId ? Number(unidadMedidaId) : null,
+  };
+
+  if (req.file) {
+    dataToUpdate.imagenUrl = `/public/uploads/productos/${req.file.filename}`;
+  }
+
   const actualizado = await prisma.producto.update({
     where: { id: producto.id },
-    data: { nombre, descripcion, codigoBarras, precioCosto, precioVenta, stockMinimo, activo, categoriaId, unidadMedidaId },
+    data: dataToUpdate,
   });
 
   res.json(actualizado);

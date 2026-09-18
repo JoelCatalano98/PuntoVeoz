@@ -74,6 +74,7 @@ const Layout = () => {
                 { label: 'Productos', to: '/productos' },
                 { label: 'Crear Producto', to: '/productos?nuevo=true' },
                 { label: 'Categorías', to: '/categorias' },
+                { label: 'Listas de Precios', to: '/listas-precio' },
                 { label: 'Unidades de Medida', to: '/unidades' },
                 { label: 'Impresión de Etiquetas', to: '/etiquetas' }
               ]} 

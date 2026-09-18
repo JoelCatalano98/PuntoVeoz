@@ -9,6 +9,8 @@ interface Categoria {
   nombre: string;
   color: string;
   activo: boolean;
+  categoriaPadreId?: number | null;
+  subcategorias?: Categoria[];
 }
 
 const Categorias = () => {
@@ -25,6 +27,7 @@ const Categorias = () => {
   const [formData, setFormData] = useState({
     nombre: '',
     color: '#CCCCCC',
+    categoriaPadreId: '',
   });
 
   const puedeEditar = usuario?.rol === 'ADMIN' || usuario?.rol === 'SUPERADMIN';
@@ -46,13 +49,17 @@ const Categorias = () => {
 
   const abrirModalNuevo = () => {
     setEditando(null);
-    setFormData({ nombre: '', color: '#CCCCCC' });
+    setFormData({ nombre: '', color: '#CCCCCC', categoriaPadreId: '' });
     setMostrarModal(true);
   };
 
-  const abrirModalEditar = (cat: Categoria) => {
+  const abrirModalEditar = (cat: Categoria, parentId?: number) => {
     setEditando(cat);
-    setFormData({ nombre: cat.nombre, color: cat.color });
+    setFormData({ 
+      nombre: cat.nombre, 
+      color: cat.color,
+      categoriaPadreId: parentId ? parentId.toString() : ''
+    });
     setMostrarModal(true);
   };
 
@@ -72,6 +79,7 @@ const Categorias = () => {
     const payload = {
       nombre: formData.nombre.trim(),
       color: formData.color,
+      categoriaPadreId: formData.categoriaPadreId ? parseInt(formData.categoriaPadreId, 10) : null
     };
 
     try {
@@ -144,36 +152,67 @@ const Categorias = () => {
                 </tr>
               ) : (
                 categorias.map(cat => (
-                  <tr key={cat.id} className="hover:bg-blue-50/50 transition-colors">
-                    <td className="p-4">
-                      <div 
-                        className="w-6 h-6 rounded border shadow-sm"
-                        style={{ backgroundColor: cat.color }}
-                        title={cat.color}
-                      />
-                    </td>
-                    <td className="p-4 text-sm font-medium text-gray-800">{cat.nombre}</td>
-                    {puedeEditar && (
+                  <React.Fragment key={cat.id}>
+                    <tr className="hover:bg-blue-50/50 transition-colors bg-white">
                       <td className="p-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <button 
-                            onClick={() => abrirModalEditar(cat)}
-                            className="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors"
-                            title="Editar"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          <button 
-                            onClick={() => handleEliminar(cat.id)}
-                            className="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors"
-                            title="Eliminar"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
+                        <div 
+                          className="w-6 h-6 rounded border shadow-sm"
+                          style={{ backgroundColor: cat.color }}
+                          title={cat.color}
+                        />
                       </td>
-                    )}
-                  </tr>
+                      <td className="p-4 text-sm font-bold text-gray-800">{cat.nombre}</td>
+                      {puedeEditar && (
+                        <td className="p-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <button 
+                              onClick={() => abrirModalEditar(cat)}
+                              className="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors"
+                              title="Editar"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button 
+                              onClick={() => handleEliminar(cat.id)}
+                              className="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors"
+                              title="Eliminar"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                    {cat.subcategorias?.map(sub => (
+                      <tr key={sub.id} className="hover:bg-blue-50/50 transition-colors bg-gray-50/50">
+                        <td className="p-4">
+                        </td>
+                        <td className="p-4 text-sm font-medium text-gray-600 pl-8 border-l-2 border-gray-200">
+                          ↳ {sub.nombre}
+                        </td>
+                        {puedeEditar && (
+                          <td className="p-4">
+                            <div className="flex items-center justify-center gap-2">
+                              <button 
+                                onClick={() => abrirModalEditar(sub, cat.id)}
+                                className="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors"
+                                title="Editar"
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                              <button 
+                                onClick={() => handleEliminar(sub.id)}
+                                className="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors"
+                                title="Eliminar"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </React.Fragment>
                 ))
               )}
             </tbody>
@@ -205,6 +244,21 @@ const Categorias = () => {
                     value={formData.nombre}
                     onChange={e => setFormData({...formData, nombre: e.target.value})}
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Categoría Padre (Opcional)</label>
+                  <select
+                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white text-gray-700"
+                    value={formData.categoriaPadreId}
+                    onChange={e => setFormData({...formData, categoriaPadreId: e.target.value})}
+                  >
+                    <option value="">(Ninguna - Es categoría principal)</option>
+                    {categorias.map(cat => (
+                      <option key={cat.id} value={cat.id} disabled={editando?.id === cat.id}>{cat.nombre}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Si seleccionas una categoría padre, esta se convertirá en una subcategoría.</p>
                 </div>
 
                 <div>

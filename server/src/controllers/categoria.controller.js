@@ -3,7 +3,13 @@ const prisma = require('../config/prisma');
 async function listar(req, res, next) {
   try {
     const categorias = await prisma.categoria.findMany({
-      where: { comercioId: req.comercioId, activo: true },
+      where: { comercioId: req.comercioId, activo: true, categoriaPadreId: null },
+      include: {
+        subcategorias: {
+          where: { activo: true },
+          orderBy: { nombre: 'asc' }
+        }
+      },
       orderBy: { nombre: 'asc' },
     });
     res.json(categorias);
@@ -14,7 +20,7 @@ async function listar(req, res, next) {
 
 async function crear(req, res, next) {
   try {
-    const { nombre, color } = req.body;
+    const { nombre, color, categoriaPadreId } = req.body;
     
     if (!nombre) {
       return res.status(400).json({ error: 'El nombre es obligatorio' });
@@ -25,6 +31,7 @@ async function crear(req, res, next) {
         nombre: nombre.trim(),
         color: color || '#CCCCCC',
         comercioId: req.comercioId,
+        categoriaPadreId: categoriaPadreId ? Number(categoriaPadreId) : null
       },
     });
 
@@ -40,7 +47,7 @@ async function crear(req, res, next) {
 async function actualizar(req, res, next) {
   try {
     const { id } = req.params;
-    const { nombre, color } = req.body;
+    const { nombre, color, categoriaPadreId } = req.body;
 
     const existente = await prisma.categoria.findFirst({
       where: { id: Number(id), comercioId: req.comercioId },
@@ -53,6 +60,7 @@ async function actualizar(req, res, next) {
       data: {
         nombre: nombre ? nombre.trim() : existente.nombre,
         color: color || existente.color,
+        categoriaPadreId: categoriaPadreId !== undefined ? (categoriaPadreId ? Number(categoriaPadreId) : null) : existente.categoriaPadreId
       },
     });
 

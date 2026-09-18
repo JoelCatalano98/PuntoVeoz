@@ -1,14 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { Search, Trash2, User, CreditCard, ShoppingCart, AlertTriangle, Edit2 } from 'lucide-react';
+import { Search, Trash2, User, CreditCard, ShoppingCart, AlertTriangle, Edit2, Tag } from 'lucide-react';
 import ClienteModal from '../components/ClienteModal';
 import { Link } from 'react-router-dom';
+
+interface ListaPrecio {
+  id: number;
+  nombre: string;
+  tipoModificador: 'PORCENTAJE' | 'MONTO_FIJO';
+  valor: number;
+  esPredeterminada: boolean;
+}
 
 interface VentaItem {
   productoId: number;
   nombre: string;
   cantidad: number;
+  precioBase: number;
+  precioLista: number;
+  bonificacion: number;
   precioUnitario: number;
   subtotal: number;
 }
@@ -17,6 +28,16 @@ interface Cliente {
   id: number;
   nombre: string;
 }
+
+const calcularPrecioFinal = (precioBase: number, lista: ListaPrecio | null): number => {
+  if (!lista) return precioBase;
+  const valor = Number(lista.valor);
+  if (lista.tipoModificador === 'PORCENTAJE') {
+    return precioBase + (precioBase * (valor / 100));
+  } else {
+    return precioBase + valor;
+  }
+};
 
 const Ventas = () => {
   const [items, setItems] = useState<VentaItem[]>([]);
@@ -29,6 +50,11 @@ const Ventas = () => {
   // Estado de Caja
   const [aperturaCajaId, setAperturaCajaId] = useState<number | null>(null);
   const [cargandoCaja, setCargandoCaja] = useState(true);
+
+  // Listas de Precio
+  const [listasPrecio, setListasPrecio] = useState<ListaPrecio[]>([]);
+  const [listaSeleccionadaId, setListaSeleccionadaId] = useState<string>('');
+  const [aplicarLista, setAplicarLista] = useState(false);
 
   const [scanValue, setScanValue] = useState('');
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
@@ -72,17 +98,16 @@ const Ventas = () => {
     focusScan();
   };
 
-  // Ref para botones del modal
   const btnSiRef = useRef<HTMLButtonElement>(null);
   const btnNoRef = useRef<HTMLButtonElement>(null);
 
-  // Obtener estado de caja y config al montar
   useEffect(() => {
     const initData = async () => {
       try {
-        const [resCaja, resConfig] = await Promise.all([
+        const [resCaja, resConfig, resListas] = await Promise.all([
           api.get('/caja/estado'),
-          api.get('/parametros/impresionTicket')
+          api.get('/parametros/impresionTicket'),
+          api.get('/listas-precio')
         ]);
 
         if (resCaja.data.abierta) {
@@ -94,6 +119,15 @@ const Ventas = () => {
         if (resConfig.data?.valor) {
           setConfigImpresion(resConfig.data.valor);
         }
+
+        const listas = resListas.data;
+        setListasPrecio(listas);
+        const listaPredeterminada = listas.find((l: ListaPrecio) => l.esPredeterminada);
+        if (listaPredeterminada) {
+          setListaSeleccionadaId(listaPredeterminada.id.toString());
+        } else if (listas.length > 0) {
+          setListaSeleccionadaId(listas[0].id.toString());
+        }
       } catch (err) {
         toast.error('Error al inicializar la terminal');
       } finally {
@@ -103,14 +137,29 @@ const Ventas = () => {
     initData();
   }, []);
 
-  // Autofocus continuo pero sin romper selects
+  // Recalcular carrito cuando cambia la lista de precios o su activación
   useEffect(() => {
-    if (aperturaCajaId && !showClienteModal && !showModalTicket && document.activeElement !== montoInputRef.current && document.activeElement?.tagName !== 'SELECT') {
+    const listaActiva = aplicarLista ? listasPrecio.find(l => l.id.toString() === listaSeleccionadaId) || null : null;
+    
+    setItems(prev => prev.map(item => {
+      const nuevoPrecioLista = calcularPrecioFinal(item.precioBase, listaActiva);
+      const nuevoPrecioUnitario = nuevoPrecioLista * (1 - item.bonificacion / 100);
+      
+      return {
+        ...item,
+        precioLista: nuevoPrecioLista,
+        precioUnitario: nuevoPrecioUnitario,
+        subtotal: Number((nuevoPrecioUnitario * item.cantidad).toFixed(2))
+      };
+    }));
+  }, [listaSeleccionadaId, listasPrecio, aplicarLista]);
+
+  useEffect(() => {
+    if (aperturaCajaId && !showClienteModal && !showModalTicket && document.activeElement !== montoInputRef.current && document.activeElement?.tagName !== 'SELECT' && document.activeElement?.tagName !== 'INPUT') {
       scanInputRef.current?.focus();
     }
-  }, [items, showClienteModal, showModalTicket, aperturaCajaId]);
+  }, [items, showClienteModal, showModalTicket, aperturaCajaId, listaSeleccionadaId, aplicarLista]);
 
-  // Manejo de foco en el modal de ticket
   useEffect(() => {
     if (showModalTicket) {
       setTimeout(() => btnSiRef.current?.focus(), 50);
@@ -143,19 +192,28 @@ const Ventas = () => {
     });
   };
 
+  const updateBonificacion = (index: number, bonificacion: number) => {
+    setItems(prev => {
+      const newItems = [...prev];
+      const item = { ...newItems[index] };
+      item.bonificacion = Math.max(0, Math.min(100, bonificacion || 0)); // Validar entre 0 y 100
+      item.precioUnitario = item.precioLista * (1 - item.bonificacion / 100);
+      item.subtotal = Number((item.cantidad * item.precioUnitario).toFixed(2));
+      newItems[index] = item;
+      return newItems;
+    });
+  };
+
   const removeItem = (index: number) => {
     setItems(prev => prev.filter((_, i) => i !== index));
     setSelectedIndex(prev => (prev >= items.length - 1 ? items.length - 2 : prev));
   };
 
   const total = Number(items.reduce((acc, item) => acc + item.subtotal, 0).toFixed(2));
-
-  // Manejo de pago
   const esEfectivo = medioPago === 'EFECTIVO';
   const montoRecibidoNum = esEfectivo ? (Number(montoRecibido) || 0) : total;
   const canSubmit = items.length > 0 && montoRecibidoNum >= total && !cobrando;
 
-  // Procesar escaneo inteligente
   const handleScan = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!scanValue.trim()) return;
@@ -173,6 +231,12 @@ const Ventas = () => {
       const res = await api.get(`/productos/codigo/${code}`);
       const prod = res.data;
 
+      const precioBase = Number(prod.precioVenta);
+      const listaActiva = aplicarLista ? listasPrecio.find(l => l.id.toString() === listaSeleccionadaId) || null : null;
+      const precioLista = calcularPrecioFinal(precioBase, listaActiva);
+      const bonificacionInicial = 0;
+      const precioUnitario = precioLista * (1 - bonificacionInicial / 100);
+
       setItems(prev => {
         const existingIdx = prev.findIndex(i => i.productoId === prod.id);
         if (existingIdx >= 0) {
@@ -183,12 +247,15 @@ const Ventas = () => {
           newItems[existingIdx] = updatedItem;
           return newItems;
         } else {
-          const newItem = {
+          const newItem: VentaItem = {
             productoId: prod.id,
             nombre: prod.nombre,
             cantidad: qty,
-            precioUnitario: Number(prod.precioVenta),
-            subtotal: Number((qty * prod.precioVenta).toFixed(2))
+            precioBase: precioBase,
+            precioLista: precioLista,
+            bonificacion: bonificacionInicial,
+            precioUnitario: precioUnitario,
+            subtotal: Number((qty * precioUnitario).toFixed(2))
           };
           return [...prev, newItem];
         }
@@ -208,10 +275,21 @@ const Ventas = () => {
     setCliente(null);
     setSelectedIndex(-1);
     setScanValue('');
+    
+    // Restablecer a lista predeterminada
+    const listaPredeterminada = listasPrecio.find(l => l.esPredeterminada);
+    if (listaPredeterminada) {
+      setListaSeleccionadaId(listaPredeterminada.id.toString());
+    } else if (listasPrecio.length > 0) {
+      setListaSeleccionadaId(listasPrecio[0].id.toString());
+    } else {
+      setListaSeleccionadaId('');
+    }
+    setAplicarLista(false);
+
     focusScan();
   };
 
-  // Enviar Venta a la API
   const handleCobrar = async () => {
     if (!canSubmit) return;
     if (!aperturaCajaId) {
@@ -222,11 +300,16 @@ const Ventas = () => {
     setCobrando(true);
     try {
       const payload = {
-        items: items.map(i => ({ productoId: i.productoId, cantidad: i.cantidad })),
+        items: items.map(i => ({ 
+          productoId: i.productoId, 
+          cantidad: i.cantidad,
+          // Mandar precio unitario final para que el backend lo tome o pueda validarlo
+        })),
         montoRecibido: montoRecibidoNum,
         medioPago,
         clienteId: cliente?.id || null,
-        aperturaCajaId
+        aperturaCajaId,
+        listaPrecioId: (aplicarLista && listaSeleccionadaId) ? parseInt(listaSeleccionadaId, 10) : null
       };
 
       const res = await api.post('/ventas', payload);
@@ -237,8 +320,6 @@ const Ventas = () => {
         style: { padding: '16px', fontWeight: 'bold', fontSize: '1.1rem' }
       });
 
-      // Armamos un objeto venta enriquecido con el cliente actual local, 
-      // ya que el POST no trae el include del cliente (sí los items)
       const ventaImpresion = {
         ...res.data,
         cliente: cliente
@@ -305,11 +386,11 @@ const Ventas = () => {
   return (
     <div className="h-full flex flex-row">
       {/* COLUMNA IZQ: Carrito */}
-      <div className="flex-1 flex flex-col border-r border-gray-200">
+      <div className="flex-1 flex flex-col border-r border-gray-200 min-w-0">
 
-        {/* Buscador / Escáner */}
-        <div className="p-4 bg-white shadow-sm z-10">
-          <form onSubmit={handleScan} className="relative max-w-xl">
+        {/* Header con Buscador y Select Lista de Precios */}
+        <div className="p-4 bg-white shadow-sm z-10 flex gap-4 items-center border-b border-gray-200">
+          <form onSubmit={handleScan} className="relative flex-1 max-w-xl">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <input
               ref={scanInputRef}
@@ -324,8 +405,6 @@ const Ventas = () => {
                   montoInputRef.current?.focus();
                   return;
                 }
-
-                // Atajos si el input está vacío
                 if (scanValue === '') {
                   if (items.length === 0) return;
 
@@ -349,6 +428,33 @@ const Ventas = () => {
               }}
             />
           </form>
+
+          <div className="w-[300px]">
+            <div className="flex items-center gap-2 mb-1">
+              <input 
+                type="checkbox" 
+                id="checkLista" 
+                className="w-4 h-4 text-brand-light rounded focus:ring-brand-light cursor-pointer"
+                checked={aplicarLista}
+                onChange={(e) => setAplicarLista(e.target.checked)}
+              />
+              <label htmlFor="checkLista" className="flex items-center gap-1 text-xs font-bold text-gray-600 uppercase cursor-pointer">
+                <Tag size={14} /> Aplicar Lista de Precios
+              </label>
+            </div>
+            <select
+              disabled={!aplicarLista}
+              value={listaSeleccionadaId}
+              onChange={e => setListaSeleccionadaId(e.target.value)}
+              className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-brand-light focus:ring-1 focus:ring-brand-light font-bold text-gray-700 bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400"
+            >
+              {listasPrecio.map(lista => (
+                <option key={lista.id} value={lista.id}>
+                  {lista.nombre} {lista.valor !== 0 ? `(${lista.valor > 0 ? '+' : ''}${lista.valor}${lista.tipoModificador === 'PORCENTAJE' ? '%' : '$'})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Tabla (Scroll independiente) */}
@@ -365,42 +471,70 @@ const Ventas = () => {
             <table className="w-full text-left bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
               <thead className="bg-gray-100 border-b border-gray-200">
                 <tr>
-                  <th className="p-3 text-gray-600 font-semibold">Producto</th>
-                  <th className="p-3 text-gray-600 font-semibold text-center w-24">Cant.</th>
+                  <th className="p-3 text-gray-600 font-semibold w-1/3">Producto</th>
+                  <th className="p-3 text-gray-600 font-semibold text-center w-20">Cant.</th>
+                  <th className="p-3 text-gray-600 font-semibold text-center w-24">Bonif. (%)</th>
                   <th className="p-3 text-gray-600 font-semibold text-right w-32">Precio Unit.</th>
                   <th className="p-3 text-gray-600 font-semibold text-right w-32">Subtotal</th>
                   <th className="p-3 text-center w-16"></th>
                 </tr>
               </thead>
               <tbody>
-                {items.map((item, idx) => (
-                  <tr
-                    key={idx}
-                    className={`border-b border-gray-100 transition-colors cursor-default ${selectedIndex === idx ? 'bg-blue-100' : 'hover:bg-blue-50'}`}
-                    onClick={() => { setSelectedIndex(idx); focusScan(); }}
-                  >
-                    <td className="p-3 font-medium text-gray-800">{item.nombre}</td>
-                    <td className="p-3 text-center font-bold text-gray-700">{item.cantidad}</td>
-                    <td className="p-3 text-right text-gray-600">${item.precioUnitario.toFixed(2)}</td>
-                    <td className="p-3 text-right font-bold text-brand-dark">${item.subtotal.toFixed(2)}</td>
-                    <td className="p-3 text-center">
-                      <button
-                        onClick={(e) => openEditModal(idx, e)}
-                        className="text-blue-400 hover:text-blue-600 p-1 rounded hover:bg-blue-50"
-                        title="Editar Cantidad"
-                      >
-                        <Edit2 size={18} />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); removeItem(idx); focusScan(); }}
-                        className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50"
-                        title="Eliminar (Supr)"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {items.map((item, idx) => {
+                  const modificadoPorLista = Math.abs(item.precioBase - item.precioLista) > 0.01;
+                  const modificadoTotal = Math.abs(item.precioBase - item.precioUnitario) > 0.01;
+
+                  return (
+                    <tr
+                      key={idx}
+                      className={`border-b border-gray-100 transition-colors cursor-default ${selectedIndex === idx ? 'bg-blue-100' : 'hover:bg-blue-50'}`}
+                      onClick={() => { setSelectedIndex(idx); focusScan(); }}
+                    >
+                      <td className="p-3 font-medium text-gray-800">{item.nombre}</td>
+                      <td className="p-3 text-center font-bold text-gray-700">{item.cantidad}</td>
+                      <td className="p-3">
+                        <div className="flex items-center justify-center">
+                          <input 
+                            type="number"
+                            min="0"
+                            max="100"
+                            className="w-16 p-1 border rounded text-center text-sm font-bold focus:outline-none focus:border-brand-light focus:ring-1 focus:ring-brand-light"
+                            value={item.bonificacion || ''}
+                            onChange={(e) => updateBonificacion(idx, Number(e.target.value))}
+                            onFocus={() => setSelectedIndex(idx)}
+                          />
+                        </div>
+                      </td>
+                      <td className="p-3 text-right">
+                        {modificadoTotal && (
+                          <div className="text-xs text-gray-400 line-through mb-0.5">
+                            ${item.precioBase.toFixed(2)}
+                          </div>
+                        )}
+                        <div className={`font-medium ${modificadoTotal ? (item.precioUnitario > item.precioBase ? 'text-orange-600' : 'text-green-600') : 'text-gray-600'}`}>
+                          ${item.precioUnitario.toFixed(2)}
+                        </div>
+                      </td>
+                      <td className="p-3 text-right font-bold text-brand-dark">${item.subtotal.toFixed(2)}</td>
+                      <td className="p-3 text-center">
+                        <button
+                          onClick={(e) => openEditModal(idx, e)}
+                          className="text-blue-400 hover:text-blue-600 p-1 rounded hover:bg-blue-50"
+                          title="Editar Cantidad"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeItem(idx); focusScan(); }}
+                          className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50"
+                          title="Eliminar (Supr)"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           )}
@@ -408,7 +542,7 @@ const Ventas = () => {
       </div>
 
       {/* COLUMNA DER: Cobro */}
-      <div className="w-[550px] bg-white flex flex-col shadow-[rgba(0,0,0,0.05)_-4px_0_10px]">
+      <div className="w-[400px] lg:w-[450px] xl:w-[500px] bg-white flex flex-col shadow-[rgba(0,0,0,0.05)_-4px_0_10px] z-20 shrink-0">
         <div className="p-6 bg-brand-dark text-white flex flex-col items-end border-b-4 border-brand-light">
           <div className="text-brand-light/80 text-sm font-semibold uppercase tracking-wider mb-1">Total a cobrar</div>
           <div className="text-5xl font-bold">${total.toFixed(2)}</div>
@@ -454,7 +588,7 @@ const Ventas = () => {
           </div>
 
           {/* Input Monto & Info Vuelto */}
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mt-auto">
             <label className="block text-sm font-bold text-gray-600 uppercase mb-2">Monto Recibido</label>
             <div className="relative">
               <span className={`absolute left-3 top-1/2 -translate-y-1/2 font-bold text-xl ${esEfectivo ? 'text-gray-500' : 'text-gray-300'}`}>$</span>

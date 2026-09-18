@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 
 // Importar rutas (las dejamos preparadas para los siguientes pasos)
 const authRoutes = require('./routes/auth.routes');
@@ -17,12 +18,14 @@ const usuarioRoutes = require('./routes/usuario.routes');
 const proveedorRoutes = require('./routes/proveedor.routes');
 const compraRoutes = require('./routes/compra.routes');
 const stockRoutes = require('./routes/stock.routes');
+const listaPrecioRoutes = require('./routes/listaPrecio.routes');
 
 const app = express();
 
 // Middlewares globales
 app.use(cors());
 app.use(express.json());
+app.use('/public', express.static(path.join(__dirname, '../public')));
 
 // Montar rutas bajo /api (descomentaremos a medida que las creemos)
 app.use('/api/auth', authRoutes);
@@ -39,6 +42,7 @@ app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/proveedores', proveedorRoutes);
 app.use('/api/compras', compraRoutes);
 app.use('/api/stock', stockRoutes);
+app.use('/api/listas-precio', listaPrecioRoutes);
 
 // Endpoint de prueba (Health Check)
 app.get('/api/health', (req, res) => {

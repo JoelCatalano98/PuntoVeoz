@@ -13,6 +13,7 @@ import CajaMovimientos from './pages/CajaMovimientos';
 import Parametros from './pages/Parametros';
 import EtiquetasImpresion from './pages/EtiquetasImpresion';
 import Categorias from './pages/Categorias';
+import ListasPrecio from './pages/ListasPrecio';
 import Unidades from './pages/Unidades';
 import Usuarios from './pages/Usuarios';
 import PuntosVenta from './pages/PuntosVenta';
@@ -43,6 +44,7 @@ function App() {
               {/* Rutas para ADMIN y SUPERADMIN */}
               <Route element={<RutaProtegida rolesPermitidos={['SUPERADMIN', 'ADMIN']} />}>
                 <Route path="/categorias" element={<Categorias />} />
+                <Route path="/listas-precio" element={<ListasPrecio />} />
                 <Route path="/unidades" element={<Unidades />} />
                 <Route path="/usuarios" element={<Usuarios />} />
                 <Route path="/puntos-venta" element={<PuntosVenta />} />

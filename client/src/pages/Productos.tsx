@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, X, AlertTriangle, Package, Barcode, FileSpreadsheet, Printer } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, X, AlertTriangle, Package, Barcode, FileSpreadsheet, Printer, Image as ImageIcon } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import JsBarcode from 'jsbarcode';
 import api from '../services/api';
@@ -8,6 +8,13 @@ import { useAuth } from '../context/AuthContext';
 import { exportarProductosExcel } from '../services/exportar.service';
 import { imprimirEtiquetas } from '../services/etiquetas.service';
 
+interface Categoria {
+  id: number;
+  nombre: string;
+  color: string;
+  subcategorias?: Categoria[];
+}
+
 interface Producto {
   id: number;
   nombre: string;
@@ -15,14 +22,21 @@ interface Producto {
   codigoBarras?: string;
   precioCosto: number;
   precioVenta: number;
+  ivaIncluido?: boolean;
+  rentabilidad?: number;
   stockActual: number;
   stockMinimo: number;
+  stockIdeal?: number;
+  imagenUrl?: string;
   activo: boolean;
   categoria?: {
     id: number;
     nombre: string;
     color: string;
+    categoriaPadreId?: number | null;
   };
+  unidadMedidaId?: number;
+  categoriaId?: number;
 }
 
 const Productos = () => {
@@ -51,13 +65,20 @@ const Productos = () => {
     codigoBarras: '',
     precioCosto: '',
     precioVenta: '',
-    stockActual: '',
-    stockMinimo: '',
+    ivaIncluido: true,
+    rentabilidad: '',
+    stockActual: '0',
+    stockMinimo: '0',
+    stockIdeal: '',
     categoriaId: '',
+    subcategoriaId: '',
     unidadMedidaId: '',
   });
 
-  const [categoriasLista, setCategoriasLista] = useState<any[]>([]);
+  const [imagenArchivo, setImagenArchivo] = useState<File | null>(null);
+  const [imagenPreview, setImagenPreview] = useState<string | null>(null);
+
+  const [categoriasLista, setCategoriasLista] = useState<Categoria[]>([]);
   const [unidadesLista, setUnidadesLista] = useState<any[]>([]);
 
   const puedeEditar = usuario?.rol === 'ADMIN' || usuario?.rol === 'SUPERADMIN';
@@ -77,7 +98,6 @@ const Productos = () => {
     const params = new URLSearchParams(location.search);
     if (params.get('nuevo') === 'true') {
       abrirModalNuevo();
-      // Limpiamos la url para que no se reabra al recargar
       navigate('/productos', { replace: true });
     }
   }, [location.search]);
@@ -87,7 +107,6 @@ const Productos = () => {
   useEffect(() => {
     if (mostrarModal && barcodeRef.current && formData.codigoBarras) {
       try {
-        // Intentar primero con EAN13 como pidió el usuario
         JsBarcode(barcodeRef.current, formData.codigoBarras, {
           format: 'EAN13',
           width: 2,
@@ -97,7 +116,6 @@ const Productos = () => {
           margin: 0
         });
       } catch (error) {
-        // Fallback a CODE128 si el usuario tipea algo que no es EAN13 válido
         try {
           JsBarcode(barcodeRef.current, formData.codigoBarras, {
             format: 'CODE128',
@@ -107,9 +125,7 @@ const Productos = () => {
             fontSize: 14,
             margin: 0
           });
-        } catch (e) {
-          // Ignorar silenciosamente si está tipeando algo inválido a medias
-        }
+        } catch (e) {}
       }
     }
   }, [formData.codigoBarras, mostrarModal]);
@@ -152,29 +168,55 @@ const Productos = () => {
 
   const abrirModalNuevo = () => {
     setProductoEditando(null);
+    setImagenArchivo(null);
+    setImagenPreview(null);
     setFormData({
       nombre: '',
       codigoBarras: '',
       precioCosto: '',
       precioVenta: '',
+      ivaIncluido: true,
+      rentabilidad: '',
       stockActual: '0',
       stockMinimo: '0',
+      stockIdeal: '',
       categoriaId: '',
+      subcategoriaId: '',
       unidadMedidaId: '',
     });
     setMostrarModal(true);
   };
 
-  const abrirModalEditar = (prod: Producto & { categoriaId?: number, unidadMedidaId?: number }) => {
-    setProductoEditando(prod as Producto);
+  const abrirModalEditar = (prod: Producto) => {
+    setProductoEditando(prod);
+    setImagenArchivo(null);
+    setImagenPreview(prod.imagenUrl ? `http://localhost:4000${prod.imagenUrl}` : null);
+    
+    // Determinar categoría y subcategoría
+    let catId = '';
+    let subCatId = '';
+    if (prod.categoriaId) {
+      const parent = categoriasLista.find(c => c.subcategorias?.some(sc => sc.id === prod.categoriaId));
+      if (parent) {
+        catId = parent.id.toString();
+        subCatId = prod.categoriaId.toString();
+      } else {
+        catId = prod.categoriaId.toString();
+      }
+    }
+
     setFormData({
       nombre: prod.nombre,
       codigoBarras: prod.codigoBarras || '',
       precioCosto: prod.precioCosto.toString(),
       precioVenta: prod.precioVenta.toString(),
+      ivaIncluido: prod.ivaIncluido !== false,
+      rentabilidad: prod.rentabilidad ? prod.rentabilidad.toString() : '',
       stockActual: prod.stockActual.toString(),
       stockMinimo: prod.stockMinimo.toString(),
-      categoriaId: prod.categoriaId?.toString() || '',
+      stockIdeal: prod.stockIdeal ? prod.stockIdeal.toString() : '',
+      categoriaId: catId,
+      subcategoriaId: subCatId,
       unidadMedidaId: prod.unidadMedidaId?.toString() || '',
     });
     setMostrarModal(true);
@@ -183,6 +225,39 @@ const Productos = () => {
   const cerrarModal = () => {
     setMostrarModal(false);
     setProductoEditando(null);
+  };
+
+  const handleImagenCambio = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImagenArchivo(file);
+      setImagenPreview(URL.createObjectURL(file));
+    }
+  };
+
+  // Cálculo de Precios
+  const handlePrecioCostoChange = (val: string) => {
+    const costo = parseFloat(val) || 0;
+    const renta = parseFloat(formData.rentabilidad) || 0;
+    const nuevoVenta = costo + (costo * (renta / 100));
+    setFormData({ ...formData, precioCosto: val, precioVenta: nuevoVenta > 0 ? nuevoVenta.toFixed(2) : '' });
+  };
+
+  const handleRentabilidadChange = (val: string) => {
+    const renta = parseFloat(val) || 0;
+    const costo = parseFloat(formData.precioCosto) || 0;
+    const nuevoVenta = costo + (costo * (renta / 100));
+    setFormData({ ...formData, rentabilidad: val, precioVenta: nuevoVenta > 0 ? nuevoVenta.toFixed(2) : '' });
+  };
+
+  const handlePrecioVentaChange = (val: string) => {
+    const venta = parseFloat(val) || 0;
+    const costo = parseFloat(formData.precioCosto) || 0;
+    let nuevaRenta = '';
+    if (costo > 0 && venta > costo) {
+      nuevaRenta = (((venta - costo) / costo) * 100).toFixed(2);
+    }
+    setFormData({ ...formData, precioVenta: val, rentabilidad: nuevaRenta });
   };
 
   const handleGuardar = async (e: React.FormEvent) => {
@@ -194,27 +269,37 @@ const Productos = () => {
 
     setGuardando(true);
 
-    // Formatear payload seguro
-    const payload = {
-      nombre: formData.nombre.trim(),
-      codigoBarras: formData.codigoBarras.trim() || undefined,
-      precioCosto: Number(parseFloat(formData.precioCosto).toFixed(2)) || 0,
-      precioVenta: Number(parseFloat(formData.precioVenta).toFixed(2)) || 0,
-      stockActual: productoEditando ? undefined : (parseInt(formData.stockActual, 10) || 0),
-      stockMinimo: parseInt(formData.stockMinimo, 10) || 0,
-      categoriaId: formData.categoriaId ? parseInt(formData.categoriaId, 10) : null,
-      unidadMedidaId: formData.unidadMedidaId ? parseInt(formData.unidadMedidaId, 10) : null,
-      activo: true
-    };
+    const formDataPayload = new FormData();
+    formDataPayload.append('nombre', formData.nombre.trim());
+    if (formData.codigoBarras) formDataPayload.append('codigoBarras', formData.codigoBarras.trim());
+    formDataPayload.append('precioCosto', formData.precioCosto);
+    formDataPayload.append('precioVenta', formData.precioVenta);
+    formDataPayload.append('ivaIncluido', String(formData.ivaIncluido));
+    if (formData.rentabilidad) formDataPayload.append('rentabilidad', formData.rentabilidad);
+    if (!productoEditando) formDataPayload.append('stockActual', formData.stockActual || '0');
+    formDataPayload.append('stockMinimo', formData.stockMinimo || '0');
+    if (formData.stockIdeal) formDataPayload.append('stockIdeal', formData.stockIdeal);
+    
+    // Mandar subcategoriaId si existe, sino categoriaId
+    const catFinal = formData.subcategoriaId || formData.categoriaId;
+    if (catFinal) formDataPayload.append('categoriaId', catFinal);
+    if (formData.unidadMedidaId) formDataPayload.append('unidadMedidaId', formData.unidadMedidaId);
+    formDataPayload.append('activo', 'true');
+
+    if (imagenArchivo) {
+      formDataPayload.append('imagen', imagenArchivo);
+    }
 
     try {
       if (productoEditando) {
-        // En edición, excluyo explícitamente el stockActual porque no se debe tocar por acá
-        const { stockActual, ...updatePayload } = payload;
-        await api.put(`/productos/${productoEditando.id}`, updatePayload);
+        await api.put(`/productos/${productoEditando.id}`, formDataPayload, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
         toast.success('Producto actualizado exitosamente');
       } else {
-        await api.post('/productos', payload);
+        await api.post('/productos', formDataPayload, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
         toast.success('Producto creado exitosamente');
       }
       cerrarModal();
@@ -268,7 +353,6 @@ const Productos = () => {
   };
 
   const [generandoCodigo, setGenerandoCodigo] = useState(false);
-
   const StockObligatorio = true;
 
   const handleGenerarCodigo = async () => {
@@ -314,10 +398,11 @@ const Productos = () => {
     (p.codigoBarras && p.codigoBarras.includes(filtro))
   );
 
+  // Subcategorias filtradas para el select anidado
+  const subcategoriasDisponibles = categoriasLista.find(c => c.id.toString() === formData.categoriaId)?.subcategorias || [];
+
   return (
     <div className="h-full flex flex-col bg-gray-50 p-6">
-      
-      {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-brand-dark">Gestión de Productos</h1>
@@ -345,12 +430,12 @@ const Productos = () => {
             <table className="w-full text-left border-collapse">
               <thead className="bg-gray-100 border-b border-gray-200 sticky top-0 z-10">
                 <tr>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-40">Código</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-16 text-center">Foto</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-32">Código</th>
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Nombre</th>
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right w-32">P. Costo</th>
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right w-32">P. Venta</th>
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right w-24">Stock</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right w-24">Min.</th>
                   {puedeEditar && (
                     <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center w-28">Acciones</th>
                   )}
@@ -374,8 +459,26 @@ const Productos = () => {
                         className="hover:bg-blue-50/50 transition-colors"
                         style={{ backgroundColor: prod.categoria?.color ? `${prod.categoria.color}1A` : undefined }}
                       >
+                        <td className="p-4 text-center">
+                          {prod.imagenUrl ? (
+                            <img 
+                              src={`http://localhost:4000${prod.imagenUrl}`} 
+                              alt={prod.nombre}
+                              className="w-10 h-10 rounded-full object-cover border border-gray-200 mx-auto"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mx-auto text-gray-400">
+                              <Package size={20} />
+                            </div>
+                          )}
+                        </td>
                         <td className="p-4 text-sm text-gray-600 font-mono">{prod.codigoBarras || '-'}</td>
-                        <td className="p-4 text-sm font-medium text-gray-800">{prod.nombre}</td>
+                        <td className="p-4 text-sm font-medium text-gray-800">
+                          {prod.nombre}
+                          {prod.categoria && (
+                            <div className="text-xs text-gray-500 mt-1">{prod.categoria.nombre}</div>
+                          )}
+                        </td>
                         <td className="p-4 text-sm text-right text-gray-600">${Number(prod.precioCosto).toFixed(2)}</td>
                         <td className="p-4 text-sm text-right font-bold text-brand-dark">${Number(prod.precioVenta).toFixed(2)}</td>
                         <td className="p-4 text-sm text-right">
@@ -384,7 +487,6 @@ const Productos = () => {
                             {prod.stockActual}
                           </span>
                         </td>
-                        <td className="p-4 text-sm text-right text-gray-500">{prod.stockMinimo}</td>
                         {puedeEditar && (
                           <td className="p-4">
                             <div className="flex items-center justify-center gap-2">
@@ -457,7 +559,12 @@ const Productos = () => {
             >
               <option value="">Todas las categorías</option>
               {categoriasLista.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                <optgroup key={cat.id} label={cat.nombre}>
+                  <option value={cat.id}>{cat.nombre} (Principal)</option>
+                  {cat.subcategorias?.map(sub => (
+                    <option key={sub.id} value={sub.id}>↳ {sub.nombre}</option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>
@@ -493,13 +600,6 @@ const Productos = () => {
               onChange={e => setFiltroFecha(e.target.value)}
             />
           </div>
-
-          <div className="opacity-50">
-            <label className="block text-xs font-bold text-gray-500 mb-1">Proveedor (Próximamente)</label>
-            <select disabled className="w-full p-2 text-sm border rounded-md bg-gray-50 cursor-not-allowed">
-              <option>Seleccionar proveedor...</option>
-            </select>
-          </div>
           
           <div className="mt-auto pt-4 border-t border-gray-100 flex flex-col gap-3">
             <button
@@ -520,7 +620,7 @@ const Productos = () => {
       {/* MODAL FORMULARIO */}
       {mostrarModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl flex flex-col max-h-[90vh]">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
             
             <div className="flex justify-between items-center p-6 border-b border-gray-100">
               <h2 className="text-xl font-bold text-brand-dark">
@@ -532,95 +632,172 @@ const Productos = () => {
             </div>
 
             <div className="p-6 overflow-y-auto">
-              <form id="producto-form" onSubmit={handleGuardar} className="flex flex-col gap-5">
+              <form id="producto-form" onSubmit={handleGuardar} className="flex flex-col gap-6">
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Nombre *</label>
-                    <input
-                      type="text"
-                      required
-                      autoFocus
-                      className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white"
-                      value={formData.nombre}
-                      onChange={e => setFormData({...formData, nombre: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Código de Barras *</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        className="flex-1 p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light font-mono bg-gray-50 focus:bg-white"
-                        value={formData.codigoBarras}
-                        onChange={e => setFormData({...formData, codigoBarras: e.target.value})}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            document.getElementById('precioCostoInput')?.focus();
-                          }
-                        }}
-                      />
-                      {puedeEditar && productoEditando && !formData.codigoBarras && (
-                        <button
-                          type="button"
-                          onClick={handleGenerarCodigo}
-                          disabled={generandoCodigo}
-                          className="px-4 py-2 border border-brand-light text-brand-dark rounded-lg hover:bg-brand-light/10 font-bold disabled:opacity-50 transition-colors whitespace-nowrap flex items-center gap-2"
-                        >
-                          <Barcode size={18} />
-                          {generandoCodigo ? 'Generando...' : 'Generar Código'}
-                        </button>
+                {/* SECCIÓN FOTO Y DATOS BÁSICOS */}
+                <div className="flex gap-6 items-start">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-32 h-32 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden relative group">
+                      {imagenPreview ? (
+                        <img src={imagenPreview} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="flex flex-col items-center text-gray-400">
+                          <ImageIcon size={32} />
+                          <span className="text-xs mt-1">Sin foto</span>
+                        </div>
                       )}
+                      <label className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-sm font-bold cursor-pointer transition-opacity">
+                        Cambiar
+                        <input type="file" accept="image/*" className="hidden" onChange={handleImagenCambio} />
+                      </label>
                     </div>
-                    {formData.codigoBarras && (
-                      <div className="mt-3 p-3 bg-white border border-gray-200 rounded-lg flex justify-center items-center">
-                        <svg ref={barcodeRef}></svg>
-                      </div>
+                    {imagenPreview && (
+                      <button type="button" onClick={() => { setImagenArchivo(null); setImagenPreview(null); }} className="text-xs text-red-500 font-bold hover:underline">
+                        Quitar foto
+                      </button>
                     )}
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Precio de Costo *</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
+                  
+                  <div className="flex-1 flex flex-col gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Nombre *</label>
                       <input
-                        id="precioCostoInput"
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
                         required
-                        className="w-full p-2.5 pl-8 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white"
-                        value={formData.precioCosto}
-                        onChange={e => setFormData({...formData, precioCosto: e.target.value})}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            document.getElementById('precioVentaInput')?.focus();
-                          }
-                        }}
+                        autoFocus
+                        className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white"
+                        value={formData.nombre}
+                        onChange={e => setFormData({...formData, nombre: e.target.value})}
                       />
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Precio de Venta *</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
-                      <input
-                        id="precioVentaInput"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        required
-                        className="w-full p-2.5 pl-8 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light font-bold text-brand-dark bg-gray-50 focus:bg-white"
-                        value={formData.precioVenta}
-                        onChange={e => setFormData({...formData, precioVenta: e.target.value})}
-                      />
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Código de Barras</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          className="flex-1 p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light font-mono bg-gray-50 focus:bg-white"
+                          value={formData.codigoBarras}
+                          onChange={e => setFormData({...formData, codigoBarras: e.target.value})}
+                        />
+                        {puedeEditar && productoEditando && !formData.codigoBarras && (
+                          <button
+                            type="button"
+                            onClick={handleGenerarCodigo}
+                            disabled={generandoCodigo}
+                            className="px-4 py-2 border border-brand-light text-brand-dark rounded-lg hover:bg-brand-light/10 font-bold disabled:opacity-50 transition-colors whitespace-nowrap flex items-center gap-2"
+                          >
+                            <Barcode size={18} />
+                            {generandoCodigo ? 'Generando...' : 'Generar Código'}
+                          </button>
+                        )}
+                      </div>
+                      {formData.codigoBarras && (
+                        <div className="mt-2 p-2 bg-white border border-gray-200 rounded-lg flex justify-center items-center">
+                          <svg ref={barcodeRef} style={{ maxHeight: 60 }}></svg>
+                        </div>
+                      )}
                     </div>
                   </div>
+                </div>
 
+                {/* SECCIÓN CATEGORIZACIÓN */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Categoría Padre *</label>
+                    <select
+                      required
+                      className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-white"
+                      value={formData.categoriaId}
+                      onChange={e => setFormData({...formData, categoriaId: e.target.value, subcategoriaId: ''})}
+                    >
+                      <option value="">(Seleccione)</option>
+                      {categoriasLista.map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Subcategoría (Opcional)</label>
+                    <select
+                      className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-white"
+                      value={formData.subcategoriaId}
+                      onChange={e => setFormData({...formData, subcategoriaId: e.target.value})}
+                      disabled={!formData.categoriaId || subcategoriasDisponibles.length === 0}
+                    >
+                      <option value="">(Sin subcategoría)</option>
+                      {subcategoriasDisponibles.map((sub: Categoria) => (
+                        <option key={sub.id} value={sub.id}>{sub.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Unidad de Medida *</label>
+                    <select
+                      required
+                      className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-white"
+                      value={formData.unidadMedidaId}
+                      onChange={e => setFormData({...formData, unidadMedidaId: e.target.value})}
+                    >
+                      <option value="">(Seleccione)</option>
+                      {unidadesLista.map(uni => (
+                        <option key={uni.id} value={uni.id}>{uni.nombre} {uni.abreviatura ? `(${uni.abreviatura})` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* SECCIÓN PRECIOS */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-l-4 border-brand-light pl-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Costo ($) *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      required
+                      className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light"
+                      value={formData.precioCosto}
+                      onChange={e => handlePrecioCostoChange(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Rentabilidad (%)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light"
+                      value={formData.rentabilidad}
+                      onChange={e => handleRentabilidadChange(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Precio Venta ($) *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      required
+                      className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light font-bold text-brand-dark bg-blue-50"
+                      value={formData.precioVenta}
+                      onChange={e => handlePrecioVentaChange(e.target.value)}
+                    />
+                  </div>
+                  <div className="md:col-span-3 flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="ivaIncluido"
+                      className="w-4 h-4 text-brand-light rounded focus:ring-brand-light"
+                      checked={formData.ivaIncluido}
+                      onChange={e => setFormData({...formData, ivaIncluido: e.target.checked})}
+                    />
+                    <label htmlFor="ivaIncluido" className="text-sm font-bold text-gray-600">
+                      El precio de venta incluye IVA
+                    </label>
+                  </div>
+                </div>
+
+                {/* SECCIÓN STOCK */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Stock Actual {StockObligatorio ? '*' : ''}</label>
                     <input
@@ -628,13 +805,11 @@ const Productos = () => {
                       step="1"
                       required={StockObligatorio}
                       disabled={!!productoEditando}
-                      className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                      className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
                       value={formData.stockActual}
                       onChange={e => setFormData({...formData, stockActual: e.target.value})}
-                      title={productoEditando ? "El stock solo puede ajustarse por movimientos o inventario." : ""}
                     />
                   </div>
-
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Stock Mínimo {StockObligatorio ? '*' : ''}</label>
                     <input
@@ -642,40 +817,21 @@ const Productos = () => {
                       step="1"
                       min="0"
                       required={StockObligatorio}
-                      className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white"
+                      className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light"
                       value={formData.stockMinimo}
                       onChange={e => setFormData({...formData, stockMinimo: e.target.value})}
                     />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Categoría *</label>
-                    <select
-                      required
-                      className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white text-gray-700"
-                      value={formData.categoriaId}
-                      onChange={e => setFormData({...formData, categoriaId: e.target.value})}
-                    >
-                      <option value="">(Seleccione categoría)</option>
-                      {categoriasLista.map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.nombre}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Unidad de Medida *</label>
-                    <select
-                      required
-                      className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white text-gray-700"
-                      value={formData.unidadMedidaId}
-                      onChange={e => setFormData({...formData, unidadMedidaId: e.target.value})}
-                    >
-                      <option value="">(Seleccione unidad)</option>
-                      {unidadesLista.map(uni => (
-                        <option key={uni.id} value={uni.id}>{uni.nombre} {uni.abreviatura ? `(${uni.abreviatura})` : ''}</option>
-                      ))}
-                    </select>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Stock Ideal (Opcional)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light"
+                      value={formData.stockIdeal}
+                      onChange={e => setFormData({...formData, stockIdeal: e.target.value})}
+                    />
                   </div>
                 </div>
 
