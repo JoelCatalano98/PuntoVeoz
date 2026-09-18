@@ -13,6 +13,5 @@ router.get('/codigo/:codigo', productoController.buscarPorCodigoBarras);
 router.post('/', requireRole('ADMIN', 'SUPERADMIN'), productoController.crear);
 router.put('/:id', requireRole('ADMIN', 'SUPERADMIN'), productoController.actualizar);
 router.post('/:id/codigo-barras', requireRole('ADMIN', 'SUPERADMIN'), productoController.generarCodigoBarras);
-router.post('/:id/ajuste-stock', requireRole('ADMIN', 'SUPERADMIN'), productoController.ajustarStock);
 
 module.exports = router;

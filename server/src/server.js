@@ -14,6 +14,9 @@ const parametroRoutes = require('./routes/parametro.routes');
 const categoriaRoutes = require('./routes/categoria.routes');
 const unidadMedidaRoutes = require('./routes/unidad-medida.routes');
 const usuarioRoutes = require('./routes/usuario.routes');
+const proveedorRoutes = require('./routes/proveedor.routes');
+const compraRoutes = require('./routes/compra.routes');
+const stockRoutes = require('./routes/stock.routes');
 
 const app = express();
 
@@ -33,6 +36,9 @@ app.use('/api/parametros', parametroRoutes);
 app.use('/api/categorias', categoriaRoutes);
 app.use('/api/unidades-medida', unidadMedidaRoutes);
 app.use('/api/usuarios', usuarioRoutes);
+app.use('/api/proveedores', proveedorRoutes);
+app.use('/api/compras', compraRoutes);
+app.use('/api/stock', stockRoutes);
 
 // Endpoint de prueba (Health Check)
 app.get('/api/health', (req, res) => {

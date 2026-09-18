@@ -72,10 +72,12 @@ async function crear(req, res) {
     if (stockActual > 0) {
       await tx.movimientoStock.create({
         data: {
+          comercioId: req.comercioId,
           productoId: p.id,
+          usuarioId: req.user.userId,
           tipo: 'ENTRADA',
           cantidad: stockActual,
-          motivo: 'Stock Inicial',
+          motivo: 'Carga Inicial',
         }
       });
     }
@@ -132,68 +134,5 @@ async function generarCodigoBarras(req, res, next) {
     next(error);
   }
 }
-async function ajustarStock(req, res, next) {
-  try {
-    const { id } = req.params;
-    const { tipo, cantidad, motivo } = req.body;
 
-    if (!id || isNaN(Number(id))) {
-      return res.status(400).json({ error: 'id de producto inválido' });
-    }
-    if (!tipo || !['ENTRADA', 'SALIDA'].includes(tipo)) {
-      return res.status(400).json({ error: 'tipo debe ser ENTRADA o SALIDA' });
-    }
-    if (cantidad === undefined || isNaN(Number(cantidad)) || Number(cantidad) <= 0) {
-      return res.status(400).json({ error: 'cantidad debe ser un número mayor a 0' });
-    }
-    if (!motivo || typeof motivo !== 'string' || motivo.trim() === '') {
-      return res.status(400).json({ error: 'El motivo es obligatorio' });
-    }
-
-    const result = await prisma.$transaction(async (tx) => {
-      const producto = await tx.producto.findFirst({
-        where: { id: Number(id), comercioId: req.comercioId },
-      });
-      
-      if (!producto) {
-        throw new Error('Producto no encontrado');
-      }
-
-      if (tipo === 'SALIDA' && producto.stockActual < cantidad) {
-        throw new Error('La cantidad de salida supera el stock actual disponible');
-      }
-
-      const nuevoStock = tipo === 'ENTRADA' 
-        ? producto.stockActual + Number(cantidad)
-        : producto.stockActual - Number(cantidad);
-
-      const actualizado = await tx.producto.update({
-        where: { id: producto.id },
-        data: { stockActual: nuevoStock }
-      });
-
-      await tx.movimientoStock.create({
-        data: {
-          productoId: producto.id,
-          tipo,
-          cantidad: Number(cantidad),
-          motivo
-        }
-      });
-
-      return actualizado;
-    });
-
-    res.json(result);
-  } catch (error) {
-    if (error.message === 'Producto no encontrado') {
-      return res.status(404).json({ error: error.message });
-    }
-    if (error.message === 'La cantidad de salida supera el stock actual disponible') {
-      return res.status(400).json({ error: error.message });
-    }
-    next(error);
-  }
-}
-
-module.exports = { listar, buscarPorCodigoBarras, crear, actualizar, generarCodigoBarras, ajustarStock };
+module.exports = { listar, buscarPorCodigoBarras, crear, actualizar, generarCodigoBarras };

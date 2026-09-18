@@ -130,10 +130,12 @@ async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, it
 
       await tx.movimientoStock.create({
         data: {
+          comercioId,
           productoId: item.productoId,
+          usuarioId,
           tipo: 'SALIDA',
           cantidad: item.cantidad,
-          motivo: 'venta',
+          motivo: 'Venta',
           ventaId: venta.id
         }
       });

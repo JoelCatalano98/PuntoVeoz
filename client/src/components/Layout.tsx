@@ -57,9 +57,10 @@ const Layout = () => {
             <NavDropdown 
               title="Compras" 
               items={[
-                { label: 'Facturas de compra' },
-                { label: 'Proveedores' },
-                { label: 'Órdenes de entrega' }
+                { label: 'Cargar Compra', to: '/compras-carga' },
+                { label: 'Historial de Compras', to: '/compras-historial' },
+                { label: 'Proveedores', to: '/proveedores' },
+                { label: 'Órdenes de entrega', disabled: true }
               ]} 
             />
             
@@ -85,7 +86,8 @@ const Layout = () => {
                 { label: 'Movimientos de Caja', to: '/caja-movimientos' },
                 { label: 'Cierre de caja diario' },
                 { label: 'Cierre/reporte semanal' },
-                { label: 'Stock' }
+                { label: 'Ajuste Manual de Stock', to: '/ajuste-stock' },
+                { label: 'Historial de Stock', to: '/historial-stock' }
               ]} 
             />
             

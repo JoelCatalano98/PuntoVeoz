@@ -367,7 +367,7 @@ const Productos = () => {
                   </tr>
                 ) : (
                   filtrados.map(prod => {
-                    const bajoStock = prod.stockActual <= prod.stockMinimo;
+                    const bajoStock = Number(prod.stockActual) <= Number(prod.stockMinimo);
                     return (
                       <tr 
                         key={prod.id} 

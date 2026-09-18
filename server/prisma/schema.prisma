@@ -35,6 +35,9 @@ model Comercio {
   parametros    Parametro[]
   categorias    Categoria[]
   unidadesMedida UnidadMedida[]
+  proveedores   Proveedor[]
+  compras       Compra[]
+  movimientosStock MovimientoStock[]
 
   @@map("comercios")
 }
@@ -54,6 +57,8 @@ model Usuario {
   ventas          Venta[]
   aperturasCaja   AperturaCaja[]
   cierresCaja     CierreCaja[]
+  compras         Compra[]
+  movimientosStock MovimientoStock[]
 
   @@index([comercioId])
   @@map("usuarios")
@@ -77,20 +82,24 @@ model Producto {
   descripcion   String?
   precioCosto   Decimal  @db.Decimal(10, 2) @default(0)
   precioVenta   Decimal  @db.Decimal(10, 2)
-  stockActual   Int      @default(0)
-  stockMinimo   Int      @default(0)
+  stockActual   Decimal  @db.Decimal(10, 2) @default(0)
+  stockMinimo   Decimal  @db.Decimal(10, 2) @default(0)
   activo        Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   movimientos     MovimientoStock[]
   ventaItems      VentaItem[]
+  detalleCompras  DetalleCompra[]
 
   categoriaId     Int?
   categoria       Categoria?     @relation(fields: [categoriaId], references: [id])
   
   unidadMedidaId  Int?
   unidadMedida    UnidadMedida?  @relation(fields: [unidadMedidaId], references: [id])
+
+  proveedorId     Int?
+  proveedor       Proveedor?     @relation(fields: [proveedorId], references: [id])
 
   @@index([comercioId])
   @@index([comercioId, codigoBarras])
@@ -99,15 +108,23 @@ model Producto {
 
 model MovimientoStock {
   id           Int       @id @default(autoincrement())
+  comercioId   Int
+  comercio     Comercio  @relation(fields: [comercioId], references: [id])
   productoId   Int
   producto     Producto  @relation(fields: [productoId], references: [id])
+  usuarioId    Int
+  usuario      Usuario   @relation(fields: [usuarioId], references: [id])
+  
   tipo         TipoMovimientoStock
-  cantidad     Int       // siempre positivo, el "tipo" define si suma o resta
-  motivo       String?   // "compra", "ajuste", "venta", "merma", etc.
-  ventaId      Int?      // si el movimiento vino de una venta
+  cantidad     Decimal   @db.Decimal(10, 2)
+  motivo       String    // "Rotura", "Merma", "Ajuste de Inventario", "Carga Inicial", etc.
+  observaciones String?
+  
+  ventaId      Int?
   venta        Venta?    @relation(fields: [ventaId], references: [id])
   createdAt    DateTime  @default(now())
 
+  @@index([comercioId])
   @@index([productoId])
   @@map("movimientos_stock")
 }
@@ -222,6 +239,10 @@ model MovimientoCaja {
   monto           Decimal      @db.Decimal(10, 2)
   medioPago       MedioPago?   // relevante para ingresos por venta
   descripcion     String?      // ej: "retiro para pago proveedor"
+  
+  compraId        Int?
+  compra          Compra?      @relation(fields: [compraId], references: [id])
+
   createdAt       DateTime     @default(now())
 
   @@index([aperturaCajaId])
@@ -353,4 +374,61 @@ model UnidadMedida {
   @@unique([comercioId, nombre])
   @@index([comercioId])
   @@map("unidades_medida")
+}
+
+model Proveedor {
+  id          Int      @id @default(autoincrement())
+  comercioId  Int
+  comercio    Comercio @relation(fields: [comercioId], references: [id])
+  razonSocial String
+  cuit        String?
+  telefono    String?
+  email       String?
+  direccion   String?
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  
+  productos   Producto[]
+  compras     Compra[]
+
+  @@index([comercioId])
+  @@map("proveedores")
+}
+
+model Compra {
+  id              Int      @id @default(autoincrement())
+  comercioId      Int
+  comercio        Comercio @relation(fields: [comercioId], references: [id])
+  proveedorId     Int
+  proveedor       Proveedor @relation(fields: [proveedorId], references: [id])
+  usuarioId       Int
+  usuario         Usuario  @relation(fields: [usuarioId], references: [id])
+  
+  numeroFactura   String?
+  fechaEmision    DateTime @default(now())
+  total           Decimal  @db.Decimal(10, 2)
+  metodoPago      String   @default("CUENTA_CORRIENTE") // "EFECTIVO_CAJA", "TRANSFERENCIA", "CUENTA_CORRIENTE"
+  estado          String   @default("COMPLETADA")
+  createdAt       DateTime @default(now())
+
+  detalles        DetalleCompra[]
+  movimientosCaja MovimientoCaja[]
+
+  @@index([comercioId])
+  @@map("compras")
+}
+
+model DetalleCompra {
+  id          Int      @id @default(autoincrement())
+  compraId    Int
+  compra      Compra   @relation(fields: [compraId], references: [id])
+  productoId  Int
+  producto    Producto @relation(fields: [productoId], references: [id])
+  
+  cantidad    Int
+  precioCosto Decimal  @db.Decimal(10, 2)
+  subtotal    Decimal  @db.Decimal(10, 2)
+
+  @@index([compraId])
+  @@map("detalle_compras")
 }

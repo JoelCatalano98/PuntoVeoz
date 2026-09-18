@@ -16,6 +16,11 @@ import Categorias from './pages/Categorias';
 import Unidades from './pages/Unidades';
 import Usuarios from './pages/Usuarios';
 import PuntosVenta from './pages/PuntosVenta';
+import Proveedores from './pages/Proveedores';
+import ComprasCarga from './pages/ComprasCarga';
+import ComprasHistorial from './pages/ComprasHistorial';
+import AjusteStock from './pages/AjusteStock';
+import HistorialStock from './pages/HistorialStock';
 
 function App() {
   return (
@@ -41,6 +46,11 @@ function App() {
                 <Route path="/unidades" element={<Unidades />} />
                 <Route path="/usuarios" element={<Usuarios />} />
                 <Route path="/puntos-venta" element={<PuntosVenta />} />
+                <Route path="/proveedores" element={<Proveedores />} />
+                <Route path="/compras-carga" element={<ComprasCarga />} />
+                <Route path="/compras-historial" element={<ComprasHistorial />} />
+                <Route path="/ajuste-stock" element={<AjusteStock />} />
+                <Route path="/historial-stock" element={<HistorialStock />} />
               </Route>
 
               {/* Rutas solo para SUPERADMIN */}
