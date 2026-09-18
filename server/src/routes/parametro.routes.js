@@ -12,7 +12,7 @@ router.use(requireAuth, attachTenant);
 router.get('/:clave', parametroController.obtenerUno);
 
 // endpoints administrativos
-router.use(requireRole(['ADMIN', 'SUPERADMIN']));
+router.use(requireRole('ADMIN', 'SUPERADMIN'));
 router.get('/', parametroController.listar);
 router.put('/:clave', parametroController.guardar);
 

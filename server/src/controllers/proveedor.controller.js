@@ -27,7 +27,7 @@ async function obtener(req, res, next) {
 
 async function crear(req, res, next) {
   try {
-    const { razonSocial, cuit, telefono, email, direccion } = req.body;
+    const { razonSocial, cuit, telefono, email, direccion, condicionIva } = req.body;
     if (!razonSocial) return res.status(400).json({ error: 'La razón social es obligatoria' });
 
     const proveedor = await prisma.proveedor.create({
@@ -37,7 +37,8 @@ async function crear(req, res, next) {
         cuit,
         telefono,
         email,
-        direccion
+        direccion,
+        condicionIva
       }
     });
     res.status(201).json(proveedor);
@@ -49,7 +50,7 @@ async function crear(req, res, next) {
 async function actualizar(req, res, next) {
   try {
     const { id } = req.params;
-    const { razonSocial, cuit, telefono, email, direccion } = req.body;
+    const { razonSocial, cuit, telefono, email, direccion, condicionIva } = req.body;
 
     const existe = await prisma.proveedor.findFirst({
       where: { id: Number(id), comercioId: req.comercioId }
@@ -58,7 +59,7 @@ async function actualizar(req, res, next) {
 
     const proveedor = await prisma.proveedor.update({
       where: { id: Number(id) },
-      data: { razonSocial, cuit, telefono, email, direccion }
+      data: { razonSocial, cuit, telefono, email, direccion, condicionIva }
     });
     res.json(proveedor);
   } catch (error) {

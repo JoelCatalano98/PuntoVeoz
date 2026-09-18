@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { Search, Plus, Trash2, Building2, Calendar, FileText, Printer, CheckCircle } from 'lucide-react';
+import { FacturaImpresion } from '../components/FacturaImpresion';
 
 interface Producto {
   id: number;
@@ -561,6 +562,11 @@ const ComprasCarga = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* COMPONENTE DE IMPRESIÓN (Solo visible al imprimir) */}
+      {compraExitosa && (
+        <FacturaImpresion compra={compraExitosa} />
       )}
     </div>
   );

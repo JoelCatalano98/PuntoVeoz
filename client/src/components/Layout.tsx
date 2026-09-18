@@ -37,7 +37,7 @@ const Layout = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 overflow-hidden text-sm">
+    <div className="flex flex-col h-screen bg-gray-50 overflow-hidden text-sm print:h-auto print:overflow-visible">
       {/* Top bar (fixed) */}
       <header className="flex-none h-[52px] bg-brand-light text-brand-dark flex items-center justify-between px-4 z-40 border-b border-black/10">
         <div className="flex items-center h-full gap-6">
@@ -118,9 +118,9 @@ const Layout = () => {
       </header>
 
       {/* Main layout below top bar */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar */}
-        <aside className="w-[150px] bg-white border-r border-gray-200 flex flex-col p-3 z-30">
+      <div className="flex flex-1 overflow-hidden print:overflow-visible print:block">
+        {/* Sidebar */}
+        <aside className="w-[150px] bg-white border-r border-gray-200 flex flex-col p-3 z-30 print:hidden">
           <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">
             Más usadas
           </div>
@@ -148,7 +148,7 @@ const Layout = () => {
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-auto bg-gray-50 relative">
+        <main className="flex-1 overflow-y-auto bg-gray-50 relative print:overflow-visible print:bg-white print:p-0">
           <Outlet />
         </main>
       </div>

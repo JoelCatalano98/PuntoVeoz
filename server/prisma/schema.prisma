@@ -385,6 +385,7 @@ model Proveedor {
   telefono    String?
   email       String?
   direccion   String?
+  condicionIva String?
   activo      Boolean  @default(true)
   createdAt   DateTime @default(now())
   

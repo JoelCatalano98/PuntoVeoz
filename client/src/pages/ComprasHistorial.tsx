@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { ShoppingCart, Search, FileText, Printer } from 'lucide-react';
+import { FacturaImpresion } from '../components/FacturaImpresion';
 
 interface DetalleCompra {
   producto: { nombre: string; codigoBarras: string | null };
@@ -174,6 +175,11 @@ const ComprasHistorial = () => {
           )}
         </div>
       </div>
+
+      {/* COMPONENTE DE IMPRESIÓN (Solo visible al imprimir) */}
+      {compraSeleccionada && (
+        <FacturaImpresion compra={compraSeleccionada as any} />
+      )}
     </div>
   );
 };

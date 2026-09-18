@@ -11,6 +11,7 @@ interface Proveedor {
   telefono: string | null;
   email: string | null;
   direccion: string | null;
+  condicionIva: string | null;
   activo: boolean;
 }
 
@@ -31,6 +32,7 @@ const Proveedores = () => {
     telefono: '',
     email: '',
     direccion: '',
+    condicionIva: '',
   });
 
   const puedeEditar = usuario?.rol === 'ADMIN' || usuario?.rol === 'SUPERADMIN';
@@ -52,7 +54,7 @@ const Proveedores = () => {
 
   const abrirModalNuevo = () => {
     setEditando(null);
-    setFormData({ razonSocial: '', cuit: '', telefono: '', email: '', direccion: '' });
+    setFormData({ razonSocial: '', cuit: '', telefono: '', email: '', direccion: '', condicionIva: '' });
     setMostrarModal(true);
   };
 
@@ -63,7 +65,8 @@ const Proveedores = () => {
       cuit: prov.cuit || '', 
       telefono: prov.telefono || '', 
       email: prov.email || '', 
-      direccion: prov.direccion || '' 
+      direccion: prov.direccion || '',
+      condicionIva: prov.condicionIva || ''
     });
     setMostrarModal(true);
   };
@@ -87,6 +90,7 @@ const Proveedores = () => {
       telefono: formData.telefono.trim() || null,
       email: formData.email.trim() || null,
       direccion: formData.direccion.trim() || null,
+      condicionIva: formData.condicionIva.trim() || null,
     };
 
     try {
@@ -147,6 +151,8 @@ const Proveedores = () => {
                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">CUIT</th>
                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Teléfono</th>
                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Email</th>
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Dirección</th>
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Cond. IVA</th>
                 {puedeEditar && (
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center w-28">Acciones</th>
                 )}
@@ -155,11 +161,11 @@ const Proveedores = () => {
             <tbody className="divide-y divide-gray-100">
               {cargando ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-gray-400">Cargando proveedores...</td>
+                  <td colSpan={7} className="p-8 text-center text-gray-400">Cargando proveedores...</td>
                 </tr>
               ) : proveedores.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-gray-400">No hay proveedores registrados</td>
+                  <td colSpan={7} className="p-8 text-center text-gray-400">No hay proveedores registrados</td>
                 </tr>
               ) : (
                 proveedores.map(prov => (
@@ -168,6 +174,8 @@ const Proveedores = () => {
                     <td className="p-4 text-sm text-gray-600">{prov.cuit || '-'}</td>
                     <td className="p-4 text-sm text-gray-600">{prov.telefono || '-'}</td>
                     <td className="p-4 text-sm text-gray-600">{prov.email || '-'}</td>
+                    <td className="p-4 text-sm text-gray-600">{prov.direccion || '-'}</td>
+                    <td className="p-4 text-sm text-gray-600">{prov.condicionIva || '-'}</td>
                     {puedeEditar && (
                       <td className="p-4">
                         <div className="flex items-center justify-center gap-2">
@@ -257,6 +265,20 @@ const Proveedores = () => {
                     value={formData.direccion}
                     onChange={e => setFormData({ ...formData, direccion: e.target.value })}
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Condición frente al IVA</label>
+                  <select
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-brand-light focus:ring-1 focus:ring-brand-light bg-white"
+                    value={formData.condicionIva}
+                    onChange={e => setFormData({ ...formData, condicionIva: e.target.value })}
+                  >
+                    <option value="">Seleccionar condición...</option>
+                    <option value="Responsable Inscripto">Responsable Inscripto</option>
+                    <option value="Monotributista">Monotributista</option>
+                    <option value="Exento">Exento</option>
+                    <option value="Consumidor Final">Consumidor Final</option>
+                  </select>
                 </div>
               </form>
             </div>

@@ -5,7 +5,7 @@ async function listar(req, res, next) {
     const compras = await prisma.compra.findMany({
       where: { comercioId: req.comercioId },
       include: {
-        proveedor: { select: { razonSocial: true, cuit: true } },
+        proveedor: { select: { razonSocial: true, cuit: true, direccion: true, condicionIva: true } },
         usuario: { select: { nombre: true, username: true } },
         detalles: {
           include: { producto: { select: { nombre: true, codigoBarras: true } } }
