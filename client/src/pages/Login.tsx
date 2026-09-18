@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login } = useAuth();
@@ -15,7 +15,7 @@ const Login = () => {
     setError('');
 
     try {
-      const response = await api.post('/auth/login', { email, password });
+      const response = await api.post('/auth/login', { username, password });
       const { token, usuario } = response.data;
       
       login(token, usuario);
@@ -36,11 +36,11 @@ const Login = () => {
         {error && <div style={{ color: '#d32f2f', backgroundColor: '#fdecea', padding: '0.75rem', borderRadius: '4px', marginBottom: '1rem', textAlign: 'center', fontSize: '14px' }}>{error}</div>}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
           <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontSize: '14px', fontWeight: 500 }}>Email</label>
+            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontSize: '14px', fontWeight: 500 }}>Usuario</label>
             <input 
-              type="email" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
+              type="text" 
+              value={username} 
+              onChange={(e) => setUsername(e.target.value)} 
               required 
               style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid #ccc', fontSize: '16px', boxSizing: 'border-box' }}
             />

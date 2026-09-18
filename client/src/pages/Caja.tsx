@@ -29,7 +29,7 @@ interface CajaFisica {
 }
 
 const Caja = () => {
-  const { usuario } = useAuth();
+  const { usuario, token } = useAuth();
   
   // Estado general
   const [cargando, setCargando] = useState(true);
@@ -166,9 +166,13 @@ const Caja = () => {
         aperturaCajaId: apertura.id,
         totalContado: Number(montoContado),
         observaciones: 'Cierre de turno'
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
       
-      const dif = res.data.diferencia;
+      const dif = Number(res.data.diferencia);
       if (dif === 0) {
         toast.success('Caja cerrada con éxito. El arqueo dio exacto.');
       } else if (dif > 0) {
@@ -181,7 +185,7 @@ const Caja = () => {
       setMontoContado('');
       cargarEstado();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Error al cerrar caja');
+      toast.error(err.response?.data?.message || err.response?.data?.error || err.message || 'Error al cerrar caja');
     } finally {
       setCerrandoCaja(false);
     }
@@ -430,18 +434,18 @@ const Caja = () => {
         </div>
         <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center">
           <div className="text-gray-400 text-sm font-semibold mb-1 uppercase">Ventas / Ingresos</div>
-          <div className="text-2xl font-bold text-green-600">${ingresos.toFixed(2)}</div>
+          <div className="text-2xl font-bold text-green-600">${Number(ingresos).toFixed(2)}</div>
         </div>
         <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center">
           <div className="text-gray-400 text-sm font-semibold mb-1 uppercase">Retiros / Egresos</div>
-          <div className="text-2xl font-bold text-red-500">${egresos.toFixed(2)}</div>
+          <div className="text-2xl font-bold text-red-500">${Number(egresos).toFixed(2)}</div>
         </div>
         <div className="bg-brand-dark p-4 rounded-xl shadow-md flex flex-col justify-center relative overflow-hidden">
           <div className="absolute -right-4 -bottom-4 opacity-10">
             <DollarSign size={80} />
           </div>
           <div className="text-brand-light/80 text-sm font-semibold mb-1 uppercase">Esperado en Caja</div>
-          <div className="text-3xl font-extrabold text-white">${totalEsperado.toFixed(2)}</div>
+          <div className="text-3xl font-extrabold text-white">${Number(totalEsperado).toFixed(2)}</div>
         </div>
       </div>
 

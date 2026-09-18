@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 
 const Parametros = () => {
   const [impresionTicket, setImpresionTicket] = useState('PREGUNTAR');
+  const [etiquetaMostrarPrecio, setEtiquetaMostrarPrecio] = useState('false');
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
 
@@ -14,9 +15,15 @@ const Parametros = () => {
 
   const cargarParametros = async () => {
     try {
-      const res = await api.get('/parametros/impresionTicket');
-      if (res.data && res.data.valor) {
-        setImpresionTicket(res.data.valor);
+      const [resTicket, resEtiqueta] = await Promise.all([
+        api.get('/parametros/impresionTicket'),
+        api.get('/parametros/etiquetaMostrarPrecio')
+      ]);
+      if (resTicket.data?.valor) {
+        setImpresionTicket(resTicket.data.valor);
+      }
+      if (resEtiqueta.data?.valor) {
+        setEtiquetaMostrarPrecio(resEtiqueta.data.valor);
       }
     } catch (err) {
       toast.error('Error al cargar configuraciones');
@@ -30,7 +37,10 @@ const Parametros = () => {
     setGuardando(true);
 
     try {
-      await api.put('/parametros/impresionTicket', { valor: impresionTicket });
+      await Promise.all([
+        api.put('/parametros/impresionTicket', { valor: impresionTicket }),
+        api.put('/parametros/etiquetaMostrarPrecio', { valor: etiquetaMostrarPrecio })
+      ]);
       toast.success('Configuraciones guardadas exitosamente');
     } catch (err) {
       toast.error('Error al guardar configuraciones');
@@ -72,6 +82,27 @@ const Parametros = () => {
             </select>
             <p className="mt-2 text-sm text-gray-500">
               Define el comportamiento del sistema justo después de registrar un cobro exitoso en la pantalla de Ventas.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              Mostrar precio en etiquetas
+            </label>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                className="sr-only peer" 
+                checked={etiquetaMostrarPrecio === 'true'}
+                onChange={e => setEtiquetaMostrarPrecio(e.target.checked ? 'true' : 'false')}
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-brand-light/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-dark"></div>
+              <span className="ml-3 text-sm font-medium text-gray-700">
+                {etiquetaMostrarPrecio === 'true' ? 'Sí, mostrar precio' : 'No, solo nombre y código de barras'}
+              </span>
+            </label>
+            <p className="mt-2 text-sm text-gray-500">
+              Activa o desactiva la impresión del precio de venta en las etiquetas de los productos.
             </p>
           </div>
 

@@ -31,6 +31,9 @@ async function obtenerUno(req, res, next) {
     if (clave === 'impresionTicket') {
       return res.json({ clave, valor: 'PREGUNTAR' });
     }
+    if (clave === 'etiquetaMostrarPrecio') {
+      return res.json({ clave, valor: 'false' });
+    }
 
     return res.json({ clave, valor: null });
   } catch (error) {

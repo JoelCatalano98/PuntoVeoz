@@ -27,17 +27,27 @@ function App() {
           
           <Route element={<RutaProtegida />}>
             <Route element={<Layout />}>
+              {/* Rutas para todos los autenticados */}
               <Route path="/ventas" element={<Ventas />} />
               <Route path="/productos" element={<Productos />} />
               <Route path="/clientes" element={<Clientes />} />
               <Route path="/caja" element={<Caja />} />
               <Route path="/caja-movimientos" element={<CajaMovimientos />} />
-              <Route path="/parametros" element={<Parametros />} />
               <Route path="/etiquetas" element={<EtiquetasImpresion />} />
-              <Route path="/categorias" element={<Categorias />} />
-              <Route path="/unidades" element={<Unidades />} />
-              <Route path="/usuarios" element={<Usuarios />} />
-              <Route path="/puntos-venta" element={<PuntosVenta />} />
+              
+              {/* Rutas para ADMIN y SUPERADMIN */}
+              <Route element={<RutaProtegida rolesPermitidos={['SUPERADMIN', 'ADMIN']} />}>
+                <Route path="/categorias" element={<Categorias />} />
+                <Route path="/unidades" element={<Unidades />} />
+                <Route path="/usuarios" element={<Usuarios />} />
+                <Route path="/puntos-venta" element={<PuntosVenta />} />
+              </Route>
+
+              {/* Rutas solo para SUPERADMIN */}
+              <Route element={<RutaProtegida rolesPermitidos={['SUPERADMIN']} />}>
+                <Route path="/parametros" element={<Parametros />} />
+              </Route>
+
               <Route path="/" element={<Navigate to="/ventas" replace />} />
               
               {/* Ruta comodín para pantallas aún no implementadas */}

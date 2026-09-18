@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { Search, Trash2, User, CreditCard, ShoppingCart, AlertTriangle } from 'lucide-react';
+import { Search, Trash2, User, CreditCard, ShoppingCart, AlertTriangle, Edit2 } from 'lucide-react';
 import ClienteModal from '../components/ClienteModal';
 import { Link } from 'react-router-dom';
 
@@ -43,6 +43,34 @@ const Ventas = () => {
   // Modal Ticket
   const [showModalTicket, setShowModalTicket] = useState(false);
   const [ultimaVenta, setUltimaVenta] = useState<any>(null);
+
+  // Edit Manual Quantity
+  const [editandoItemIdx, setEditandoItemIdx] = useState<number | null>(null);
+  const [editCantidad, setEditCantidad] = useState('');
+
+  const openEditModal = (idx: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditandoItemIdx(idx);
+    setEditCantidad(items[idx].cantidad.toString());
+  };
+
+  const handleGuardarCantidad = () => {
+    const qty = parseInt(editCantidad, 10);
+    if (isNaN(qty) || qty <= 0) {
+      toast.error('Cantidad inválida');
+      return;
+    }
+    setItems(prev => {
+      const newItems = [...prev];
+      const updatedItem = { ...newItems[editandoItemIdx!] };
+      updatedItem.cantidad = qty;
+      updatedItem.subtotal = Number((updatedItem.cantidad * updatedItem.precioUnitario).toFixed(2));
+      newItems[editandoItemIdx!] = updatedItem;
+      return newItems;
+    });
+    setEditandoItemIdx(null);
+    focusScan();
+  };
 
   // Ref para botones del modal
   const btnSiRef = useRef<HTMLButtonElement>(null);
@@ -149,9 +177,10 @@ const Ventas = () => {
         const existingIdx = prev.findIndex(i => i.productoId === prod.id);
         if (existingIdx >= 0) {
           const newItems = [...prev];
-          newItems[existingIdx].cantidad += qty;
-          newItems[existingIdx].subtotal = Number((newItems[existingIdx].cantidad * newItems[existingIdx].precioUnitario).toFixed(2));
-          setSelectedIndex(existingIdx);
+          const updatedItem = { ...newItems[existingIdx] };
+          updatedItem.cantidad += qty;
+          updatedItem.subtotal = Number((updatedItem.cantidad * updatedItem.precioUnitario).toFixed(2));
+          newItems[existingIdx] = updatedItem;
           return newItems;
         } else {
           const newItem = {
@@ -161,10 +190,10 @@ const Ventas = () => {
             precioUnitario: Number(prod.precioVenta),
             subtotal: Number((qty * prod.precioVenta).toFixed(2))
           };
-          setSelectedIndex(prev.length);
           return [...prev, newItem];
         }
       });
+      setSelectedIndex(items.findIndex(i => i.productoId === prod.id) >= 0 ? items.findIndex(i => i.productoId === prod.id) : items.length);
       setScanValue('');
     } catch (err: any) {
       toast.error('Producto no encontrado');
@@ -186,7 +215,7 @@ const Ventas = () => {
   const handleCobrar = async () => {
     if (!canSubmit) return;
     if (!aperturaCajaId) {
-      toast.error('Error: No se encontró una caja abierta.');
+      toast.error('No hay caja abierta');
       return;
     }
 
@@ -202,7 +231,7 @@ const Ventas = () => {
 
       const res = await api.post('/ventas', payload);
 
-      const vueltoStr = esEfectivo ? res.data.vuelto.toFixed(2) : '0.00';
+      const vueltoStr = esEfectivo ? Number(res.data.vuelto).toFixed(2) : '0.00';
       toast.success(`Venta registrada con éxito | Vuelto: $${vueltoStr}`, {
         duration: 5000,
         style: { padding: '16px', fontWeight: 'bold', fontSize: '1.1rem' }
@@ -215,7 +244,8 @@ const Ventas = () => {
         cliente: cliente
       };
 
-      import('../services/ticket.service').then(({ imprimirTicket }) => {
+      try {
+        const { imprimirTicket } = await import('../services/ticket.service');
         if (configImpresion === 'SIEMPRE') {
           imprimirTicket(ventaImpresion);
           limpiarPOS();
@@ -223,13 +253,15 @@ const Ventas = () => {
           setUltimaVenta(ventaImpresion);
           setShowModalTicket(true);
         } else {
-          // NUNCA
           limpiarPOS();
         }
-      });
+      } catch (importErr) {
+        console.error('Error al cargar ticket.service', importErr);
+        limpiarPOS();
+      }
 
     } catch (err: any) {
-      toast.error(err.response?.data?.message || err.response?.data?.error || 'Error procesando la venta');
+      toast.error(err.response?.data?.message || err.response?.data?.error || err.message || 'Error procesando la venta');
     } finally {
       setCobrando(false);
     }
@@ -352,6 +384,13 @@ const Ventas = () => {
                     <td className="p-3 text-right text-gray-600">${item.precioUnitario.toFixed(2)}</td>
                     <td className="p-3 text-right font-bold text-brand-dark">${item.subtotal.toFixed(2)}</td>
                     <td className="p-3 text-center">
+                      <button
+                        onClick={(e) => openEditModal(idx, e)}
+                        className="text-blue-400 hover:text-blue-600 p-1 rounded hover:bg-blue-50"
+                        title="Editar Cantidad"
+                      >
+                        <Edit2 size={18} />
+                      </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); removeItem(idx); focusScan(); }}
                         className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50"
@@ -484,6 +523,48 @@ const Ventas = () => {
             setShowClienteModal(false);
           }}
         />
+      )}
+
+      {/* Modal Editar Cantidad */}
+      {editandoItemIdx !== null && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Editar Cantidad</h2>
+            <p className="text-gray-600 mb-4">{items[editandoItemIdx]?.nombre}</p>
+            <input
+              autoFocus
+              type="number"
+              min="1"
+              className="w-full p-3 border-2 border-brand-light rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-xl font-bold text-center mb-6"
+              value={editCantidad}
+              onChange={e => setEditCantidad(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleGuardarCantidad();
+                if (e.key === 'Escape') {
+                  setEditandoItemIdx(null);
+                  focusScan();
+                }
+              }}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setEditandoItemIdx(null);
+                  focusScan();
+                }}
+                className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleGuardarCantidad}
+                className="flex-1 py-3 bg-brand-light text-brand-dark font-bold rounded-lg hover:bg-blue-400 transition-colors shadow-md"
+              >
+                Guardar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal Ticket Preguntar */}

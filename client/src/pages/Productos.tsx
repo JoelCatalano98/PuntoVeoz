@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, X, AlertTriangle, Package } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, X, AlertTriangle, Package, Barcode, FileSpreadsheet, Printer } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import JsBarcode from 'jsbarcode';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { exportarProductosExcel } from '../services/exportar.service';
+import { imprimirEtiquetas } from '../services/etiquetas.service';
 
 interface Producto {
   id: number;
@@ -27,6 +31,15 @@ const Productos = () => {
   const [filtro, setFiltro] = useState('');
   const [cargando, setCargando] = useState(true);
 
+  // Filtros Backend
+  const [filtroCategoria, setFiltroCategoria] = useState('');
+  const [filtroPrecioOp, setFiltroPrecioOp] = useState('>');
+  const [filtroPrecio, setFiltroPrecio] = useState('');
+  const [filtroFecha, setFiltroFecha] = useState('');
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
   // Modal State
   const [mostrarModal, setMostrarModal] = useState(false);
   const [productoEditando, setProductoEditando] = useState<Producto | null>(null);
@@ -50,9 +63,56 @@ const Productos = () => {
   const puedeEditar = usuario?.rol === 'ADMIN' || usuario?.rol === 'SUPERADMIN';
 
   useEffect(() => {
-    cargarProductos();
     cargarCatalogos();
   }, []);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      cargarProductos();
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [filtroCategoria, filtroPrecioOp, filtroPrecio, filtroFecha]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('nuevo') === 'true') {
+      abrirModalNuevo();
+      // Limpiamos la url para que no se reabra al recargar
+      navigate('/productos', { replace: true });
+    }
+  }, [location.search]);
+
+  const barcodeRef = React.useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    if (mostrarModal && barcodeRef.current && formData.codigoBarras) {
+      try {
+        // Intentar primero con EAN13 como pidió el usuario
+        JsBarcode(barcodeRef.current, formData.codigoBarras, {
+          format: 'EAN13',
+          width: 2,
+          height: 40,
+          displayValue: true,
+          fontSize: 14,
+          margin: 0
+        });
+      } catch (error) {
+        // Fallback a CODE128 si el usuario tipea algo que no es EAN13 válido
+        try {
+          JsBarcode(barcodeRef.current, formData.codigoBarras, {
+            format: 'CODE128',
+            width: 2,
+            height: 40,
+            displayValue: true,
+            fontSize: 14,
+            margin: 0
+          });
+        } catch (e) {
+          // Ignorar silenciosamente si está tipeando algo inválido a medias
+        }
+      }
+    }
+  }, [formData.codigoBarras, mostrarModal]);
 
   const cargarCatalogos = async () => {
     try {
@@ -69,7 +129,19 @@ const Productos = () => {
 
   const cargarProductos = async () => {
     try {
-      const res = await api.get('/productos');
+      const params = new URLSearchParams();
+      if (filtroCategoria) params.append('categoriaId', filtroCategoria);
+      if (filtroPrecio) {
+        if (filtroPrecioOp === '=') params.append('precioExacto', filtroPrecio);
+        else if (filtroPrecioOp === '>') params.append('precioMin', filtroPrecio);
+        else if (filtroPrecioOp === '<') params.append('precioMax', filtroPrecio);
+      }
+      if (filtroFecha) {
+        params.append('fechaDesde', filtroFecha);
+        params.append('fechaHasta', filtroFecha);
+      }
+
+      const res = await api.get('/productos', { params });
       setProductos(res.data);
     } catch (err) {
       toast.error('Error al cargar productos');
@@ -197,6 +269,8 @@ const Productos = () => {
 
   const [generandoCodigo, setGenerandoCodigo] = useState(false);
 
+  const StockObligatorio = true;
+
   const handleGenerarCodigo = async () => {
     if (!productoEditando) return;
     setGenerandoCodigo(true);
@@ -210,6 +284,17 @@ const Productos = () => {
     } finally {
       setGenerandoCodigo(false);
     }
+  };
+
+  const handleImprimirEtiqueta = (prod: Producto) => {
+    const cantStr = window.prompt(`¿Cuántas etiquetas de "${prod.nombre}" querés imprimir?`, '1');
+    if (cantStr === null) return;
+    const cant = parseInt(cantStr, 10);
+    if (isNaN(cant) || cant <= 0) {
+      toast.error('Cantidad inválida');
+      return;
+    }
+    imprimirEtiquetas([{ producto: prod, cantidad: cant }]);
   };
 
   const handleEliminar = async (id: number) => {
@@ -317,6 +402,15 @@ const Productos = () => {
                               >
                                 <Edit2 size={16} />
                               </button>
+                              {prod.codigoBarras && (
+                                <button 
+                                  onClick={() => handleImprimirEtiqueta(prod)}
+                                  className="p-1.5 text-indigo-600 hover:bg-indigo-100 rounded transition-colors bg-white/50"
+                                  title="Imprimir Etiqueta"
+                                >
+                                  <Printer size={16} />
+                                </button>
+                              )}
                               <button 
                                 onClick={() => handleEliminar(prod.id)}
                                 className="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors bg-white/50"
@@ -356,7 +450,11 @@ const Productos = () => {
 
           <div>
             <label className="block text-xs font-bold text-gray-500 mb-1">Categoría</label>
-            <select className="w-full p-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light text-gray-600 bg-white">
+            <select 
+              className="w-full p-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light text-gray-600 bg-white"
+              value={filtroCategoria}
+              onChange={e => setFiltroCategoria(e.target.value)}
+            >
               <option value="">Todas las categorías</option>
               {categoriasLista.map(cat => (
                 <option key={cat.id} value={cat.id}>{cat.nombre}</option>
@@ -367,18 +465,33 @@ const Productos = () => {
           <div>
             <label className="block text-xs font-bold text-gray-500 mb-1">Precio de Venta</label>
             <div className="flex gap-2">
-              <select className="w-16 p-2 text-sm border rounded-md bg-white text-gray-600 outline-none focus:ring-2 focus:ring-brand-light">
+              <select 
+                className="w-16 p-2 text-sm border rounded-md bg-white text-gray-600 outline-none focus:ring-2 focus:ring-brand-light"
+                value={filtroPrecioOp}
+                onChange={e => setFiltroPrecioOp(e.target.value)}
+              >
                 <option value=">">&gt;</option>
                 <option value="<">&lt;</option>
                 <option value="=">=</option>
               </select>
-              <input type="number" placeholder="Monto..." className="flex-1 p-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light" />
+              <input 
+                type="number" 
+                placeholder="Monto..." 
+                className="flex-1 p-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light" 
+                value={filtroPrecio}
+                onChange={e => setFiltroPrecio(e.target.value)}
+              />
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-bold text-gray-500 mb-1">Actualizado el</label>
-            <input type="date" className="w-full p-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light text-gray-600" />
+            <input 
+              type="date" 
+              className="w-full p-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light text-gray-600" 
+              value={filtroFecha}
+              onChange={e => setFiltroFecha(e.target.value)}
+            />
           </div>
 
           <div className="opacity-50">
@@ -388,7 +501,15 @@ const Productos = () => {
             </select>
           </div>
           
-          <div className="mt-auto pt-4 border-t border-gray-100">
+          <div className="mt-auto pt-4 border-t border-gray-100 flex flex-col gap-3">
+            <button
+              onClick={() => exportarProductosExcel(filtrados)}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm text-sm"
+              title="Exportar la lista actual a Excel"
+            >
+              <FileSpreadsheet size={18} />
+              Exportar a Excel
+            </button>
             <div className="text-sm text-gray-500 font-medium text-center bg-gray-50 py-2 rounded">
               {filtrados.length} resultados
             </div>
@@ -427,38 +548,58 @@ const Productos = () => {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Código de Barras</label>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Código de Barras *</label>
                     <div className="flex gap-2">
                       <input
                         type="text"
                         className="flex-1 p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light font-mono bg-gray-50 focus:bg-white"
                         value={formData.codigoBarras}
                         onChange={e => setFormData({...formData, codigoBarras: e.target.value})}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            document.getElementById('precioCostoInput')?.focus();
+                          }
+                        }}
                       />
                       {puedeEditar && productoEditando && !formData.codigoBarras && (
                         <button
                           type="button"
                           onClick={handleGenerarCodigo}
                           disabled={generandoCodigo}
-                          className="px-4 py-2 border border-brand-light text-brand-dark rounded-lg hover:bg-brand-light/10 font-bold disabled:opacity-50 transition-colors whitespace-nowrap"
+                          className="px-4 py-2 border border-brand-light text-brand-dark rounded-lg hover:bg-brand-light/10 font-bold disabled:opacity-50 transition-colors whitespace-nowrap flex items-center gap-2"
                         >
-                          {generandoCodigo ? 'Generando...' : 'Generar Automático'}
+                          <Barcode size={18} />
+                          {generandoCodigo ? 'Generando...' : 'Generar Código'}
                         </button>
                       )}
                     </div>
+                    {formData.codigoBarras && (
+                      <div className="mt-3 p-3 bg-white border border-gray-200 rounded-lg flex justify-center items-center">
+                        <svg ref={barcodeRef}></svg>
+                      </div>
+                    )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Precio de Costo</label>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Precio de Costo *</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
                       <input
+                        id="precioCostoInput"
                         type="number"
                         step="0.01"
                         min="0"
+                        required
                         className="w-full p-2.5 pl-8 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white"
                         value={formData.precioCosto}
                         onChange={e => setFormData({...formData, precioCosto: e.target.value})}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            document.getElementById('precioVentaInput')?.focus();
+                          }
+                        }}
                       />
                     </div>
                   </div>
@@ -468,6 +609,7 @@ const Productos = () => {
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
                       <input
+                        id="precioVentaInput"
                         type="number"
                         step="0.01"
                         min="0"
@@ -480,10 +622,11 @@ const Productos = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Stock Actual</label>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Stock Actual {StockObligatorio ? '*' : ''}</label>
                     <input
                       type="number"
                       step="1"
+                      required={StockObligatorio}
                       disabled={!!productoEditando}
                       className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
                       value={formData.stockActual}
@@ -493,11 +636,12 @@ const Productos = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Stock Mínimo</label>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Stock Mínimo {StockObligatorio ? '*' : ''}</label>
                     <input
                       type="number"
                       step="1"
                       min="0"
+                      required={StockObligatorio}
                       className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white"
                       value={formData.stockMinimo}
                       onChange={e => setFormData({...formData, stockMinimo: e.target.value})}
@@ -505,13 +649,14 @@ const Productos = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Categoría</label>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Categoría *</label>
                     <select
+                      required
                       className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white text-gray-700"
                       value={formData.categoriaId}
                       onChange={e => setFormData({...formData, categoriaId: e.target.value})}
                     >
-                      <option value="">(Sin categoría)</option>
+                      <option value="">(Seleccione categoría)</option>
                       {categoriasLista.map(cat => (
                         <option key={cat.id} value={cat.id}>{cat.nombre}</option>
                       ))}
@@ -519,13 +664,14 @@ const Productos = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Unidad de Medida</label>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Unidad de Medida *</label>
                     <select
+                      required
                       className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white text-gray-700"
                       value={formData.unidadMedidaId}
                       onChange={e => setFormData({...formData, unidadMedidaId: e.target.value})}
                     >
-                      <option value="">(Sin unidad)</option>
+                      <option value="">(Seleccione unidad)</option>
                       {unidadesLista.map(uni => (
                         <option key={uni.id} value={uni.id}>{uni.nombre} {uni.abreviatura ? `(${uni.abreviatura})` : ''}</option>
                       ))}

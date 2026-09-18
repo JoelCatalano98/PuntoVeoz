@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { ShoppingCart, Wallet, Package, Users, LogOut } from 'lucide-react';
 
 const NavDropdown = ({ title, items }: { title: string, items: {label: string, disabled?: boolean, to?: string}[] }) => {
+  if (!items || items.length === 0) return null;
   return (
     <div className="relative group h-full flex items-center">
       <button className="px-3 py-1 rounded hover:bg-black/10 transition-colors h-full font-medium flex items-center cursor-default">
@@ -67,9 +68,10 @@ const Layout = () => {
             </Link>
             
             <NavDropdown 
-              title="Productos" 
+              title="Producto" 
               items={[
-                { label: 'Catálogo (Ver Productos)', to: '/productos' },
+                { label: 'Productos', to: '/productos' },
+                { label: 'Crear Producto', to: '/productos?nuevo=true' },
                 { label: 'Categorías', to: '/categorias' },
                 { label: 'Unidades de Medida', to: '/unidades' },
                 { label: 'Impresión de Etiquetas', to: '/etiquetas' }
@@ -90,10 +92,10 @@ const Layout = () => {
             <NavDropdown 
               title="Configuraciones" 
               items={[
-                { label: 'Puntos de venta', to: '/puntos-venta' },
-                { label: 'Usuarios', to: '/usuarios' },
-                { label: 'Parámetros', to: '/parametros' }
-              ]} 
+                (usuario?.rol === 'SUPERADMIN' || usuario?.rol === 'ADMIN') ? { label: 'Puntos de venta', to: '/puntos-venta' } : null,
+                (usuario?.rol === 'SUPERADMIN' || usuario?.rol === 'ADMIN') ? { label: 'Usuarios', to: '/usuarios' } : null,
+                usuario?.rol === 'SUPERADMIN' ? { label: 'Parámetros', to: '/parametros' } : null
+              ].filter(Boolean) as any} 
             />
           </nav>
         </div>
@@ -121,22 +123,22 @@ const Layout = () => {
             Más usadas
           </div>
           <div className="flex flex-col gap-2">
-            <Link to="/ventas" className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:border-blue-100 transition-colors gap-2 text-gray-600 hover:text-blue-600">
+            <Link to="/ventas" className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-300 bg-gray-200 hover:bg-blue-50 hover:border-blue-100 transition-colors gap-2 text-gray-600 hover:text-blue-600">
               <ShoppingCart size={24} />
               <span className="font-medium">Ventas</span>
             </Link>
             
-            <Link to="/caja" className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:border-blue-100 transition-colors gap-2 text-gray-600 hover:text-blue-600">
+            <Link to="/caja" className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-300 bg-gray-200 hover:bg-blue-50 hover:border-blue-100 transition-colors gap-2 text-gray-600 hover:text-blue-600">
               <Wallet size={24} />
               <span className="font-medium">Caja</span>
             </Link>
             
-            <Link to="/productos" className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:border-blue-100 transition-colors gap-2 text-gray-600 hover:text-blue-600">
+            <Link to="/productos" className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-300 bg-gray-200 hover:bg-blue-50 hover:border-blue-100 transition-colors gap-2 text-gray-600 hover:text-blue-600">
               <Package size={24} />
               <span className="font-medium">Productos</span>
             </Link>
             
-            <Link to="/clientes" className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:border-blue-100 transition-colors gap-2 text-gray-600 hover:text-blue-600">
+            <Link to="/clientes" className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-300 bg-gray-200 hover:bg-blue-50 hover:border-blue-100 transition-colors gap-2 text-gray-600 hover:text-blue-600">
               <Users size={24} />
               <span className="font-medium">Clientes</span>
             </Link>

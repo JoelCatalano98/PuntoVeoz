@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 interface Usuario {
   id: number;
   nombre: string;
+  username: string;
   email: string;
   rol: string;
   activo: boolean;
@@ -25,6 +26,7 @@ const Usuarios = () => {
   // Form State
   const [formData, setFormData] = useState({
     nombre: '',
+    username: '',
     email: '',
     password: '',
     rol: 'CAJERO',
@@ -52,13 +54,13 @@ const Usuarios = () => {
 
   const abrirModalNuevo = () => {
     setEditando(null);
-    setFormData({ nombre: '', email: '', password: '', rol: 'CAJERO' });
+    setFormData({ nombre: '', username: '', email: '', password: '', rol: 'CAJERO' });
     setMostrarModal(true);
   };
 
   const abrirModalEditar = (u: Usuario) => {
     setEditando(u);
-    setFormData({ nombre: u.nombre, email: u.email, password: '', rol: u.rol });
+    setFormData({ nombre: u.nombre, username: u.username, email: u.email, password: '', rol: u.rol });
     setMostrarModal(true);
   };
 
@@ -69,8 +71,8 @@ const Usuarios = () => {
 
   const handleGuardar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.nombre.trim() || !formData.email.trim()) {
-      toast.error('Nombre y Email son obligatorios');
+    if (!formData.nombre.trim() || !formData.email.trim() || !formData.username.trim()) {
+      toast.error('Nombre, Usuario y Email son obligatorios');
       return;
     }
 
@@ -82,6 +84,7 @@ const Usuarios = () => {
     setGuardando(true);
     const payload: any = {
       nombre: formData.nombre.trim(),
+      username: formData.username.trim(),
       email: formData.email.trim(),
       rol: formData.rol,
     };
@@ -151,6 +154,7 @@ const Usuarios = () => {
             <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
               <tr>
                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Nombre</th>
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Email</th>
                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Rol</th>
                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center w-28">Acciones</th>
@@ -169,6 +173,7 @@ const Usuarios = () => {
                 usuarios.map(u => (
                   <tr key={u.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="p-4 text-sm font-medium text-gray-800">{u.nombre}</td>
+                    <td className="p-4 text-sm font-medium text-blue-600">@{u.username}</td>
                     <td className="p-4 text-sm text-gray-600">{u.email}</td>
                     <td className="p-4 text-sm">
                       <span className={`px-2 py-1 text-xs font-bold rounded-full ${
@@ -181,14 +186,15 @@ const Usuarios = () => {
                       <div className="flex items-center justify-center gap-2">
                         <button 
                           onClick={() => abrirModalEditar(u)}
-                          className="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors"
+                          disabled={u.rol === 'SUPERADMIN' && usuario?.rol !== 'SUPERADMIN'}
+                          className="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
                           title="Editar"
                         >
                           <Edit2 size={16} />
                         </button>
                         <button 
                           onClick={() => handleEliminar(u.id)}
-                          disabled={usuario?.id === u.id} // No se puede borrar a sí mismo
+                          disabled={usuario?.id === u.id || (u.rol === 'SUPERADMIN' && usuario?.rol !== 'SUPERADMIN')}
                           className="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
                           title="Deshabilitar"
                         >
@@ -231,6 +237,17 @@ const Usuarios = () => {
                 </div>
 
                 <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Usuario (Login) *</label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white"
+                    value={formData.username}
+                    onChange={e => setFormData({...formData, username: e.target.value})}
+                  />
+                </div>
+
+                <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">Email *</label>
                   <input
                     type="email"
@@ -251,6 +268,7 @@ const Usuarios = () => {
                   >
                     <option value="CAJERO">CAJERO</option>
                     <option value="ADMIN">ADMIN</option>
+                    {usuario?.rol === 'SUPERADMIN' && <option value="SUPERADMIN">SUPERADMIN</option>}
                   </select>
                 </div>
 

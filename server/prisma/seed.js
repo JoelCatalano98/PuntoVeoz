@@ -9,9 +9,9 @@ async function main() {
   // 1. Crear un Comercio base (el usuario requiere pertenecer a un comercio)
   const comercio = await prisma.comercio.upsert({
     where: { cuit: '30-12345678-9' },
-    update: {},
+    update: { nombre: 'Punto Veloz Demo' },
     create: {
-      nombre: 'Comercio Principal',
+      nombre: 'Punto Veloz Demo',
       razonSocial: 'Punto Veloz S.A.',
       cuit: '30-12345678-9'
     }
@@ -48,22 +48,23 @@ async function main() {
   console.log(`✅ Caja creada/obtenida: ${caja.nombre} (Prefijo: ${caja.prefijo})`);
 
   // 2. Crear un Usuario (SUPERADMIN)
-  const passwordHash = await bcrypt.hash('admin1234', 10);
+  const passwordHash = await bcrypt.hash('Puntoveloz!!2026', 10);
 
   const usuario = await prisma.usuario.upsert({
-    where: { email: 'admin@puntoveloz.test' },
-    update: {},
+    where: { username: 'admin' },
+    update: { password: passwordHash, rol: 'SUPERADMIN', email: 'admin@puntoveloz.com' },
     create: {
       comercioId: comercio.id,
       nombre: 'Administrador',
-      email: 'admin@puntoveloz.test',
+      username: 'admin',
+      email: 'admin@puntoveloz.com',
       password: passwordHash,
       rol: 'SUPERADMIN'
     }
   });
 
-  console.log(`✅ Usuario creado/obtenido: ${usuario.email} (Rol: ${usuario.rol})`);
-  console.log(`🔑 Contraseña: admin1234`);
+  console.log(`✅ Usuario creado/obtenido: ${usuario.username} (Email: ${usuario.email}, Rol: ${usuario.rol})`);
+  console.log(`🔑 Contraseña: Puntoveloz!!2026`);
 
   // 3. Crear Parámetro por defecto: impresionTicket
   const parametro = await prisma.parametro.upsert({

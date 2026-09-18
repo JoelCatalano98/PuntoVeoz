@@ -4,14 +4,14 @@ const prisma = require('../config/prisma');
 
 const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: true, message: 'Email y contraseña son requeridos' });
+    if (!username || !password) {
+      return res.status(400).json({ error: true, message: 'Usuario y contraseña son requeridos' });
     }
 
     const usuario = await prisma.usuario.findUnique({
-      where: { email }
+      where: { username }
     });
 
     if (!usuario) {
@@ -48,6 +48,7 @@ const login = async (req, res, next) => {
       usuario: {
         id: usuario.id,
         nombre: usuario.nombre,
+        username: usuario.username,
         email: usuario.email,
         rol: usuario.rol,
         comercioId: usuario.comercioId

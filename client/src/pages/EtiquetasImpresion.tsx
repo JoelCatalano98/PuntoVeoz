@@ -1,15 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { Settings, Printer, X, Tag, Search, Plus, Trash2, AlertCircle } from 'lucide-react';
+import { Settings, Printer, X, Tag, Search, Plus, Trash2, AlertCircle, Filter } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import JsBarcode from 'jsbarcode';
 
 interface Producto {
   id: number;
   nombre: string;
+  nombre: string;
   codigoBarras: string;
   precioVenta: number;
+  categoriaId?: number;
+}
+
+interface Categoria {
+  id: number;
+  nombre: string;
 }
 
 interface ItemCola {
@@ -32,16 +39,32 @@ const EtiquetasImpresion = () => {
   const [formato, setFormato] = useState(DEFAULT_FORMATO);
   const [showConfig, setShowConfig] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [mostrarPrecio, setMostrarPrecio] = useState(false);
 
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [categoriasLista, setCategoriasLista] = useState<Categoria[]>([]);
+  
   const [busqueda, setBusqueda] = useState('');
+  const [filtroCategoria, setFiltroCategoria] = useState('');
+  const [filtroFechaDesde, setFiltroFechaDesde] = useState('');
+  const [filtroFechaHasta, setFiltroFechaHasta] = useState('');
+  const [filtroProveedor, setFiltroProveedor] = useState(''); // Placeholder
+
   const [cola, setCola] = useState<ItemCola[]>([]);
   const [imprimiendo, setImprimiendo] = useState(false);
 
   useEffect(() => {
     cargarFormato();
-    cargarProductos();
+    cargarParametroPrecio();
+    cargarCatalogos();
   }, []);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      cargarProductos();
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [filtroCategoria, filtroFechaDesde, filtroFechaHasta]);
 
   useEffect(() => {
     if (showConfig) {
@@ -67,26 +90,55 @@ const EtiquetasImpresion = () => {
       if (res.data?.valor) {
         setFormato(JSON.parse(res.data.valor));
       }
+    } catch (err: any) {
+      if (err.response?.status !== 404) {
+        toast.error('Error al cargar formato de etiquetas');
+      }
+    }
+  };
+
+  const cargarParametroPrecio = async () => {
+    try {
+      const res = await api.get('/parametros/etiquetaMostrarPrecio');
+      if (res.data?.valor) {
+        setMostrarPrecio(res.data.valor === 'true');
+      }
     } catch (err) {
-      // Ignorar error, usamos default si no existe (404)
+      // Ignorar si no existe
+    }
+  };
+
+  const cargarCatalogos = async () => {
+    try {
+      const res = await api.get('/categorias');
+      setCategoriasLista(res.data);
+    } catch (err) {
+      toast.error('Error al cargar categorías');
     }
   };
 
   const cargarProductos = async () => {
     try {
-      const res = await api.get('/productos');
-      // Solo productos con código de barras
+      const params = new URLSearchParams();
+      if (filtroCategoria) params.append('categoriaId', filtroCategoria);
+      if (filtroFechaDesde) params.append('fechaDesde', filtroFechaDesde);
+      if (filtroFechaHasta) params.append('fechaHasta', filtroFechaHasta);
+
+      const res = await api.get('/productos', { params });
       setProductos(res.data.filter((p: any) => p.codigoBarras));
     } catch (err) {
       toast.error('Error al cargar productos');
     }
   };
 
-  const productosFiltrados = busqueda
-    ? productos.filter(p => 
-        p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || 
-        p.codigoBarras.includes(busqueda)
-      )
+  const hayFiltrosActivos = busqueda.length > 0 || filtroCategoria !== '' || filtroFechaDesde !== '' || filtroFechaHasta !== '' || filtroProveedor !== '';
+
+  const productosFiltrados = hayFiltrosActivos
+    ? productos.filter(p => {
+        const matchBusqueda = busqueda ? (p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || p.codigoBarras.includes(busqueda)) : true;
+        // Proveedor is just a placeholder for now, so we always pass it if we don't have the data
+        return matchBusqueda;
+      })
     : [];
 
   const agregarACola = (prod: Producto) => {
@@ -200,24 +252,66 @@ const EtiquetasImpresion = () => {
       {/* CONTENIDO PRINCIPAL - OCULTO EN IMPRESION */}
       <div className="flex flex-1 gap-6 overflow-hidden print:hidden">
         
-        {/* PANEL IZQUIERDO: Buscador */}
+        {/* PANEL IZQUIERDO: Buscador y Filtros */}
         <div className="w-1/3 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
-          <div className="p-4 border-b border-gray-100 bg-gray-50">
-            <h2 className="font-bold text-gray-700 mb-3">Buscar Producto</h2>
+          <div className="p-4 border-b border-gray-100 bg-gray-50 flex flex-col gap-3">
+            <h2 className="font-bold text-gray-700">Buscar y Filtrar</h2>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type="text"
-                placeholder="Nombre o código de barras..."
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:border-brand-light focus:ring-1 focus:ring-brand-light"
+                placeholder="Nombre o código..."
+                className="w-full pl-10 pr-4 py-2 text-sm border rounded-lg focus:outline-none focus:border-brand-light focus:ring-1 focus:ring-brand-light bg-white"
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}
               />
             </div>
+            
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <select 
+                  className="w-full p-2 text-xs border rounded-md focus:outline-none focus:ring-1 focus:ring-brand-light bg-white text-gray-600"
+                  value={filtroCategoria}
+                  onChange={e => setFiltroCategoria(e.target.value)}
+                >
+                  <option value="">Categoría (Todas)</option>
+                  {categoriasLista.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-1">
+                <input 
+                  type="date" 
+                  title="Fecha desde"
+                  className="w-1/2 p-2 text-xs border rounded-md focus:outline-none focus:ring-1 focus:ring-brand-light bg-white text-gray-600"
+                  value={filtroFechaDesde}
+                  onChange={e => setFiltroFechaDesde(e.target.value)}
+                />
+                <input 
+                  type="date" 
+                  title="Fecha hasta"
+                  className="w-1/2 p-2 text-xs border rounded-md focus:outline-none focus:ring-1 focus:ring-brand-light bg-white text-gray-600"
+                  value={filtroFechaHasta}
+                  onChange={e => setFiltroFechaHasta(e.target.value)}
+                />
+              </div>
+              <div className="col-span-2">
+                <select 
+                  className="w-full p-2 text-xs border rounded-md focus:outline-none focus:ring-1 focus:ring-brand-light bg-gray-100 text-gray-400 cursor-not-allowed"
+                  value={filtroProveedor}
+                  onChange={e => setFiltroProveedor(e.target.value)}
+                  disabled
+                  title="Próximamente"
+                >
+                  <option value="">Proveedor (Próximamente)</option>
+                </select>
+              </div>
+            </div>
           </div>
           
           <div className="flex-1 overflow-y-auto p-2">
-            {busqueda.length > 0 ? (
+            {hayFiltrosActivos ? (
               productosFiltrados.length > 0 ? (
                 <div className="flex flex-col gap-1">
                   {productosFiltrados.map(prod => (
@@ -241,8 +335,8 @@ const EtiquetasImpresion = () => {
               )
             ) : (
               <div className="text-center text-gray-400 p-8 flex flex-col items-center gap-3">
-                <Search size={32} className="opacity-20" />
-                <p className="text-sm">Buscá un producto para agregarlo a la cola de impresión.</p>
+                <Filter size={32} className="opacity-20" />
+                <p className="text-sm">Aplicá algún filtro o buscá un producto para agregarlo a la cola.</p>
               </div>
             )}
           </div>
@@ -345,7 +439,9 @@ const EtiquetasImpresion = () => {
               <div className="flex-1 flex items-center justify-center overflow-hidden my-1">
                 <svg id={`barcode-print-${idx}`} className="w-full h-full object-contain"></svg>
               </div>
-              <div className="text-xs font-extrabold text-right mt-0.5">${Number(prod.precioVenta).toFixed(2)}</div>
+              {mostrarPrecio && (
+                <div className="text-xs font-extrabold text-right mt-0.5">${Number(prod.precioVenta).toFixed(2)}</div>
+              )}
             </div>
           ))}
         </div>

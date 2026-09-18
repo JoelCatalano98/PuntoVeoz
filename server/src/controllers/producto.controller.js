@@ -1,8 +1,33 @@
 const prisma = require('../config/prisma');
 
 async function listar(req, res) {
+  const { categoriaId, precioMin, precioMax, precioExacto, fechaDesde, fechaHasta } = req.query;
+
+  const whereClause = {
+    comercioId: req.comercioId,
+    activo: true
+  };
+
+  if (categoriaId) {
+    whereClause.categoriaId = Number(categoriaId);
+  }
+
+  if (precioExacto) {
+    whereClause.precioVenta = Number(precioExacto);
+  } else if (precioMin || precioMax) {
+    whereClause.precioVenta = {};
+    if (precioMin) whereClause.precioVenta.gte = Number(precioMin);
+    if (precioMax) whereClause.precioVenta.lte = Number(precioMax);
+  }
+
+  if (fechaDesde || fechaHasta) {
+    whereClause.createdAt = {};
+    if (fechaDesde) whereClause.createdAt.gte = new Date(fechaDesde + 'T00:00:00.000Z');
+    if (fechaHasta) whereClause.createdAt.lte = new Date(fechaHasta + 'T23:59:59.999Z');
+  }
+
   const productos = await prisma.producto.findMany({
-    where: { comercioId: req.comercioId, activo: true },
+    where: whereClause,
     orderBy: { nombre: 'asc' },
     include: {
       categoria: { select: { id: true, nombre: true, color: true } },
