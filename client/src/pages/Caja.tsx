@@ -56,6 +56,7 @@ const Caja = () => {
   const [showModalCierre, setShowModalCierre] = useState(false);
   const [montoContado, setMontoContado] = useState('');
   const [cerrandoCaja, setCerrandoCaja] = useState(false);
+  const [ticketZData, setTicketZData] = useState<any>(null);
 
   // Nueva Caja
   const [showModalNuevaCaja, setShowModalNuevaCaja] = useState(false);
@@ -183,7 +184,23 @@ const Caja = () => {
       
       setShowModalCierre(false);
       setMontoContado('');
-      cargarEstado();
+      
+      // Armar data para Ticket Z
+      setTicketZData({
+        fecha: new Date().toLocaleString('es-AR'),
+        cajero: usuario?.nombre,
+        cajaNombre: apertura?.caja.nombre,
+        esperado: totalEsperado,
+        contado: res.data.totalContado,
+        diferencia: res.data.diferencia
+      });
+
+      // Dar tiempo al DOM para renderizar el ticket antes de imprimir
+      setTimeout(() => {
+        window.print();
+        cargarEstado();
+      }, 100);
+      
     } catch (err: any) {
       toast.error(err.response?.data?.message || err.response?.data?.error || err.message || 'Error al cerrar caja');
     } finally {
@@ -394,10 +411,12 @@ const Caja = () => {
 
   // VISTA: CAJA ABIERTA (DASHBOARD)
   return (
-    <div className="h-full flex flex-col bg-gray-50 p-6 overflow-hidden">
+    <div className="h-full flex flex-col bg-gray-50 p-0 overflow-hidden print:bg-white print:overflow-visible">
       
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6 flex-none">
+      {/* Todo esto se oculta al imprimir */}
+      <div className="flex flex-col h-full p-6 overflow-hidden print:hidden">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6 flex-none">
         <div>
           <h1 className="text-2xl font-bold text-brand-dark flex items-center gap-2">
             <Wallet /> Operación de Caja: {apertura?.caja.nombre}
@@ -596,6 +615,42 @@ const Caja = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      </div> {/* Fin del contenedor print:hidden */}
+
+      {/* TICKET Z IMPRESIÓN (OCULTO EN PANTALLA, VISIBLE SOLO EN @media print) */}
+      {ticketZData && (
+        <div className="hidden print:block font-mono text-black w-[80mm] mx-auto p-4 bg-white" style={{ fontSize: '12px', lineHeight: '1.4' }}>
+          <div className="text-center mb-4">
+            <h2 className="font-bold text-lg mb-1">CIERRE DE CAJA (Z)</h2>
+            <p className="text-xs">{ticketZData.cajaNombre}</p>
+          </div>
+          
+          <div className="mb-4 border-b border-black pb-2 border-dashed">
+            <p><strong>Fecha:</strong> {ticketZData.fecha}</p>
+            <p><strong>Cajero:</strong> {ticketZData.cajero}</p>
+          </div>
+
+          <div className="mb-4 space-y-1">
+            <div className="flex justify-between">
+              <span>Efectivo Esperado:</span>
+              <span>${Number(ticketZData.esperado).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Efectivo Contado:</span>
+              <span>${Number(ticketZData.contado).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between font-bold mt-2 pt-2 border-t border-black border-dashed">
+              <span>DIFERENCIA:</span>
+              <span>${Number(ticketZData.diferencia).toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div className="text-center mt-8 text-xs">
+            <p>_______________________</p>
+            <p className="mt-1">Firma Cajero</p>
           </div>
         </div>
       )}

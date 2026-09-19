@@ -12,6 +12,7 @@ import Dashboard from './pages/Dashboard';
 import Clientes from './pages/Clientes';
 import Caja from './pages/Caja';
 import CajaMovimientos from './pages/CajaMovimientos';
+import CierresHistorial from './pages/CierresHistorial';
 import Parametros from './pages/Parametros';
 import EtiquetasImpresion from './pages/EtiquetasImpresion';
 import Categorias from './pages/Categorias';
@@ -44,6 +45,7 @@ function App() {
               <Route path="/clientes" element={<Clientes />} />
               <Route path="/caja" element={<Caja />} />
               <Route path="/caja-movimientos" element={<CajaMovimientos />} />
+              <Route path="/caja-cierres" element={<CierresHistorial />} />
               <Route path="/etiquetas" element={<EtiquetasImpresion />} />
               
               {/* Rutas para ADMIN y SUPERADMIN */}

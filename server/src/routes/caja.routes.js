@@ -12,6 +12,8 @@ router.get('/estado', cajaController.obtenerEstado);
 router.post('/abrir', cajaController.abrirCaja);
 router.post('/movimiento-manual', cajaController.registrarMovimiento);
 router.post('/cerrar', cajaController.cerrarCaja);
+router.get('/cierres', cajaController.listarCierres);
+router.get('/cierres/:id', cajaController.obtenerDetalleCierre);
 router.get('/:aperturaCajaId/esperado', cajaController.obtenerEsperado);
 router.get('/:aperturaCajaId/movimientos', cajaController.listarMovimientos);
 

@@ -196,11 +196,53 @@ async function listarMovimientos(req, res, next) {
   }
 }
 
+async function listarCierres(req, res, next) {
+  try {
+    const comercioId = req.comercioId;
+    const { fechaDesde, fechaHasta } = req.query;
+
+    const cierres = await cajaService.listarCierres({
+      comercioId,
+      fechaDesde,
+      fechaHasta
+    });
+
+    res.json(cierres);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function obtenerDetalleCierre(req, res, next) {
+  try {
+    const comercioId = req.comercioId;
+    const { id } = req.params;
+
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'ID de cierre inválido' });
+    }
+
+    const detalle = await cajaService.obtenerDetalleCierre({
+      comercioId,
+      cierreId: Number(id)
+    });
+
+    res.json(detalle);
+  } catch (error) {
+    if (error.message === 'Cierre de caja no encontrado') {
+      return res.status(404).json({ error: error.message });
+    }
+    next(error);
+  }
+}
+
 module.exports = {
   abrirCaja,
   registrarMovimiento,
   obtenerEsperado,
   cerrarCaja,
   obtenerEstado,
-  listarMovimientos
+  listarMovimientos,
+  listarCierres,
+  obtenerDetalleCierre
 };

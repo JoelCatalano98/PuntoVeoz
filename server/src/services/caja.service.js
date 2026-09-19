@@ -160,11 +160,91 @@ async function listarMovimientos({ comercioId, aperturaCajaId }) {
   });
 }
 
+async function listarCierres({ comercioId, fechaDesde, fechaHasta }) {
+  const whereClausula = {
+    aperturaCaja: { comercioId }
+  };
+
+  if (fechaDesde && fechaHasta) {
+    const hasta = new Date(fechaHasta);
+    hasta.setHours(23, 59, 59, 999);
+    const desde = new Date(fechaDesde);
+    desde.setHours(0, 0, 0, 0);
+
+    whereClausula.createdAt = { gte: desde, lte: hasta };
+  }
+
+  return prisma.cierreCaja.findMany({
+    where: whereClausula,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      usuario: { select: { id: true, nombre: true } },
+      aperturaCaja: {
+        include: {
+          caja: { select: { nombre: true, prefijo: true } }
+        }
+      }
+    }
+  });
+}
+
+async function obtenerDetalleCierre({ comercioId, cierreId }) {
+  const cierre = await prisma.cierreCaja.findUnique({
+    where: { id: cierreId },
+    include: {
+      usuario: { select: { nombre: true } },
+      aperturaCaja: {
+        include: {
+          caja: { select: { nombre: true, prefijo: true } },
+          usuario: { select: { nombre: true } }
+        }
+      }
+    }
+  });
+
+  if (!cierre || cierre.aperturaCaja.comercioId !== comercioId) {
+    throw new Error('Cierre de caja no encontrado');
+  }
+
+  // Las ventas ocurren entre apertura y cierre
+  const ventas = await prisma.venta.findMany({
+    where: {
+      comercioId,
+      anulada: false,
+      createdAt: {
+        gte: cierre.aperturaCaja.createdAt,
+        lte: cierre.createdAt
+      }
+    }
+  });
+
+  const totalesPorMedioPago = {};
+  let totalFacturado = 0;
+
+  for (const venta of ventas) {
+    const vTotal = Number(venta.total);
+    totalFacturado += vTotal;
+    const medio = venta.medioPago;
+    totalesPorMedioPago[medio] = (totalesPorMedioPago[medio] || 0) + vTotal;
+  }
+
+  return {
+    cierre,
+    resumenVentas: {
+      totalFacturado,
+      totalesPorMedioPago,
+      cantidadVentas: ventas.length
+    }
+  };
+}
+
 module.exports = {
   abrirCaja,
   registrarMovimientoManual,
   calcularTotalEsperadoEfectivo,
   cerrarCaja,
   reporteVentasPorRango,
-  listarMovimientos
+  listarMovimientos,
+  listarCierres,
+  obtenerDetalleCierre
 };

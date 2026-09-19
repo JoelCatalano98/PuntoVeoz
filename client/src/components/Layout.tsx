@@ -97,7 +97,7 @@ const Layout = () => {
   return (
     <div className="flex flex-col h-screen bg-gray-50 overflow-hidden text-sm print:h-auto print:overflow-visible">
       {/* Top bar (fixed) */}
-      <header className="flex-none h-[52px] bg-brand-light text-brand-dark flex items-center justify-between px-4 z-40 border-b border-black/10">
+      <header className="flex-none h-[52px] bg-brand-light text-brand-dark flex items-center justify-between px-4 z-40 border-b border-black/10 print:hidden">
         <div className="flex items-center h-full gap-6">
           <div className="font-bold text-lg mr-4">Punto Veloz</div>
           
@@ -153,8 +153,7 @@ const Layout = () => {
               items={[
                 { label: 'Caja', to: '/caja' },
                 { label: 'Movimientos de Caja', to: '/caja-movimientos' },
-                { label: 'Cierre de caja diario' },
-                { label: 'Cierre/reporte semanal' }
+                { label: 'Historial de Arqueos', to: '/caja-cierres' }
               ]} 
             />
             
