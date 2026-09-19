@@ -1,7 +1,8 @@
-
-import { Outlet, Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ShoppingCart, Wallet, Package, Users, LogOut } from 'lucide-react';
+import { ShoppingCart, Wallet, Package, Users, LogOut, Bell } from 'lucide-react';
+import api from '../services/api';
 
 const NavDropdown = ({ title, items }: { title: string, items: {label: string, disabled?: boolean, to?: string}[] }) => {
   if (!items || items.length === 0) return null;
@@ -23,6 +24,63 @@ const NavDropdown = ({ title, items }: { title: string, items: {label: string, d
           )
         ))}
       </div>
+    </div>
+  );
+};
+
+const NotificationBell = () => {
+  const [alertas, setAlertas] = useState<any[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    const fetchAlertas = async () => {
+      try {
+        const res = await api.get('/stock/alertas');
+        setAlertas(res.data);
+      } catch (err) {
+        console.error('Error fetching stock alerts', err);
+      }
+    };
+    fetchAlertas();
+  }, [location.pathname]);
+
+  return (
+    <div className="relative">
+      <button 
+        onClick={() => setShowDropdown(!showDropdown)}
+        className="relative p-2 rounded-full hover:bg-black/10 transition-colors outline-none"
+      >
+        <Bell size={20} />
+        {alertas.length > 0 && (
+          <span className="absolute top-0 right-0 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full">
+            {alertas.length > 99 ? '99+' : alertas.length}
+          </span>
+        )}
+      </button>
+
+      {showDropdown && (
+        <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 shadow-xl rounded-lg overflow-hidden z-50">
+          <div className="bg-red-50 p-3 border-b border-red-100 flex justify-between items-center">
+            <h3 className="font-bold text-red-800">Alertas de Stock ({alertas.length})</h3>
+          </div>
+          <div className="max-h-64 overflow-y-auto p-2">
+            {alertas.length === 0 ? (
+              <p className="text-sm text-gray-500 p-2 text-center">No hay productos con stock crítico.</p>
+            ) : (
+              alertas.map(a => (
+                <div key={a.id} className="p-2 border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                  <div className="text-sm font-semibold text-gray-800">{a.nombre}</div>
+                  <div className="text-xs text-gray-500 flex justify-between mt-1">
+                    <span>Actual: <span className="text-red-600 font-bold">{a.stockActual}</span></span>
+                    <span>Mínimo: {a.stockMinimo}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -81,14 +139,21 @@ const Layout = () => {
             />
 
             <NavDropdown 
+              title="Stock e Inventario" 
+              items={[
+                { label: 'Stock Valorizado', to: '/stock-valorizado' },
+                { label: 'Ajuste Manual de Stock', to: '/ajuste-stock' },
+                { label: 'Historial de Movimientos', to: '/historial-stock' }
+              ]} 
+            />
+
+            <NavDropdown 
               title="Utilidades" 
               items={[
                 { label: 'Caja', to: '/caja' },
                 { label: 'Movimientos de Caja', to: '/caja-movimientos' },
                 { label: 'Cierre de caja diario' },
-                { label: 'Cierre/reporte semanal' },
-                { label: 'Ajuste Manual de Stock', to: '/ajuste-stock' },
-                { label: 'Historial de Stock', to: '/historial-stock' }
+                { label: 'Cierre/reporte semanal' }
               ]} 
             />
             
@@ -104,7 +169,8 @@ const Layout = () => {
         </div>
 
         <div className="flex items-center gap-4">
-          <span className="font-medium text-brand-dark/80">
+          <NotificationBell />
+          <span className="font-medium text-brand-dark/80 border-l border-brand-dark/20 pl-4">
             {usuario?.nombre || 'Usuario'}
           </span>
           <button 

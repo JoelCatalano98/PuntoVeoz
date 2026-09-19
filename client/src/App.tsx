@@ -22,6 +22,7 @@ import ComprasCarga from './pages/ComprasCarga';
 import ComprasHistorial from './pages/ComprasHistorial';
 import AjusteStock from './pages/AjusteStock';
 import HistorialStock from './pages/HistorialStock';
+import StockValorizado from './pages/StockValorizado';
 
 function App() {
   return (
@@ -53,6 +54,7 @@ function App() {
                 <Route path="/compras-historial" element={<ComprasHistorial />} />
                 <Route path="/ajuste-stock" element={<AjusteStock />} />
                 <Route path="/historial-stock" element={<HistorialStock />} />
+                <Route path="/stock-valorizado" element={<StockValorizado />} />
               </Route>
 
               {/* Rutas solo para SUPERADMIN */}

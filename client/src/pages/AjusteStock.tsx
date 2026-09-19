@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { Search, Plus, Minus, Save, ClipboardList } from 'lucide-react';
+import { Search, Plus, Minus, Save, ClipboardList, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+interface Categoria {
+  id: number;
+  nombre: string;
+  subcategorias?: Categoria[];
+}
 
 interface Producto {
   id: number;
@@ -14,6 +20,8 @@ interface Producto {
 const AjusteStock = () => {
   const navigate = useNavigate();
   const [busqueda, setBusqueda] = useState('');
+  const [filtroCategoria, setFiltroCategoria] = useState('');
+  const [categoriasLista, setCategoriasLista] = useState<Categoria[]>([]);
   const [productosEncontrados, setProductosEncontrados] = useState<Producto[]>([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
 
@@ -24,7 +32,18 @@ const AjusteStock = () => {
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
-    if (busqueda.trim().length > 2 && !productoSeleccionado) {
+    const fetchCats = async () => {
+      try {
+        const res = await api.get('/categorias');
+        setCategoriasLista(res.data);
+      } catch (err) {}
+    };
+    fetchCats();
+  }, []);
+
+  useEffect(() => {
+    // Buscar si hay texto de búsqueda o si se cambió la categoría (y hay algo escrito para no traer todo)
+    if ((busqueda.trim().length > 2 || filtroCategoria) && !productoSeleccionado) {
       const delay = setTimeout(() => {
         buscarProductos();
       }, 300);
@@ -32,16 +51,24 @@ const AjusteStock = () => {
     } else {
       setProductosEncontrados([]);
     }
-  }, [busqueda, productoSeleccionado]);
+  }, [busqueda, filtroCategoria, productoSeleccionado]);
 
   const buscarProductos = async () => {
     try {
-      const res = await api.get('/productos');
-      const filtrados = res.data.filter((p: any) => 
-        p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || 
-        (p.codigoBarras && p.codigoBarras.includes(busqueda))
-      ).slice(0, 10);
-      setProductosEncontrados(filtrados);
+      const params = new URLSearchParams();
+      if (filtroCategoria) params.append('categoriaId', filtroCategoria);
+
+      const res = await api.get('/productos', { params });
+      let filtrados = res.data;
+
+      if (busqueda.trim()) {
+        filtrados = filtrados.filter((p: any) => 
+          p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || 
+          (p.codigoBarras && p.codigoBarras.includes(busqueda))
+        );
+      }
+      
+      setProductosEncontrados(filtrados.slice(0, 10));
     } catch (err) {
       console.error(err);
     }
@@ -118,29 +145,53 @@ const AjusteStock = () => {
               <Search size={18} className="text-gray-400" /> 1. Buscar Producto
             </h2>
             
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Escribí nombre o código (min 3 letras)..."
-                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-brand-light outline-none ${productoSeleccionado ? 'bg-gray-100 text-gray-500 font-bold border-gray-300' : 'bg-white'}`}
-                value={busqueda}
-                onChange={e => {
-                  if (productoSeleccionado) limpiarSeleccion();
-                  setBusqueda(e.target.value);
-                }}
-              />
-              {productoSeleccionado && (
-                <button 
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 font-bold text-lg"
-                  onClick={limpiarSeleccion}
-                >
-                  &times;
-                </button>
+            <div className="flex flex-col gap-3">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Escribí nombre o código (min 3 letras)..."
+                  className={`w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-brand-light outline-none ${productoSeleccionado ? 'bg-gray-100 text-gray-500 font-bold border-gray-300' : 'bg-white'}`}
+                  value={busqueda}
+                  onChange={e => {
+                    if (productoSeleccionado) limpiarSeleccion();
+                    setBusqueda(e.target.value);
+                  }}
+                />
+                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                {productoSeleccionado && (
+                  <button 
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 font-bold text-lg"
+                    onClick={limpiarSeleccion}
+                  >
+                    &times;
+                  </button>
+                )}
+              </div>
+
+              {!productoSeleccionado && (
+                <div className="relative">
+                  <Filter size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <select 
+                    className="w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-brand-light outline-none bg-white text-gray-600 appearance-none"
+                    value={filtroCategoria}
+                    onChange={e => setFiltroCategoria(e.target.value)}
+                  >
+                    <option value="">Todas las categorías</option>
+                    {categoriasLista.map(cat => (
+                      <optgroup key={cat.id} label={cat.nombre}>
+                        <option value={cat.id}>{cat.nombre} (Principal)</option>
+                        {cat.subcategorias?.map(sub => (
+                          <option key={sub.id} value={sub.id}>↳ {sub.nombre}</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
               )}
             </div>
 
             {!productoSeleccionado && (
-              <div className="flex-1 overflow-y-auto mt-2 space-y-2">
+              <div className="flex-1 overflow-y-auto mt-4 space-y-2">
                 {productosEncontrados.map(prod => (
                   <div 
                     key={prod.id} 
@@ -157,7 +208,7 @@ const AjusteStock = () => {
                     </div>
                   </div>
                 ))}
-                {busqueda.length > 2 && productosEncontrados.length === 0 && (
+                {(busqueda.length > 2 || filtroCategoria) && productosEncontrados.length === 0 && (
                   <div className="text-center text-gray-400 text-sm py-8">
                     No se encontraron productos que coincidan con la búsqueda.
                   </div>

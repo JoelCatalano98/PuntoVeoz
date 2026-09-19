@@ -14,4 +14,10 @@ router.post('/ajustar', requireRole('ADMIN', 'SUPERADMIN'), stockController.ajus
 // Historial de movimientos (lectura)
 router.get('/movimientos', requireRole('ADMIN', 'SUPERADMIN'), stockController.historial);
 
+// Alertas de stock mínimo
+router.get('/alertas', requireRole('ADMIN', 'SUPERADMIN'), stockController.alertas);
+
+// Stock valorizado
+router.get('/valorizado', requireRole('ADMIN', 'SUPERADMIN'), stockController.valorizado);
+
 module.exports = router;
