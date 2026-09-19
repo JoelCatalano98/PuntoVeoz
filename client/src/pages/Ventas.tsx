@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { Search, Trash2, User, CreditCard, ShoppingCart, AlertTriangle, Edit2, Tag } from 'lucide-react';
+import { Search, Trash2, User, CreditCard, ShoppingCart, AlertTriangle, Edit2, Tag, Percent } from 'lucide-react';
 import ClienteModal from '../components/ClienteModal';
 import { Link } from 'react-router-dom';
 
@@ -43,6 +43,7 @@ const Ventas = () => {
   const [items, setItems] = useState<VentaItem[]>([]);
   const [montoRecibido, setMontoRecibido] = useState('');
   const [medioPago, setMedioPago] = useState('EFECTIVO');
+  const [descuentoGlobal, setDescuentoGlobal] = useState('');
 
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [showClienteModal, setShowClienteModal] = useState(false);
@@ -51,12 +52,15 @@ const Ventas = () => {
   const [aperturaCajaId, setAperturaCajaId] = useState<number | null>(null);
   const [cargandoCaja, setCargandoCaja] = useState(true);
 
-  // Listas de Precio
+  // Listas de Precio y Categorías
   const [listasPrecio, setListasPrecio] = useState<ListaPrecio[]>([]);
+  const [categoriasLista, setCategoriasLista] = useState<any[]>([]);
   const [listaSeleccionadaId, setListaSeleccionadaId] = useState<string>('');
   const [aplicarLista, setAplicarLista] = useState(false);
+  const [filtroCategoria, setFiltroCategoria] = useState('');
 
   const [scanValue, setScanValue] = useState('');
+  const [productosBuscados, setProductosBuscados] = useState<any[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const [cobrando, setCobrando] = useState(false);
 
@@ -65,6 +69,7 @@ const Ventas = () => {
 
   const scanInputRef = useRef<HTMLInputElement>(null);
   const montoInputRef = useRef<HTMLInputElement>(null);
+  const resultadosRef = useRef<HTMLDivElement>(null);
 
   // Modal Ticket
   const [showModalTicket, setShowModalTicket] = useState(false);
@@ -104,10 +109,11 @@ const Ventas = () => {
   useEffect(() => {
     const initData = async () => {
       try {
-        const [resCaja, resConfig, resListas] = await Promise.all([
+        const [resCaja, resConfig, resListas, resCat] = await Promise.all([
           api.get('/caja/estado'),
           api.get('/parametros/impresionTicket'),
-          api.get('/listas-precio')
+          api.get('/listas-precio'),
+          api.get('/categorias')
         ]);
 
         if (resCaja.data.abierta) {
@@ -128,6 +134,8 @@ const Ventas = () => {
         } else if (listas.length > 0) {
           setListaSeleccionadaId(listas[0].id.toString());
         }
+
+        setCategoriasLista(resCat.data);
       } catch (err) {
         toast.error('Error al inicializar la terminal');
       } finally {
@@ -154,11 +162,41 @@ const Ventas = () => {
     }));
   }, [listaSeleccionadaId, listasPrecio, aplicarLista]);
 
+  // Búsqueda rápida
+  useEffect(() => {
+    if (scanValue.trim().length > 1 || filtroCategoria) {
+      const delay = setTimeout(async () => {
+        try {
+          const params = new URLSearchParams();
+          if (filtroCategoria) params.append('categoriaId', filtroCategoria);
+          if (scanValue.trim()) params.append('busqueda', scanValue.trim());
+
+          const res = await api.get('/productos', { params });
+          setProductosBuscados(res.data.slice(0, 15));
+        } catch (e) {}
+      }, 300);
+      return () => clearTimeout(delay);
+    } else {
+      setProductosBuscados([]);
+    }
+  }, [scanValue, filtroCategoria]);
+
+  // Manejar clics fuera de los resultados de búsqueda para cerrarlos
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (resultadosRef.current && !resultadosRef.current.contains(event.target as Node) && scanInputRef.current && !scanInputRef.current.contains(event.target as Node)) {
+        setProductosBuscados([]);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   useEffect(() => {
     if (aperturaCajaId && !showClienteModal && !showModalTicket && document.activeElement !== montoInputRef.current && document.activeElement?.tagName !== 'SELECT' && document.activeElement?.tagName !== 'INPUT') {
       scanInputRef.current?.focus();
     }
-  }, [items, showClienteModal, showModalTicket, aperturaCajaId, listaSeleccionadaId, aplicarLista]);
+  }, [items, showClienteModal, showModalTicket, aperturaCajaId, listaSeleccionadaId, aplicarLista, descuentoGlobal]);
 
   useEffect(() => {
     if (showModalTicket) {
@@ -209,10 +247,46 @@ const Ventas = () => {
     setSelectedIndex(prev => (prev >= items.length - 1 ? items.length - 2 : prev));
   };
 
-  const total = Number(items.reduce((acc, item) => acc + item.subtotal, 0).toFixed(2));
+  const totalItems = Number(items.reduce((acc, item) => acc + item.subtotal, 0).toFixed(2));
+  const descNum = Number(descuentoGlobal) || 0;
+  const total = Math.max(0, Number((totalItems - descNum).toFixed(2)));
+
   const esEfectivo = medioPago === 'EFECTIVO';
   const montoRecibidoNum = esEfectivo ? (Number(montoRecibido) || 0) : total;
   const canSubmit = items.length > 0 && montoRecibidoNum >= total && !cobrando;
+
+  const agregarProducto = (prod: any, qty: number = 1) => {
+    const precioBase = Number(prod.precioVenta);
+    const listaActiva = aplicarLista ? listasPrecio.find(l => l.id.toString() === listaSeleccionadaId) || null : null;
+    const precioLista = calcularPrecioFinal(precioBase, listaActiva);
+    const bonificacionInicial = 0;
+    const precioUnitario = precioLista * (1 - bonificacionInicial / 100);
+
+    setItems(prev => {
+      const existingIdx = prev.findIndex(i => i.productoId === prod.id);
+      if (existingIdx >= 0) {
+        const newItems = [...prev];
+        const updatedItem = { ...newItems[existingIdx] };
+        updatedItem.cantidad += qty;
+        updatedItem.subtotal = Number((updatedItem.cantidad * updatedItem.precioUnitario).toFixed(2));
+        newItems[existingIdx] = updatedItem;
+        return newItems;
+      } else {
+        const newItem: VentaItem = {
+          productoId: prod.id,
+          nombre: prod.nombre,
+          cantidad: qty,
+          precioBase: precioBase,
+          precioLista: precioLista,
+          bonificacion: bonificacionInicial,
+          precioUnitario: precioUnitario,
+          subtotal: Number((qty * precioUnitario).toFixed(2))
+        };
+        return [...prev, newItem];
+      }
+    });
+    setSelectedIndex(items.findIndex(i => i.productoId === prod.id) >= 0 ? items.findIndex(i => i.productoId === prod.id) : items.length);
+  };
 
   const handleScan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -229,52 +303,34 @@ const Ventas = () => {
 
     try {
       const res = await api.get(`/productos/codigo/${code}`);
-      const prod = res.data;
-
-      const precioBase = Number(prod.precioVenta);
-      const listaActiva = aplicarLista ? listasPrecio.find(l => l.id.toString() === listaSeleccionadaId) || null : null;
-      const precioLista = calcularPrecioFinal(precioBase, listaActiva);
-      const bonificacionInicial = 0;
-      const precioUnitario = precioLista * (1 - bonificacionInicial / 100);
-
-      setItems(prev => {
-        const existingIdx = prev.findIndex(i => i.productoId === prod.id);
-        if (existingIdx >= 0) {
-          const newItems = [...prev];
-          const updatedItem = { ...newItems[existingIdx] };
-          updatedItem.cantidad += qty;
-          updatedItem.subtotal = Number((updatedItem.cantidad * updatedItem.precioUnitario).toFixed(2));
-          newItems[existingIdx] = updatedItem;
-          return newItems;
-        } else {
-          const newItem: VentaItem = {
-            productoId: prod.id,
-            nombre: prod.nombre,
-            cantidad: qty,
-            precioBase: precioBase,
-            precioLista: precioLista,
-            bonificacion: bonificacionInicial,
-            precioUnitario: precioUnitario,
-            subtotal: Number((qty * precioUnitario).toFixed(2))
-          };
-          return [...prev, newItem];
-        }
-      });
-      setSelectedIndex(items.findIndex(i => i.productoId === prod.id) >= 0 ? items.findIndex(i => i.productoId === prod.id) : items.length);
+      agregarProducto(res.data, qty);
       setScanValue('');
+      setProductosBuscados([]);
     } catch (err: any) {
-      toast.error('Producto no encontrado');
-      setScanValue('');
+      // Si no es un código exacto, la búsqueda rápida lo mostrará, pero no agregamos nada.
+      if (productosBuscados.length === 1) {
+        // Autoseleccionar si hay solo 1 coincidencia
+        agregarProducto(productosBuscados[0], qty);
+        setScanValue('');
+        setProductosBuscados([]);
+      } else if (productosBuscados.length === 0) {
+        toast.error('Producto no encontrado');
+        setScanValue('');
+      } else {
+        toast.error('Múltiples resultados, seleccione uno de la lista');
+      }
     }
   };
 
   const limpiarPOS = () => {
     setItems([]);
     setMontoRecibido('');
+    setDescuentoGlobal('');
     setMedioPago('EFECTIVO');
     setCliente(null);
     setSelectedIndex(-1);
     setScanValue('');
+    setProductosBuscados([]);
     
     // Restablecer a lista predeterminada
     const listaPredeterminada = listasPrecio.find(l => l.esPredeterminada);
@@ -303,13 +359,14 @@ const Ventas = () => {
         items: items.map(i => ({ 
           productoId: i.productoId, 
           cantidad: i.cantidad,
-          // Mandar precio unitario final para que el backend lo tome o pueda validarlo
+          descuentoLinea: i.bonificacion
         })),
         montoRecibido: montoRecibidoNum,
         medioPago,
         clienteId: cliente?.id || null,
         aperturaCajaId,
-        listaPrecioId: (aplicarLista && listaSeleccionadaId) ? parseInt(listaSeleccionadaId, 10) : null
+        listaPrecioId: (aplicarLista && listaSeleccionadaId) ? parseInt(listaSeleccionadaId, 10) : null,
+        descuentoGlobal: descNum
       };
 
       const res = await api.post('/ventas', payload);
@@ -384,52 +441,104 @@ const Ventas = () => {
   }
 
   return (
-    <div className="h-full flex flex-row">
+    <div className="h-full flex flex-row relative">
       {/* COLUMNA IZQ: Carrito */}
       <div className="flex-1 flex flex-col border-r border-gray-200 min-w-0">
 
         {/* Header con Buscador y Select Lista de Precios */}
-        <div className="p-4 bg-white shadow-sm z-10 flex gap-4 items-center border-b border-gray-200">
-          <form onSubmit={handleScan} className="relative flex-1 max-w-xl">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              ref={scanInputRef}
-              type="text"
-              placeholder="Escanear código (ej: 779089... o 3*779...)"
-              className="w-full pl-10 pr-4 py-3 text-lg border-2 border-brand-light rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition-shadow"
-              value={scanValue}
-              onChange={e => setScanValue(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Tab') {
-                  e.preventDefault();
-                  montoInputRef.current?.focus();
-                  return;
-                }
-                if (scanValue === '') {
-                  if (items.length === 0) return;
-
-                  if (e.key === 'ArrowDown') {
+        <div className="p-4 bg-white shadow-sm z-30 flex gap-4 items-center border-b border-gray-200 relative">
+          <form onSubmit={handleScan} className="relative flex-1 max-w-xl flex gap-2">
+            <div className="w-1/3">
+              <select 
+                className="w-full p-3 border-2 border-brand-light rounded-lg focus:outline-none focus:border-blue-400 bg-white font-medium text-gray-700"
+                value={filtroCategoria}
+                onChange={e => {
+                  setFiltroCategoria(e.target.value);
+                  focusScan();
+                }}
+              >
+                <option value="">Todas las categorías</option>
+                {categoriasLista.map(cat => (
+                  <optgroup key={cat.id} label={cat.nombre}>
+                    <option value={cat.id}>{cat.nombre} (Principal)</option>
+                    {cat.subcategorias?.map((sub: any) => (
+                      <option key={sub.id} value={sub.id}>↳ {sub.nombre}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+            
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                ref={scanInputRef}
+                type="text"
+                placeholder="Escanear o buscar (min 2 letras)..."
+                className="w-full pl-10 pr-4 py-3 text-lg border-2 border-brand-light rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition-shadow"
+                value={scanValue}
+                onChange={e => setScanValue(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Tab') {
                     e.preventDefault();
-                    setSelectedIndex(prev => (prev < items.length - 1 ? prev + 1 : prev));
-                  } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    setSelectedIndex(prev => (prev > 0 ? prev - 1 : 0));
-                  } else if (e.key === '+' && selectedIndex >= 0) {
-                    e.preventDefault();
-                    updateCantidad(selectedIndex, 1);
-                  } else if (e.key === '-' && selectedIndex >= 0) {
-                    e.preventDefault();
-                    updateCantidad(selectedIndex, -1);
-                  } else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIndex >= 0) {
-                    e.preventDefault();
-                    removeItem(selectedIndex);
+                    montoInputRef.current?.focus();
+                    return;
                   }
-                }
-              }}
-            />
+                  if (scanValue === '') {
+                    if (items.length === 0) return;
+
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      setSelectedIndex(prev => (prev < items.length - 1 ? prev + 1 : prev));
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      setSelectedIndex(prev => (prev > 0 ? prev - 1 : 0));
+                    } else if (e.key === '+' && selectedIndex >= 0) {
+                      e.preventDefault();
+                      updateCantidad(selectedIndex, 1);
+                    } else if (e.key === '-' && selectedIndex >= 0) {
+                      e.preventDefault();
+                      updateCantidad(selectedIndex, -1);
+                    } else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIndex >= 0) {
+                      e.preventDefault();
+                      removeItem(selectedIndex);
+                    }
+                  }
+                }}
+              />
+
+              {/* Resultados Búsqueda Rápida */}
+              {productosBuscados.length > 0 && (
+                <div ref={resultadosRef} className="absolute left-0 right-0 top-full mt-2 bg-white border border-gray-200 shadow-xl rounded-lg overflow-hidden z-[100] max-h-96 overflow-y-auto">
+                  {productosBuscados.map(prod => (
+                    <div 
+                      key={prod.id} 
+                      className="p-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer flex justify-between items-center transition-colors"
+                      onClick={() => {
+                        agregarProducto(prod, 1);
+                        setScanValue('');
+                        setProductosBuscados([]);
+                        focusScan();
+                      }}
+                    >
+                      <div>
+                        <div className="font-bold text-gray-800">{prod.nombre}</div>
+                        <div className="text-xs text-gray-400">{prod.codigoBarras || 'S/N'} | {prod.categoria?.nombre || 'Sin cat.'}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-bold text-brand-dark">${Number(prod.precioVenta).toFixed(2)}</div>
+                        <div className={`text-xs font-bold ${prod.stockActual <= 0 ? 'text-red-500' : 'text-gray-500'}`}>
+                          Stock: {prod.stockActual}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </form>
 
-          <div className="w-[300px]">
+          <div className="w-[280px]">
             <div className="flex items-center gap-2 mb-1">
               <input 
                 type="checkbox" 
@@ -458,13 +567,13 @@ const Ventas = () => {
         </div>
 
         {/* Tabla (Scroll independiente) */}
-        <div className="flex-1 overflow-y-auto bg-gray-50 p-4">
+        <div className="flex-1 overflow-y-auto bg-gray-50 p-4 relative z-0">
           {items.length === 0 ? (
             <div className="h-full flex items-center justify-center text-gray-400">
               <div className="text-center">
                 <ShoppingCart size={64} className="mx-auto mb-4 opacity-20" />
                 <p className="text-lg">El carrito está vacío</p>
-                <p className="text-sm">Escaneá un producto para comenzar</p>
+                <p className="text-sm">Escaneá un producto o búscalo por nombre</p>
               </div>
             </div>
           ) : (
@@ -481,7 +590,6 @@ const Ventas = () => {
               </thead>
               <tbody>
                 {items.map((item, idx) => {
-                  const modificadoPorLista = Math.abs(item.precioBase - item.precioLista) > 0.01;
                   const modificadoTotal = Math.abs(item.precioBase - item.precioUnitario) > 0.01;
 
                   return (
@@ -546,6 +654,11 @@ const Ventas = () => {
         <div className="p-6 bg-brand-dark text-white flex flex-col items-end border-b-4 border-brand-light">
           <div className="text-brand-light/80 text-sm font-semibold uppercase tracking-wider mb-1">Total a cobrar</div>
           <div className="text-5xl font-bold">${total.toFixed(2)}</div>
+          {descNum > 0 && (
+            <div className="text-red-300 text-sm mt-1 font-medium">
+              Subtotal: ${totalItems.toFixed(2)} - Descuento: ${descNum.toFixed(2)}
+            </div>
+          )}
         </div>
 
         <div className="p-6 flex flex-col gap-6 flex-1 overflow-y-auto">
@@ -568,23 +681,40 @@ const Ventas = () => {
             </div>
           </div>
 
-          {/* Medio de Pago */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-bold text-gray-600 uppercase mb-2">
-              <CreditCard size={16} /> Medio de pago
-            </label>
-            <select
-              value={medioPago}
-              onChange={e => { setMedioPago(e.target.value); }}
-              className="w-full p-3 border rounded font-medium text-gray-800 focus:outline-none focus:border-brand-light focus:ring-1 focus:ring-brand-light bg-white cursor-pointer"
-            >
-              <option value="EFECTIVO">Efectivo</option>
-              <option value="TARJETA_DEBITO">Tarjeta Débito</option>
-              <option value="TARJETA_CREDITO">Tarjeta Crédito</option>
-              <option value="TRANSFERENCIA">Transferencia</option>
-              <option value="QR">Mercado Pago / QR</option>
-              <option value="OTRO">Otro</option>
-            </select>
+          <div className="flex gap-4">
+            {/* Medio de Pago */}
+            <div className="flex-1">
+              <label className="flex items-center gap-2 text-sm font-bold text-gray-600 uppercase mb-2">
+                <CreditCard size={16} /> Medio de pago
+              </label>
+              <select
+                value={medioPago}
+                onChange={e => { setMedioPago(e.target.value); }}
+                className="w-full p-3 border rounded font-medium text-gray-800 focus:outline-none focus:border-brand-light focus:ring-1 focus:ring-brand-light bg-white cursor-pointer"
+              >
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TARJETA_DEBITO">Tarjeta Débito</option>
+                <option value="TARJETA_CREDITO">Tarjeta Crédito</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
+                <option value="QR">Mercado Pago / QR</option>
+                <option value="OTRO">Otro</option>
+              </select>
+            </div>
+            {/* Descuento Global */}
+            <div className="w-1/3">
+              <label className="flex items-center gap-2 text-sm font-bold text-gray-600 uppercase mb-2">
+                <Percent size={16} /> Desc. ($)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className="w-full p-3 border rounded font-bold focus:outline-none focus:border-brand-light focus:ring-1 focus:ring-brand-light text-right text-red-600 bg-white"
+                value={descuentoGlobal}
+                onChange={e => setDescuentoGlobal(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
           </div>
 
           {/* Input Monto & Info Vuelto */}

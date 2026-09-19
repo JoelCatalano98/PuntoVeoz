@@ -9,6 +9,8 @@ const router = Router();
 router.use(requireAuth, attachTenant);
 
 router.post('/', ventaController.crearVenta);
+router.post('/:id/anular', ventaController.anularVenta);
+router.get('/historial', ventaController.historialVentas);
 router.get('/:id', ventaController.obtenerPorId);
 router.get('/', requireRole('ADMIN', 'SUPERADMIN'), ventaController.reporteVentas);
 

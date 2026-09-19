@@ -70,7 +70,9 @@ async function calcularTotalEsperadoEfectivo({ comercioId, aperturaCajaId }) {
     } else if (mov.tipo === 'INGRESO_MANUAL') {
       esperado = sumar(esperado, mov.monto);
     } else if (mov.tipo === 'EGRESO_MANUAL') {
-      esperado = restar(esperado, mov.monto);
+      if (!mov.medioPago || mov.medioPago === 'EFECTIVO') {
+        esperado = restar(esperado, mov.monto);
+      }
     }
     // ventas con otros medios de pago no afectan el efectivo físico
   }

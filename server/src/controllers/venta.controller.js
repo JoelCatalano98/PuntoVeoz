@@ -3,7 +3,7 @@ const cajaService = require('../services/caja.service');
 
 async function crearVenta(req, res, next) {
   try {
-    const { aperturaCajaId, items, montoRecibido, medioPago, clienteId } = req.body;
+    const { aperturaCajaId, items, montoRecibido, medioPago, clienteId, listaPrecioId, descuentoGlobal } = req.body;
     const comercioId = req.comercioId;
     const usuarioId = req.user.userId;
 
@@ -41,7 +41,9 @@ async function crearVenta(req, res, next) {
       clienteId: clienteId || null,
       items,
       montoRecibido,
-      medioPago
+      medioPago,
+      listaPrecioId: listaPrecioId ? Number(listaPrecioId) : null,
+      descuentoGlobal: descuentoGlobal || 0
     });
 
     res.status(201).json(venta);
@@ -126,8 +128,53 @@ async function obtenerPorId(req, res, next) {
   }
 }
 
+async function anularVenta(req, res, next) {
+  try {
+    const { id } = req.params;
+    const comercioId = req.comercioId;
+    const usuarioId = req.user.userId;
+
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'id de venta es obligatorio y debe ser válido' });
+    }
+
+    const venta = await ventaService.anularVenta(comercioId, usuarioId, Number(id));
+
+    res.json(venta);
+  } catch (error) {
+    if (error.message === 'Venta no encontrada' || error.message === 'Esta venta ya se encuentra anulada') {
+      return res.status(400).json({ error: error.message });
+    }
+    next(error);
+  }
+}
+
+async function historialVentas(req, res, next) {
+  try {
+    const comercioId = req.comercioId;
+    const prisma = require('../config/prisma');
+
+    const ventas = await prisma.venta.findMany({
+      where: { comercioId },
+      orderBy: { createdAt: 'desc' },
+      take: 100, // list up to 100 recent sales
+      include: {
+        cliente: true,
+        usuario: { select: { id: true, nombre: true } },
+        items: true
+      }
+    });
+
+    res.json(ventas);
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   crearVenta,
   reporteVentas,
-  obtenerPorId
+  obtenerPorId,
+  anularVenta,
+  historialVentas
 };

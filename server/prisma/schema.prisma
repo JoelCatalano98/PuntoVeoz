@@ -18,47 +18,47 @@ datasource db {
 // MULTI-TENANT: cada comercio es un cliente independiente
 // ------------------------------------------------------------
 model Comercio {
-  id            Int       @id @default(autoincrement())
-  nombre        String
-  razonSocial   String?
-  cuit          String?   @unique
-  activo        Boolean   @default(true)
-  createdAt     DateTime  @default(now())
+  id          Int      @id @default(autoincrement())
+  nombre      String
+  razonSocial String?
+  cuit        String?  @unique
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
 
-  usuarios      Usuario[]
-  puntosVenta   PuntoVenta[]
-  cajas         Caja[]
-  productos     Producto[]
-  clientes      Cliente[]
-  ventas        Venta[]
-  aperturasCaja AperturaCaja[]
-  parametros    Parametro[]
-  categorias    Categoria[]
-  unidadesMedida UnidadMedida[]
-  proveedores   Proveedor[]
-  compras       Compra[]
+  usuarios         Usuario[]
+  puntosVenta      PuntoVenta[]
+  cajas            Caja[]
+  productos        Producto[]
+  clientes         Cliente[]
+  ventas           Venta[]
+  aperturasCaja    AperturaCaja[]
+  parametros       Parametro[]
+  categorias       Categoria[]
+  unidadesMedida   UnidadMedida[]
+  proveedores      Proveedor[]
+  compras          Compra[]
   movimientosStock MovimientoStock[]
-  listasPrecio  ListaPrecio[]
+  listasPrecio     ListaPrecio[]
 
   @@map("comercios")
 }
 
 model Usuario {
-  id          Int      @id @default(autoincrement())
-  comercioId  Int
-  comercio    Comercio @relation(fields: [comercioId], references: [id])
-  nombre      String
-  username    String   @unique
-  email       String   @unique
-  password    String
-  rol         RolUsuario @default(CAJERO)
-  activo      Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  id         Int        @id @default(autoincrement())
+  comercioId Int
+  comercio   Comercio   @relation(fields: [comercioId], references: [id])
+  nombre     String
+  username   String     @unique
+  email      String     @unique
+  password   String
+  rol        RolUsuario @default(CAJERO)
+  activo     Boolean    @default(true)
+  createdAt  DateTime   @default(now())
 
-  ventas          Venta[]
-  aperturasCaja   AperturaCaja[]
-  cierresCaja     CierreCaja[]
-  compras         Compra[]
+  ventas           Venta[]
+  aperturasCaja    AperturaCaja[]
+  cierresCaja      CierreCaja[]
+  compras          Compra[]
   movimientosStock MovimientoStock[]
 
   @@index([comercioId])
@@ -67,10 +67,9 @@ model Usuario {
 
 enum RolUsuario {
   SUPERADMIN // Joel / soporte
-  ADMIN      // dueño del comercio
+  ADMIN // dueño del comercio
   CAJERO
 }
-
 
 enum TipoModificadorPrecio {
   PORCENTAJE
@@ -78,15 +77,16 @@ enum TipoModificadorPrecio {
 }
 
 model ListaPrecio {
-  id               Int      @id @default(autoincrement())
+  id               Int                   @id @default(autoincrement())
   comercioId       Int
-  comercio         Comercio @relation(fields: [comercioId], references: [id])
+  comercio         Comercio              @relation(fields: [comercioId], references: [id])
   nombre           String
   tipoModificador  TipoModificadorPrecio
-  valor            Decimal  @db.Decimal(10, 2)
-  esPredeterminada Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  valor            Decimal               @db.Decimal(10, 2)
+  esPredeterminada Boolean               @default(false)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  Venta            Venta[]
 
   @@index([comercioId])
   @@map("listas_precio")
@@ -96,36 +96,36 @@ model ListaPrecio {
 // PRODUCTOS Y STOCK
 // ------------------------------------------------------------
 model Producto {
-  id            Int      @id @default(autoincrement())
-  comercioId    Int
-  comercio      Comercio @relation(fields: [comercioId], references: [id])
-  codigoBarras  String?  // código escaneado por el lector
-  nombre        String
-  descripcion   String?
-  precioCosto   Decimal  @db.Decimal(10, 2) @default(0)
-  precioVenta   Decimal  @db.Decimal(10, 2)
-  ivaIncluido   Boolean? @default(true)
-  rentabilidad  Decimal? @db.Decimal(10, 2)
-  stockActual   Decimal  @db.Decimal(10, 2) @default(0)
-  stockMinimo   Decimal  @db.Decimal(10, 2) @default(0)
-  stockIdeal    Decimal? @db.Decimal(10, 2)
-  imagenUrl     String?
-  activo        Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  comercioId   Int
+  comercio     Comercio @relation(fields: [comercioId], references: [id])
+  codigoBarras String? // código escaneado por el lector
+  nombre       String
+  descripcion  String?
+  precioCosto  Decimal  @default(0) @db.Decimal(10, 2)
+  precioVenta  Decimal  @db.Decimal(10, 2)
+  ivaIncluido  Boolean? @default(true)
+  rentabilidad Decimal? @db.Decimal(10, 2)
+  stockActual  Decimal  @default(0) @db.Decimal(10, 2)
+  stockMinimo  Decimal  @default(0) @db.Decimal(10, 2)
+  stockIdeal   Decimal? @db.Decimal(10, 2)
+  imagenUrl    String?
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  movimientos     MovimientoStock[]
-  ventaItems      VentaItem[]
-  detalleCompras  DetalleCompra[]
+  movimientos    MovimientoStock[]
+  ventaItems     VentaItem[]
+  detalleCompras DetalleCompra[]
 
-  categoriaId     Int?
-  categoria       Categoria?     @relation(fields: [categoriaId], references: [id])
-  
-  unidadMedidaId  Int?
-  unidadMedida    UnidadMedida?  @relation(fields: [unidadMedidaId], references: [id])
+  categoriaId Int?
+  categoria   Categoria? @relation(fields: [categoriaId], references: [id])
 
-  proveedorId     Int?
-  proveedor       Proveedor?     @relation(fields: [proveedorId], references: [id])
+  unidadMedidaId Int?
+  unidadMedida   UnidadMedida? @relation(fields: [unidadMedidaId], references: [id])
+
+  proveedorId Int?
+  proveedor   Proveedor? @relation(fields: [proveedorId], references: [id])
 
   @@index([comercioId])
   @@index([comercioId, codigoBarras])
@@ -133,22 +133,22 @@ model Producto {
 }
 
 model MovimientoStock {
-  id           Int       @id @default(autoincrement())
-  comercioId   Int
-  comercio     Comercio  @relation(fields: [comercioId], references: [id])
-  productoId   Int
-  producto     Producto  @relation(fields: [productoId], references: [id])
-  usuarioId    Int
-  usuario      Usuario   @relation(fields: [usuarioId], references: [id])
-  
-  tipo         TipoMovimientoStock
-  cantidad     Decimal   @db.Decimal(10, 2)
-  motivo       String    // "Rotura", "Merma", "Ajuste de Inventario", "Carga Inicial", etc.
+  id         Int      @id @default(autoincrement())
+  comercioId Int
+  comercio   Comercio @relation(fields: [comercioId], references: [id])
+  productoId Int
+  producto   Producto @relation(fields: [productoId], references: [id])
+  usuarioId  Int
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+
+  tipo          TipoMovimientoStock
+  cantidad      Decimal             @db.Decimal(10, 2)
+  motivo        String // "Rotura", "Merma", "Ajuste de Inventario", "Carga Inicial", etc.
   observaciones String?
-  
-  ventaId      Int?
-  venta        Venta?    @relation(fields: [ventaId], references: [id])
-  createdAt    DateTime  @default(now())
+
+  ventaId   Int?
+  venta     Venta?   @relation(fields: [ventaId], references: [id])
+  createdAt DateTime @default(now())
 
   @@index([comercioId])
   @@index([productoId])
@@ -166,35 +166,39 @@ enum TipoMovimientoStock {
 // todavía pero evitan una migración dolorosa más adelante.
 // ------------------------------------------------------------
 model Venta {
-  id                Int          @id @default(autoincrement())
-  comercioId        Int
-  comercio          Comercio     @relation(fields: [comercioId], references: [id])
-  usuarioId         Int          // cajero que hizo la venta
-  usuario           Usuario      @relation(fields: [usuarioId], references: [id])
+  id         Int      @id @default(autoincrement())
+  comercioId Int
+  comercio   Comercio @relation(fields: [comercioId], references: [id])
+  usuarioId  Int // cajero que hizo la venta
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
 
-  total             Decimal      @db.Decimal(10, 2)
-  montoRecibido     Decimal      @db.Decimal(10, 2)
-  vuelto            Decimal      @db.Decimal(10, 2)
-  medioPago         MedioPago    @default(EFECTIVO)
+  total         Decimal   @db.Decimal(10, 2)
+  montoRecibido Decimal   @db.Decimal(10, 2)
+  vuelto        Decimal   @db.Decimal(10, 2)
+  medioPago     MedioPago @default(EFECTIVO)
 
-  clienteId         Int?
-  cliente           Cliente?     @relation(fields: [clienteId], references: [id])
-  puntoVentaId      Int
-  puntoVenta        PuntoVenta   @relation(fields: [puntoVentaId], references: [id])
+  clienteId    Int?
+  cliente      Cliente?   @relation(fields: [clienteId], references: [id])
+  puntoVentaId Int
+  puntoVenta   PuntoVenta @relation(fields: [puntoVentaId], references: [id])
 
   // --- Campos reservados para integración futura con ARCA ---
-  tipoComprobante     String?   // "Ticket", "Factura A/B/C"
-  numeroComprobante   Int?
-  cae                 String?
-  vencimientoCae      DateTime?
-  estadoFiscal        EstadoFiscal @default(NO_APLICA)
+  tipoComprobante   String? // "Ticket", "Factura A/B/C"
+  numeroComprobante Int?
+  cae               String?
+  vencimientoCae    DateTime?
+  estadoFiscal      EstadoFiscal @default(NO_APLICA)
 
-  anulada           Boolean      @default(false)
-  createdAt         DateTime     @default(now())
+  listaPrecioId   Int?
+  listaPrecio     ListaPrecio? @relation(fields: [listaPrecioId], references: [id])
+  descuentoGlobal Decimal      @default(0) @db.Decimal(10, 2)
 
-  items             VentaItem[]
-  movimientosStock  MovimientoStock[]
-  movimientoCaja    MovimientoCaja?
+  anulada   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  items            VentaItem[]
+  movimientosStock MovimientoStock[]
+  movimientoCaja   MovimientoCaja?
 
   @@index([comercioId])
   @@index([comercioId, createdAt])
@@ -211,21 +215,22 @@ enum MedioPago {
 }
 
 enum EstadoFiscal {
-  NO_APLICA     // hoy: solo ticket interno, sin timbrar
-  PENDIENTE     // venta hecha, falta timbrar en ARCA
+  NO_APLICA // hoy: solo ticket interno, sin timbrar
+  PENDIENTE // venta hecha, falta timbrar en ARCA
   TIMBRADA
   ERROR
 }
 
 model VentaItem {
-  id            Int      @id @default(autoincrement())
-  ventaId       Int
-  venta         Venta    @relation(fields: [ventaId], references: [id])
-  productoId    Int
-  producto      Producto @relation(fields: [productoId], references: [id])
-  cantidad      Int
-  precioUnitario Decimal @db.Decimal(10, 2) // precio al momento de la venta
-  subtotal      Decimal  @db.Decimal(10, 2)
+  id             Int      @id @default(autoincrement())
+  ventaId        Int
+  venta          Venta    @relation(fields: [ventaId], references: [id])
+  productoId     Int
+  producto       Producto @relation(fields: [productoId], references: [id])
+  cantidad       Int
+  precioUnitario Decimal  @db.Decimal(10, 2) // precio al momento de la venta
+  descuentoLinea Decimal  @default(0) @db.Decimal(10, 2)
+  subtotal       Decimal  @db.Decimal(10, 2)
 
   @@index([ventaId])
   @@map("venta_items")
@@ -235,41 +240,41 @@ model VentaItem {
 // CAJA: apertura, movimientos y cierre
 // ------------------------------------------------------------
 model AperturaCaja {
-  id              Int       @id @default(autoincrement())
-  comercioId      Int
-  comercio        Comercio  @relation(fields: [comercioId], references: [id])
-  usuarioId       Int
-  usuario         Usuario   @relation(fields: [usuarioId], references: [id])
-  cajaId          Int
-  caja            Caja      @relation(fields: [cajaId], references: [id])
-  montoInicial    Decimal   @db.Decimal(10, 2)
-  observaciones   String?
-  createdAt       DateTime  @default(now())
+  id            Int      @id @default(autoincrement())
+  comercioId    Int
+  comercio      Comercio @relation(fields: [comercioId], references: [id])
+  usuarioId     Int
+  usuario       Usuario  @relation(fields: [usuarioId], references: [id])
+  cajaId        Int
+  caja          Caja     @relation(fields: [cajaId], references: [id])
+  montoInicial  Decimal  @db.Decimal(10, 2)
+  observaciones String?
+  createdAt     DateTime @default(now())
 
-  movimientos     MovimientoCaja[]
-  cierre          CierreCaja?
+  movimientos MovimientoCaja[]
+  cierre      CierreCaja?
 
   @@index([comercioId])
   @@map("aperturas_caja")
 }
 
 model MovimientoCaja {
-  id              Int          @id @default(autoincrement())
-  aperturaCajaId  Int
-  aperturaCaja    AperturaCaja @relation(fields: [aperturaCajaId], references: [id])
-  cajaId          Int
-  caja            Caja         @relation(fields: [cajaId], references: [id])
-  ventaId         Int?         @unique // null si es un ingreso/egreso manual
-  venta           Venta?       @relation(fields: [ventaId], references: [id])
-  tipo            TipoMovimientoCaja
-  monto           Decimal      @db.Decimal(10, 2)
-  medioPago       MedioPago?   // relevante para ingresos por venta
-  descripcion     String?      // ej: "retiro para pago proveedor"
-  
-  compraId        Int?
-  compra          Compra?      @relation(fields: [compraId], references: [id])
+  id             Int                @id @default(autoincrement())
+  aperturaCajaId Int
+  aperturaCaja   AperturaCaja       @relation(fields: [aperturaCajaId], references: [id])
+  cajaId         Int
+  caja           Caja               @relation(fields: [cajaId], references: [id])
+  ventaId        Int?               @unique // null si es un ingreso/egreso manual
+  venta          Venta?             @relation(fields: [ventaId], references: [id])
+  tipo           TipoMovimientoCaja
+  monto          Decimal            @db.Decimal(10, 2)
+  medioPago      MedioPago? // relevante para ingresos por venta
+  descripcion    String? // ej: "retiro para pago proveedor"
 
-  createdAt       DateTime     @default(now())
+  compraId Int?
+  compra   Compra? @relation(fields: [compraId], references: [id])
+
+  createdAt DateTime @default(now())
 
   @@index([aperturaCajaId])
   @@map("movimientos_caja")
@@ -282,17 +287,17 @@ enum TipoMovimientoCaja {
 }
 
 model CierreCaja {
-  id                Int          @id @default(autoincrement())
-  aperturaCajaId    Int          @unique
-  aperturaCaja      AperturaCaja @relation(fields: [aperturaCajaId], references: [id])
-  usuarioId         Int
-  usuario           Usuario      @relation(fields: [usuarioId], references: [id])
+  id             Int          @id @default(autoincrement())
+  aperturaCajaId Int          @unique
+  aperturaCaja   AperturaCaja @relation(fields: [aperturaCajaId], references: [id])
+  usuarioId      Int
+  usuario        Usuario      @relation(fields: [usuarioId], references: [id])
 
-  totalEsperado     Decimal      @db.Decimal(10, 2) // calculado por el sistema
-  totalContado      Decimal      @db.Decimal(10, 2) // ingresado manualmente al cerrar
-  diferencia        Decimal      @db.Decimal(10, 2) // totalContado - totalEsperado
-  observaciones     String?
-  createdAt         DateTime     @default(now())
+  totalEsperado Decimal  @db.Decimal(10, 2) // calculado por el sistema
+  totalContado  Decimal  @db.Decimal(10, 2) // ingresado manualmente al cerrar
+  diferencia    Decimal  @db.Decimal(10, 2) // totalContado - totalEsperado
+  observaciones String?
+  createdAt     DateTime @default(now())
 
   @@map("cierres_caja")
 }
@@ -301,55 +306,55 @@ model CierreCaja {
 // CLIENTES, PUNTOS DE VENTA Y PARAMETROS
 // ------------------------------------------------------------
 model Caja {
-  id            Int         @id @default(autoincrement())
-  comercioId    Int
-  comercio      Comercio    @relation(fields: [comercioId], references: [id])
-  puntoVentaId  Int
-  puntoVenta    PuntoVenta  @relation(fields: [puntoVentaId], references: [id])
-  nombre        String
-  descripcion   String?
-  prefijo       String
-  activo        Boolean     @default(true)
-  createdAt     DateTime    @default(now())
-  
-  aperturas     AperturaCaja[]
-  movimientos   MovimientoCaja[]
-  
+  id           Int        @id @default(autoincrement())
+  comercioId   Int
+  comercio     Comercio   @relation(fields: [comercioId], references: [id])
+  puntoVentaId Int
+  puntoVenta   PuntoVenta @relation(fields: [puntoVentaId], references: [id])
+  nombre       String
+  descripcion  String?
+  prefijo      String
+  activo       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+
+  aperturas   AperturaCaja[]
+  movimientos MovimientoCaja[]
+
   @@unique([comercioId, prefijo])
   @@index([comercioId])
   @@map("cajas")
 }
 
 model Cliente {
-  id          Int      @id @default(autoincrement())
-  comercioId  Int
-  comercio    Comercio @relation(fields: [comercioId], references: [id])
-  nombre      String
-  tipoDoc     String?
-  numeroDoc   String?
-  telefono    String?
-  email       String?
-  direccion   String?
-  activo      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  ventas      Venta[]
-  
+  id         Int      @id @default(autoincrement())
+  comercioId Int
+  comercio   Comercio @relation(fields: [comercioId], references: [id])
+  nombre     String
+  tipoDoc    String?
+  numeroDoc  String?
+  telefono   String?
+  email      String?
+  direccion  String?
+  activo     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  ventas     Venta[]
+
   @@index([comercioId])
   @@map("clientes")
 }
 
 model PuntoVenta {
-  id          Int      @id @default(autoincrement())
-  comercioId  Int
-  comercio    Comercio @relation(fields: [comercioId], references: [id])
-  nombre      String
-  tipo        TipoPuntoVenta @default(MANUAL)
-  numeroArca  Int?
-  activo      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  ventas      Venta[]
-  cajas       Caja[]
-  
+  id         Int            @id @default(autoincrement())
+  comercioId Int
+  comercio   Comercio       @relation(fields: [comercioId], references: [id])
+  nombre     String
+  tipo       TipoPuntoVenta @default(MANUAL)
+  numeroArca Int?
+  activo     Boolean        @default(true)
+  createdAt  DateTime       @default(now())
+  ventas     Venta[]
+  cajas      Caja[]
+
   @@index([comercioId])
   @@map("puntos_venta")
 }
@@ -360,88 +365,88 @@ enum TipoPuntoVenta {
 }
 
 model Parametro {
-  id          Int      @id @default(autoincrement())
-  comercioId  Int
-  comercio    Comercio @relation(fields: [comercioId], references: [id])
-  clave       String
-  valor       String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id         Int      @id @default(autoincrement())
+  comercioId Int
+  comercio   Comercio @relation(fields: [comercioId], references: [id])
+  clave      String
+  valor      String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
   @@unique([comercioId, clave])
   @@map("parametros")
 }
 
 model Categoria {
-  id          Int      @id @default(autoincrement())
-  comercioId  Int
-  comercio    Comercio @relation(fields: [comercioId], references: [id])
-  nombre      String
-  color       String   // hex, ej "#F4A261"
-  activo      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  
+  id         Int      @id @default(autoincrement())
+  comercioId Int
+  comercio   Comercio @relation(fields: [comercioId], references: [id])
+  nombre     String
+  color      String // hex, ej "#F4A261"
+  activo     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
   categoriaPadreId Int?
   categoriaPadre   Categoria?  @relation("SubCategorias", fields: [categoriaPadreId], references: [id])
   subcategorias    Categoria[] @relation("SubCategorias")
-  
-  productos   Producto[]
-  
+
+  productos Producto[]
+
   @@unique([comercioId, nombre])
   @@index([comercioId])
   @@map("categorias")
 }
 
 model UnidadMedida {
-  id          Int      @id @default(autoincrement())
+  id          Int        @id @default(autoincrement())
   comercioId  Int
-  comercio    Comercio @relation(fields: [comercioId], references: [id])
-  nombre      String   // "Unidad", "Pack", "Bulto cerrado"
-  abreviatura String?  // "UN", "L", "KG"
-  activo      Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  comercio    Comercio   @relation(fields: [comercioId], references: [id])
+  nombre      String // "Unidad", "Pack", "Bulto cerrado"
+  abreviatura String? // "UN", "L", "KG"
+  activo      Boolean    @default(true)
+  createdAt   DateTime   @default(now())
   productos   Producto[]
-  
+
   @@unique([comercioId, nombre])
   @@index([comercioId])
   @@map("unidades_medida")
 }
 
 model Proveedor {
-  id          Int      @id @default(autoincrement())
-  comercioId  Int
-  comercio    Comercio @relation(fields: [comercioId], references: [id])
-  razonSocial String
-  cuit        String?
-  telefono    String?
-  email       String?
-  direccion   String?
+  id           Int      @id @default(autoincrement())
+  comercioId   Int
+  comercio     Comercio @relation(fields: [comercioId], references: [id])
+  razonSocial  String
+  cuit         String?
+  telefono     String?
+  email        String?
+  direccion    String?
   condicionIva String?
-  activo      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  
-  productos   Producto[]
-  compras     Compra[]
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  productos Producto[]
+  compras   Compra[]
 
   @@index([comercioId])
   @@map("proveedores")
 }
 
 model Compra {
-  id              Int      @id @default(autoincrement())
-  comercioId      Int
-  comercio        Comercio @relation(fields: [comercioId], references: [id])
-  proveedorId     Int
-  proveedor       Proveedor @relation(fields: [proveedorId], references: [id])
-  usuarioId       Int
-  usuario         Usuario  @relation(fields: [usuarioId], references: [id])
-  
-  numeroFactura   String?
-  fechaEmision    DateTime @default(now())
-  total           Decimal  @db.Decimal(10, 2)
-  metodoPago      String   @default("CUENTA_CORRIENTE") // "EFECTIVO_CAJA", "TRANSFERENCIA", "CUENTA_CORRIENTE"
-  estado          String   @default("COMPLETADA")
-  createdAt       DateTime @default(now())
+  id          Int       @id @default(autoincrement())
+  comercioId  Int
+  comercio    Comercio  @relation(fields: [comercioId], references: [id])
+  proveedorId Int
+  proveedor   Proveedor @relation(fields: [proveedorId], references: [id])
+  usuarioId   Int
+  usuario     Usuario   @relation(fields: [usuarioId], references: [id])
+
+  numeroFactura String?
+  fechaEmision  DateTime @default(now())
+  total         Decimal  @db.Decimal(10, 2)
+  metodoPago    String   @default("CUENTA_CORRIENTE") // "EFECTIVO_CAJA", "TRANSFERENCIA", "CUENTA_CORRIENTE"
+  estado        String   @default("COMPLETADA")
+  createdAt     DateTime @default(now())
 
   detalles        DetalleCompra[]
   movimientosCaja MovimientoCaja[]
@@ -451,15 +456,15 @@ model Compra {
 }
 
 model DetalleCompra {
-  id          Int      @id @default(autoincrement())
-  compraId    Int
-  compra      Compra   @relation(fields: [compraId], references: [id])
-  productoId  Int
-  producto    Producto @relation(fields: [productoId], references: [id])
-  
+  id         Int      @id @default(autoincrement())
+  compraId   Int
+  compra     Compra   @relation(fields: [compraId], references: [id])
+  productoId Int
+  producto   Producto @relation(fields: [productoId], references: [id])
+
   cantidad    Int
-  precioCosto Decimal  @db.Decimal(10, 2)
-  subtotal    Decimal  @db.Decimal(10, 2)
+  precioCosto Decimal @db.Decimal(10, 2)
+  subtotal    Decimal @db.Decimal(10, 2)
 
   @@index([compraId])
   @@map("detalle_compras")

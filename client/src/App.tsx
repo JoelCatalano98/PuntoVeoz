@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext';
 import Login from './pages/Login';
 import RutaProtegida from './components/RutaProtegida';
 import Ventas from './pages/Ventas';
+import VentasHistorial from './pages/VentasHistorial';
 import Productos from './pages/Productos';
 import Layout from './components/Layout';
 import Clientes from './pages/Clientes';
@@ -36,6 +37,7 @@ function App() {
             <Route element={<Layout />}>
               {/* Rutas para todos los autenticados */}
               <Route path="/ventas" element={<Ventas />} />
+              <Route path="/ventas-historial" element={<VentasHistorial />} />
               <Route path="/productos" element={<Productos />} />
               <Route path="/clientes" element={<Clientes />} />
               <Route path="/caja" element={<Caja />} />

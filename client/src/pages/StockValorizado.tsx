@@ -16,14 +16,15 @@ interface ProductoValorizado {
   stockActual: number;
   precioCosto: number;
   totalValorizado: number;
+  categoriaId?: number;
   categoria?: {
     nombre: string;
+    categoriaPadreId?: number | null;
   };
 }
 
 const StockValorizado = () => {
   const [productos, setProductos] = useState<ProductoValorizado[]>([]);
-  const [totalGeneral, setTotalGeneral] = useState(0);
   const [cargando, setCargando] = useState(true);
   
   const [categoriasLista, setCategoriasLista] = useState<Categoria[]>([]);
@@ -51,7 +52,6 @@ const StockValorizado = () => {
       setCargando(true);
       const res = await api.get('/stock/valorizado');
       setProductos(res.data.items);
-      setTotalGeneral(res.data.totalGeneral);
     } catch (err) {
       toast.error('Error al cargar el stock valorizado');
     } finally {
@@ -73,18 +73,17 @@ const StockValorizado = () => {
       p.nombre.toLowerCase().includes(filtroTexto.toLowerCase()) || 
       (p.codigoBarras && p.codigoBarras.includes(filtroTexto));
       
-    // Como el endpoint de valorizado trae los productos, si tuviéramos que filtrar por categoría ID necesitamos 
-    // pedirlo desde el backend o buscar el match por nombre.
-    // Asumiremos que el backend no mandó categoriaId directo, pero si mandó categoria.nombre, podríamos filtrar.
-    // Sin embargo, para hacerlo perfectamente, deberíamos pedirle al backend que filtre, o que el backend mande el categoriaId.
-    // Como el backend (stock.controller) mandó {categoria: {nombre: true}} no tenemos el ID fácilmente en el front para filtrar si es subcategoria.
-    // Vamos a hacer que el filtroCategoria envíe un parametro al backend si fuese necesario, 
-    // pero como trajimos TODO el stock, podemos filtrar por texto. Para filtrar por categoría, 
-    // vamos a obviar la jerarquía estricta si no tenemos el id, o podemos modificar el controlador si quisieramos.
-    // Por simplicidad visual (y porque es Frontend phase 2), dejaremos el Select pero quizás filtre por nombre,
-    // o podemos simplemente obviar el match si filtroCategoria está vacío.
-    return textoMatch;
+    let catMatch = true;
+    if (filtroCategoria) {
+      const catId = Number(filtroCategoria);
+      // Coincide si el producto tiene esa categoria exacta, o si su categoria padre es esa
+      catMatch = p.categoriaId === catId || p.categoria?.categoriaPadreId === catId;
+    }
+
+    return textoMatch && catMatch;
   });
+
+  const totalInmovilizadoFiltro = productosFiltrados.reduce((acc, p) => acc + p.totalValorizado, 0);
 
   return (
     <div className="h-full flex flex-col bg-gray-50 p-6">
@@ -153,7 +152,7 @@ const StockValorizado = () => {
               <h2 className="text-sm font-bold uppercase tracking-wider">Capital Inmovilizado</h2>
             </div>
             <div className="text-4xl font-extrabold tracking-tight">
-              {cargando ? '...' : formatearMoneda(totalGeneral)}
+              {cargando ? '...' : formatearMoneda(totalInmovilizadoFiltro)}
             </div>
             <p className="text-xs text-gray-300 mt-4 opacity-80">
               Suma total del costo de todos los productos en stock.
@@ -181,10 +180,9 @@ const StockValorizado = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-500 mb-1">Categoría (Próximamente)</label>
+              <label className="block text-xs font-bold text-gray-500 mb-1">Categoría</label>
               <select 
-                disabled
-                className="w-full p-2 text-sm border rounded-md bg-gray-100 text-gray-400"
+                className="w-full p-2 text-sm border rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-light"
                 value={filtroCategoria}
                 onChange={e => setFiltroCategoria(e.target.value)}
               >

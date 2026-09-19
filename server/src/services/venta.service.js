@@ -1,7 +1,7 @@
 const prisma = require('../config/prisma');
 const dinero = require('../utils/dinero');
 
-async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, items, montoRecibido, medioPago }) {
+async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, items, montoRecibido, medioPago, listaPrecioId, descuentoGlobal = 0 }) {
   // Todo ocurre dentro de una única transacción
   return await prisma.$transaction(async (tx) => {
     // 1. VALIDACIONES
@@ -34,6 +34,16 @@ async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, it
       }
     }
 
+    let listaPrecio = null;
+    if (listaPrecioId) {
+      listaPrecio = await tx.listaPrecio.findFirst({
+        where: { id: listaPrecioId, comercioId }
+      });
+      if (!listaPrecio) {
+        throw new Error('La lista de precios indicada no existe o no pertenece a este comercio');
+      }
+    }
+
     const productosValidados = [];
     const subtotales = [];
 
@@ -53,19 +63,45 @@ async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, it
 
       // 2. CÁLCULOS
       // 2.a) Subtotal del item usando dinero.js
-      const subtotal = dinero.multiplicar(producto.precioVenta, item.cantidad);
+      let precioLista = dinero.toDecimal(producto.precioVenta);
+      if (listaPrecio) {
+        const valorLista = dinero.toDecimal(listaPrecio.valor);
+        if (listaPrecio.tipoModificador === 'PORCENTAJE') {
+          const factor = dinero.toDecimal(1).plus(valorLista.dividedBy(100));
+          precioLista = precioLista.times(factor);
+        } else {
+          precioLista = precioLista.plus(valorLista);
+        }
+      }
+
+      let precioUnitarioFinal = precioLista;
+      const bonifPorcentaje = dinero.toDecimal(item.descuentoLinea || 0);
+      if (bonifPorcentaje.greaterThan(0)) {
+        const factorBonif = dinero.toDecimal(1).minus(bonifPorcentaje.dividedBy(100));
+        precioUnitarioFinal = precioUnitarioFinal.times(factorBonif);
+      }
+
+      const subtotal = dinero.multiplicar(precioUnitarioFinal, item.cantidad);
       subtotales.push(subtotal);
 
       productosValidados.push({
         productoId: item.productoId,
         cantidad: item.cantidad,
         producto,
+        precioUnitarioFinal,
+        descuentoLinea: bonifPorcentaje.toNumber(),
         subtotal
       });
     }
 
     // 2.b) Total de la venta re-calculado estrictamente por el backend
-    const total = dinero.sumar(...subtotales);
+    let total = dinero.sumar(...subtotales);
+    
+    const dGlobal = dinero.toDecimal(descuentoGlobal);
+    if (dGlobal.greaterThan(0)) {
+      total = total.minus(dGlobal);
+      if (total.lessThan(0)) total = dinero.toDecimal(0);
+    }
 
     // 2.c) Validar montoRecibido y calcular vuelto
     let montoFinal = dinero.toDecimal(montoRecibido);
@@ -90,6 +126,8 @@ async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, it
         usuarioId,
         puntoVentaId,
         clienteId,
+        listaPrecioId: listaPrecio ? listaPrecio.id : null,
+        descuentoGlobal: dGlobal.toNumber(),
         total,
         montoRecibido: montoFinal.toNumber(),
         vuelto,
@@ -98,8 +136,9 @@ async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, it
           create: productosValidados.map(item => ({
             productoId: item.productoId,
             cantidad: item.cantidad,
-            precioUnitario: item.producto.precioVenta,
-            subtotal: item.subtotal
+            precioUnitario: item.precioUnitarioFinal.toNumber(),
+            descuentoLinea: item.descuentoLinea,
+            subtotal: item.subtotal.toNumber()
           }))
         }
       },
@@ -158,6 +197,69 @@ async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, it
   });
 }
 
+async function anularVenta(comercioId, usuarioId, ventaId) {
+  return await prisma.$transaction(async (tx) => {
+    const venta = await tx.venta.findFirst({
+      where: { id: ventaId, comercioId },
+      include: {
+        items: true,
+        movimientoCaja: true
+      }
+    });
+
+    if (!venta) {
+      throw new Error('Venta no encontrada');
+    }
+
+    if (venta.anulada) {
+      throw new Error('Esta venta ya se encuentra anulada');
+    }
+
+    // 1. Marcar como anulada
+    await tx.venta.update({
+      where: { id: venta.id },
+      data: { anulada: true }
+    });
+
+    // 2. Devolver Stock y registrar movimientos
+    for (const item of venta.items) {
+      await tx.producto.update({
+        where: { id: item.productoId },
+        data: { stockActual: { increment: item.cantidad } }
+      });
+
+      await tx.movimientoStock.create({
+        data: {
+          comercioId,
+          productoId: item.productoId,
+          usuarioId,
+          tipo: 'ENTRADA',
+          cantidad: item.cantidad,
+          motivo: `Anulación de Venta #${venta.id}`,
+          ventaId: venta.id
+        }
+      });
+    }
+
+    // 3. Devolver Dinero a la Caja
+    if (venta.movimientoCaja) {
+      await tx.movimientoCaja.create({
+        data: {
+          aperturaCajaId: venta.movimientoCaja.aperturaCajaId,
+          cajaId: venta.movimientoCaja.cajaId,
+          tipo: 'EGRESO_MANUAL',
+          monto: venta.movimientoCaja.monto,
+          medioPago: venta.movimientoCaja.medioPago,
+          descripcion: `Devolución por Anulación de Venta #${venta.id}`
+        }
+      });
+    }
+
+    return venta;
+  });
+}
+
 module.exports = {
-  crearVenta
+  crearVenta,
+  anularVenta
 };

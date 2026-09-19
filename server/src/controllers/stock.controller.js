@@ -147,7 +147,8 @@ async function valorizado(req, res, next) {
         nombre: true,
         stockActual: true,
         precioCosto: true,
-        categoria: { select: { nombre: true } }
+        categoriaId: true,
+        categoria: { select: { nombre: true, categoriaPadreId: true } }
       },
       orderBy: { nombre: 'asc' }
     });

@@ -1,7 +1,7 @@
 const prisma = require('../config/prisma');
 
 async function listar(req, res) {
-  const { categoriaId, precioMin, precioMax, precioExacto, fechaDesde, fechaHasta } = req.query;
+  const { busqueda, categoriaId, precioMin, precioMax, precioExacto, fechaDesde, fechaHasta } = req.query;
 
   const whereClause = {
     comercioId: req.comercioId,
@@ -10,6 +10,13 @@ async function listar(req, res) {
 
   if (categoriaId) {
     whereClause.categoriaId = Number(categoriaId);
+  }
+
+  if (busqueda) {
+    whereClause.OR = [
+      { nombre: { contains: busqueda } },
+      { codigoBarras: { contains: busqueda } }
+    ];
   }
 
   if (precioExacto) {
