@@ -8,6 +8,7 @@ import Ventas from './pages/Ventas';
 import VentasHistorial from './pages/VentasHistorial';
 import Productos from './pages/Productos';
 import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
 import Clientes from './pages/Clientes';
 import Caja from './pages/Caja';
 import CajaMovimientos from './pages/CajaMovimientos';
@@ -36,6 +37,7 @@ function App() {
           <Route element={<RutaProtegida />}>
             <Route element={<Layout />}>
               {/* Rutas para todos los autenticados */}
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/ventas" element={<Ventas />} />
               <Route path="/ventas-historial" element={<VentasHistorial />} />
               <Route path="/productos" element={<Productos />} />
@@ -64,7 +66,7 @@ function App() {
                 <Route path="/parametros" element={<Parametros />} />
               </Route>
 
-              <Route path="/" element={<Navigate to="/ventas" replace />} />
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
               
               {/* Ruta comodín para pantallas aún no implementadas */}
               <Route path="*" element={

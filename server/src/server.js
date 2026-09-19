@@ -19,6 +19,7 @@ const proveedorRoutes = require('./routes/proveedor.routes');
 const compraRoutes = require('./routes/compra.routes');
 const stockRoutes = require('./routes/stock.routes');
 const listaPrecioRoutes = require('./routes/listaPrecio.routes');
+const dashboardRoutes = require('./routes/dashboard.routes');
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use('/api/proveedores', proveedorRoutes);
 app.use('/api/compras', compraRoutes);
 app.use('/api/stock', stockRoutes);
 app.use('/api/listas-precio', listaPrecioRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Endpoint de prueba (Health Check)
 app.get('/api/health', (req, res) => {

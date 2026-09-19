@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ShoppingCart, Wallet, Package, Users, LogOut, Bell } from 'lucide-react';
+import { ShoppingCart, Wallet, Package, Users, LogOut, Bell, BarChart3 } from 'lucide-react';
 import api from '../services/api';
 
 const NavDropdown = ({ title, items }: { title: string, items: {label: string, disabled?: boolean, to?: string}[] }) => {
@@ -193,6 +193,11 @@ const Layout = () => {
             Más usadas
           </div>
           <div className="flex flex-col gap-2">
+            <Link to="/dashboard" className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-300 bg-gray-200 hover:bg-blue-50 hover:border-blue-100 transition-colors gap-2 text-gray-600 hover:text-blue-600">
+              <BarChart3 size={24} />
+              <span className="font-medium">Dashboard</span>
+            </Link>
+            
             <Link to="/ventas" className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-300 bg-gray-200 hover:bg-blue-50 hover:border-blue-100 transition-colors gap-2 text-gray-600 hover:text-blue-600">
               <ShoppingCart size={24} />
               <span className="font-medium">Ventas</span>
