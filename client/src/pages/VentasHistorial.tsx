@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { RefreshCcw, XCircle, Search, AlertCircle, Printer, CheckCircle, FileText, PackageCheck, Send } from 'lucide-react';
+import { RefreshCcw, XCircle, Search, AlertCircle, Printer, CheckCircle, FileText, PackageCheck, Send, Download } from 'lucide-react';
 
 interface VentaItem {
   id: number;
@@ -158,8 +158,11 @@ const VentasHistorial = () => {
     }
   };
 
-  const imprimirDocumento = (venta: Venta, tipo: 'REMITO' | 'PRESUPUESTO' | 'FACTURA') => {
+  const imprimirDocumento = (venta: Venta, tipo: 'REMITO' | 'PRESUPUESTO' | 'FACTURA', esPdf = false) => {
     setDocumentoImprimir({ venta, tipo });
+    if (esPdf) {
+      toast.success('En la siguiente ventana emergente, selecciona "Guardar como PDF" como Destino.', { duration: 4000 });
+    }
     setTimeout(() => {
       window.print();
       setDocumentoImprimir(null);
@@ -329,6 +332,9 @@ const VentasHistorial = () => {
                             <button onClick={() => imprimirDocumento(venta, 'PRESUPUESTO')} className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded" title="Imprimir A4">
                               <Printer size={16} />
                             </button>
+                            <button onClick={() => imprimirDocumento(venta, 'PRESUPUESTO', true)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 p-1.5 rounded" title="Guardar como PDF">
+                              <Download size={16} />
+                            </button>
                           </>
                         )}
 
@@ -343,6 +349,9 @@ const VentasHistorial = () => {
                             </button>
                             <button onClick={() => imprimirDocumento(venta, 'REMITO')} className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded" title="Imprimir Remito A4">
                               <FileText size={16} />
+                            </button>
+                            <button onClick={() => imprimirDocumento(venta, 'REMITO', true)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 p-1.5 rounded" title="Guardar como PDF">
+                              <Download size={16} />
                             </button>
                             <button onClick={() => setVentaAAnular(venta)} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded" title="Anular">
                               <XCircle size={16} />
@@ -362,6 +371,9 @@ const VentasHistorial = () => {
                             <button onClick={() => imprimirDocumento(venta, 'REMITO')} className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded" title="Imprimir Remito A4">
                               <FileText size={16} />
                             </button>
+                            <button onClick={() => imprimirDocumento(venta, 'REMITO', true)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 p-1.5 rounded" title="Guardar como PDF">
+                              <Download size={16} />
+                            </button>
                             <button onClick={() => setVentaAAnular(venta)} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded" title="Anular">
                               <XCircle size={16} />
                             </button>
@@ -372,6 +384,9 @@ const VentasHistorial = () => {
                           <>
                             <button onClick={() => imprimirDocumento(venta, 'FACTURA')} className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded" title="Imprimir Comprobante A4">
                               <Printer size={16} />
+                            </button>
+                            <button onClick={() => imprimirDocumento(venta, 'FACTURA', true)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 p-1.5 rounded" title="Guardar como PDF">
+                              <Download size={16} />
                             </button>
                             <button onClick={() => setVentaAAnular(venta)} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded" title="Anular (Devolver Stock y Dinero)">
                               <XCircle size={16} />
