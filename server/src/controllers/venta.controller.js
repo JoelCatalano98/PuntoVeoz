@@ -3,7 +3,7 @@ const cajaService = require('../services/caja.service');
 
 async function crearVenta(req, res, next) {
   try {
-    const { aperturaCajaId, items, montoRecibido, medioPago, clienteId, listaPrecioId, descuentoGlobal } = req.body;
+    const { aperturaCajaId, items, montoRecibido, medioPago, clienteId, listaPrecioId, descuentoGlobal, estado } = req.body;
     const comercioId = req.comercioId;
     const usuarioId = req.user.userId;
 
@@ -43,7 +43,8 @@ async function crearVenta(req, res, next) {
       montoRecibido,
       medioPago,
       listaPrecioId: listaPrecioId ? Number(listaPrecioId) : null,
-      descuentoGlobal: descuentoGlobal || 0
+      descuentoGlobal: descuentoGlobal || 0,
+      estado
     });
 
     res.status(201).json(venta);
@@ -161,11 +162,87 @@ async function historialVentas(req, res, next) {
       include: {
         cliente: true,
         usuario: { select: { id: true, nombre: true } },
-        items: true
+        items: {
+          include: {
+            producto: true
+          }
+        }
       }
     });
 
     res.json(ventas);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function aprobarRemito(req, res, next) {
+  try {
+    const comercioId = req.comercioId;
+    const usuarioId = req.user.userId;
+    const ventaId = Number(req.params.id);
+
+    const venta = await ventaService.aprobarRemito({ comercioId, usuarioId, ventaId });
+    res.json(venta);
+  } catch (error) {
+    if (error.message.includes('Stock insuficiente')) {
+      return res.status(400).json({ error: error.message });
+    }
+    next(error);
+  }
+}
+
+async function facturarRemito(req, res, next) {
+  try {
+    const comercioId = req.comercioId;
+    const usuarioId = req.user.userId;
+    const ventaId = Number(req.params.id);
+    const { aperturaCajaId, medioPago, montoRecibido } = req.body;
+
+    if (!aperturaCajaId || !medioPago || montoRecibido === undefined) {
+      return res.status(400).json({ error: 'Faltan datos obligatorios para facturar (caja, medio de pago, monto)' });
+    }
+
+    const venta = await ventaService.facturarRemito({
+      comercioId, usuarioId, ventaId,
+      aperturaCajaId: Number(aperturaCajaId), medioPago, montoRecibido: Number(montoRecibido)
+    });
+    res.json(venta);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function facturarPresupuesto(req, res, next) {
+  try {
+    const comercioId = req.comercioId;
+    const usuarioId = req.user.userId;
+    const ventaId = Number(req.params.id);
+    const { aperturaCajaId, medioPago, montoRecibido } = req.body;
+
+    if (!aperturaCajaId || !medioPago || montoRecibido === undefined) {
+      return res.status(400).json({ error: 'Faltan datos obligatorios para facturar (caja, medio de pago, monto)' });
+    }
+
+    const venta = await ventaService.facturarPresupuesto({
+      comercioId, usuarioId, ventaId,
+      aperturaCajaId: Number(aperturaCajaId), medioPago, montoRecibido: Number(montoRecibido)
+    });
+    res.json(venta);
+  } catch (error) {
+    if (error.message.includes('Stock insuficiente')) {
+      return res.status(400).json({ error: error.message });
+    }
+    next(error);
+  }
+}
+
+async function convertirPresupuestoEnRemito(req, res, next) {
+  try {
+    const comercioId = req.comercioId;
+    const ventaId = Number(req.params.id);
+    await ventaService.convertirPresupuestoEnRemito({ comercioId, ventaId });
+    res.json({ success: true });
   } catch (error) {
     next(error);
   }
@@ -176,5 +253,9 @@ module.exports = {
   reporteVentas,
   obtenerPorId,
   anularVenta,
-  historialVentas
+  historialVentas,
+  aprobarRemito,
+  facturarRemito,
+  facturarPresupuesto,
+  convertirPresupuestoEnRemito
 };

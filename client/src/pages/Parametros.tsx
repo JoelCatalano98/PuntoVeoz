@@ -6,6 +6,13 @@ import toast from 'react-hot-toast';
 const Parametros = () => {
   const [impresionTicket, setImpresionTicket] = useState('PREGUNTAR');
   const [etiquetaMostrarPrecio, setEtiquetaMostrarPrecio] = useState('false');
+  
+  // Parámetros Empresa
+  const [empresaRazonSocial, setEmpresaRazonSocial] = useState('');
+  const [empresaCuit, setEmpresaCuit] = useState('');
+  const [empresaDireccion, setEmpresaDireccion] = useState('');
+  const [empresaCondicionIva, setEmpresaCondicionIva] = useState('Responsable Inscripto');
+
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
 
@@ -15,16 +22,20 @@ const Parametros = () => {
 
   const cargarParametros = async () => {
     try {
-      const [resTicket, resEtiqueta] = await Promise.all([
+      const [resTicket, resEtiqueta, resRS, resCuit, resDir, resIva] = await Promise.all([
         api.get('/parametros/impresionTicket'),
-        api.get('/parametros/etiquetaMostrarPrecio')
+        api.get('/parametros/etiquetaMostrarPrecio'),
+        api.get('/parametros/empresaRazonSocial'),
+        api.get('/parametros/empresaCuit'),
+        api.get('/parametros/empresaDireccion'),
+        api.get('/parametros/empresaCondicionIva')
       ]);
-      if (resTicket.data?.valor) {
-        setImpresionTicket(resTicket.data.valor);
-      }
-      if (resEtiqueta.data?.valor) {
-        setEtiquetaMostrarPrecio(resEtiqueta.data.valor);
-      }
+      if (resTicket.data?.valor) setImpresionTicket(resTicket.data.valor);
+      if (resEtiqueta.data?.valor) setEtiquetaMostrarPrecio(resEtiqueta.data.valor);
+      if (resRS.data?.valor) setEmpresaRazonSocial(resRS.data.valor);
+      if (resCuit.data?.valor) setEmpresaCuit(resCuit.data.valor);
+      if (resDir.data?.valor) setEmpresaDireccion(resDir.data.valor);
+      if (resIva.data?.valor) setEmpresaCondicionIva(resIva.data.valor);
     } catch (err) {
       toast.error('Error al cargar configuraciones');
     } finally {
@@ -39,7 +50,11 @@ const Parametros = () => {
     try {
       await Promise.all([
         api.put('/parametros/impresionTicket', { valor: impresionTicket }),
-        api.put('/parametros/etiquetaMostrarPrecio', { valor: etiquetaMostrarPrecio })
+        api.put('/parametros/etiquetaMostrarPrecio', { valor: etiquetaMostrarPrecio }),
+        api.put('/parametros/empresaRazonSocial', { valor: empresaRazonSocial }),
+        api.put('/parametros/empresaCuit', { valor: empresaCuit }),
+        api.put('/parametros/empresaDireccion', { valor: empresaDireccion }),
+        api.put('/parametros/empresaCondicionIva', { valor: empresaCondicionIva })
       ]);
       toast.success('Configuraciones guardadas exitosamente');
     } catch (err) {
@@ -106,7 +121,63 @@ const Parametros = () => {
             </p>
           </div>
 
-          <div className="flex justify-end pt-4 border-t border-gray-100">
+        </form>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 max-w-2xl overflow-hidden mt-6">
+        <div className="p-5 border-b border-gray-100 bg-gray-50/50">
+          <h2 className="text-lg font-bold text-gray-700">Datos de la Empresa / Comercio</h2>
+          <p className="text-sm text-gray-500">Estos datos aparecerán en los encabezados de los Presupuestos y Remitos impresos en A4.</p>
+        </div>
+        
+        <form onSubmit={handleGuardar} className="p-6 flex flex-col gap-6">
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Razón Social o Nombre</label>
+              <input
+                type="text"
+                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50"
+                value={empresaRazonSocial}
+                onChange={e => setEmpresaRazonSocial(e.target.value)}
+                placeholder="Ej. Mi Comercio S.A."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">CUIT / Documento</label>
+              <input
+                type="text"
+                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50"
+                value={empresaCuit}
+                onChange={e => setEmpresaCuit(e.target.value)}
+                placeholder="Ej. 30-12345678-9"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-bold text-gray-700 mb-2">Dirección del Comercio</label>
+              <input
+                type="text"
+                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50"
+                value={empresaDireccion}
+                onChange={e => setEmpresaDireccion(e.target.value)}
+                placeholder="Ej. Av. Siempre Viva 123, Ciudad"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-bold text-gray-700 mb-2">Condición IVA</label>
+              <select
+                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50"
+                value={empresaCondicionIva}
+                onChange={e => setEmpresaCondicionIva(e.target.value)}
+              >
+                <option value="Responsable Inscripto">Responsable Inscripto</option>
+                <option value="Monotributo">Monotributo</option>
+                <option value="Exento">Exento</option>
+                <option value="Consumidor Final">Consumidor Final</option>
+              </select>
+            </div>
+          </div>
+          
+          <div className="flex justify-end pt-4 border-t border-gray-100 mt-2">
             <button
               type="submit"
               disabled={guardando}
@@ -116,7 +187,6 @@ const Parametros = () => {
               {guardando ? 'Guardando...' : 'Guardar Cambios'}
             </button>
           </div>
-
         </form>
       </div>
     </div>

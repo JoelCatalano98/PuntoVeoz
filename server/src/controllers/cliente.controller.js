@@ -9,7 +9,7 @@ async function listar(req, res) {
 }
 
 async function crear(req, res) {
-  const { nombre, tipoDoc, numeroDoc, telefono, email, direccion } = req.body;
+  const { nombre, tipoDoc, numeroDoc, telefono, email, direccion, condicionIva } = req.body;
 
   if (!nombre) {
     return res.status(400).json({ error: 'El nombre es obligatorio' });
@@ -24,6 +24,7 @@ async function crear(req, res) {
       telefono,
       email,
       direccion,
+      condicionIva,
     },
   });
 
@@ -38,10 +39,10 @@ async function actualizar(req, res) {
   
   if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
 
-  const { nombre, tipoDoc, numeroDoc, telefono, email, direccion, activo } = req.body;
+  const { nombre, tipoDoc, numeroDoc, telefono, email, direccion, condicionIva, activo } = req.body;
   const actualizado = await prisma.cliente.update({
     where: { id: cliente.id },
-    data: { nombre, tipoDoc, numeroDoc, telefono, email, direccion, activo },
+    data: { nombre, tipoDoc, numeroDoc, telefono, email, direccion, condicionIva, activo },
   });
 
   res.json(actualizado);

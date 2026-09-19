@@ -28,6 +28,7 @@ const ComprasHistorial = () => {
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState('');
   const [compraSeleccionada, setCompraSeleccionada] = useState<Compra | null>(null);
+  const [impresionModo, setImpresionModo] = useState<'FACTURA' | 'ORDEN_RECEPCION'>('FACTURA');
 
   useEffect(() => {
     cargarHistorial();
@@ -130,13 +131,24 @@ const ComprasHistorial = () => {
                 <div className="text-right flex flex-col items-end">
                   <div className="text-sm font-bold text-gray-400 uppercase tracking-wider print:hidden">Total General</div>
                   <div className="text-2xl font-bold font-mono text-brand-dark mb-3">${Number(compraSeleccionada.total).toFixed(2)}</div>
-                  <button 
-                    onClick={() => window.print()}
-                    className="flex items-center gap-2 bg-brand-dark text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-900 transition-colors print:hidden"
-                  >
-                    <Printer size={18} />
-                    Imprimir
-                  </button>
+                  <div className="flex gap-2 print:hidden">
+                    <button 
+                      onClick={() => { setImpresionModo('ORDEN_RECEPCION'); setTimeout(() => window.print(), 100); }}
+                      className="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-bold hover:bg-gray-200 transition-colors"
+                      title="Imprimir Orden de Recepción (Sin precios)"
+                    >
+                      <FileText size={18} />
+                      Orden
+                    </button>
+                    <button 
+                      onClick={() => { setImpresionModo('FACTURA'); setTimeout(() => window.print(), 100); }}
+                      className="flex items-center gap-2 bg-brand-dark text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-900 transition-colors"
+                      title="Imprimir Factura (Con precios)"
+                    >
+                      <Printer size={18} />
+                      Factura
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -178,7 +190,7 @@ const ComprasHistorial = () => {
 
       {/* COMPONENTE DE IMPRESIÓN (Solo visible al imprimir) */}
       {compraSeleccionada && (
-        <FacturaImpresion compra={compraSeleccionada as any} />
+        <FacturaImpresion compra={compraSeleccionada as any} tipo={impresionModo} />
       )}
     </div>
   );

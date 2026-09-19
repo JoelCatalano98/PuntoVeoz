@@ -107,8 +107,8 @@ const Layout = () => {
               items={[
                 { label: 'Pantalla de ventas', to: '/ventas' },
                 { label: 'Historial de ventas', to: '/ventas-historial' },
-                { label: 'Órdenes de retiro/remitos' },
-                { label: 'Presupuestos' },
+                { label: 'Órdenes de retiro/remitos', to: '/ventas-historial?tab=REMITOS' },
+                { label: 'Presupuestos', to: '/ventas-historial?tab=PRESUPUESTO' },
                 { label: 'Facturas de venta', disabled: true }
               ]} 
             />

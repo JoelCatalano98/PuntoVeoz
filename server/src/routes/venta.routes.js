@@ -10,6 +10,10 @@ router.use(requireAuth, attachTenant);
 
 router.post('/', ventaController.crearVenta);
 router.post('/:id/anular', ventaController.anularVenta);
+router.post('/:id/aprobar-remito', ventaController.aprobarRemito);
+router.post('/:id/facturar-remito', ventaController.facturarRemito);
+router.post('/:id/facturar-presupuesto', ventaController.facturarPresupuesto);
+router.post('/:id/presupuesto-a-remito', ventaController.convertirPresupuestoEnRemito);
 router.get('/historial', ventaController.historialVentas);
 router.get('/:id', ventaController.obtenerPorId);
 router.get('/', requireRole('ADMIN', 'SUPERADMIN'), ventaController.reporteVentas);

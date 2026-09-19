@@ -193,6 +193,7 @@ model Venta {
   listaPrecio     ListaPrecio? @relation(fields: [listaPrecioId], references: [id])
   descuentoGlobal Decimal      @default(0) @db.Decimal(10, 2)
 
+  estado    String   @default("COMPLETADA") // "COMPLETADA", "PRESUPUESTO", "ANULADA"
   anulada   Boolean  @default(false)
   createdAt DateTime @default(now())
 
@@ -332,12 +333,13 @@ model Cliente {
   nombre     String
   tipoDoc    String?
   numeroDoc  String?
-  telefono   String?
-  email      String?
-  direccion  String?
-  activo     Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  ventas     Venta[]
+  telefono     String?
+  email        String?
+  direccion    String?
+  condicionIva String?
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  ventas       Venta[]
 
   @@index([comercioId])
   @@map("clientes")

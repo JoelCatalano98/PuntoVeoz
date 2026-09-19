@@ -1,29 +1,37 @@
 const prisma = require('../config/prisma');
 const dinero = require('../utils/dinero');
 
-async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, items, montoRecibido, medioPago, listaPrecioId, descuentoGlobal = 0 }) {
+async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, items, montoRecibido, medioPago, listaPrecioId, descuentoGlobal = 0, estado = 'COMPLETADA' }) {
   // Todo ocurre dentro de una única transacción
   return await prisma.$transaction(async (tx) => {
     // 1. VALIDACIONES
     
-    // 1.c) Buscar AperturaCaja abierta (sin CierreCaja asociado) usando aperturaCajaId explícito
-    const apertura = await tx.aperturaCaja.findFirst({
-      where: {
-        id: aperturaCajaId,
-        comercioId,
-        cierre: null
-      },
-      include: {
-        caja: true
-      }
-    });
+    // 1.c) Buscar AperturaCaja abierta si el estado es COMPLETADA
+    let apertura = null;
+    let puntoVentaId = 1; // Fallback temporal si es presupuesto y no requiere caja
 
-    if (!apertura) {
-      throw new Error('No hay una caja abierta válida con ese ID para registrar esta venta');
+    if (estado === 'COMPLETADA' || estado === 'FACTURADA') {
+      apertura = await tx.aperturaCaja.findFirst({
+        where: {
+          id: aperturaCajaId,
+          comercioId,
+          cierre: null
+        },
+        include: {
+          caja: true
+        }
+      });
+
+      if (!apertura) {
+        throw new Error('No hay una caja abierta válida con ese ID para registrar esta venta');
+      }
+      
+      puntoVentaId = apertura.caja.puntoVentaId;
+    } else {
+      // Para PRESUPUESTO o REMITO_PENDIENTE podemos agarrar el primer punto de venta activo del comercio
+      const pv = await tx.puntoVenta.findFirst({ where: { comercioId, activo: true } });
+      if (pv) puntoVentaId = pv.id;
     }
-    
-    // Derivamos puntoVentaId de la caja asociada a la apertura
-    const puntoVentaId = apertura.caja.puntoVentaId;
 
     if (clienteId) {
       const cliente = await tx.cliente.findFirst({
@@ -132,6 +140,7 @@ async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, it
         montoRecibido: montoFinal.toNumber(),
         vuelto,
         medioPago,
+        estado,
         items: {
           create: productosValidados.map(item => ({
             productoId: item.productoId,
@@ -151,46 +160,48 @@ async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, it
       }
     });
 
-    // 3.c) Actualizar stock y crear MovimientoStock para cada item
-    for (const item of productosValidados) {
-      const resultado = await tx.producto.updateMany({
-        where: { 
-          id: item.productoId, 
-          stockActual: { gte: item.cantidad } 
-        },
-        data: { 
-          stockActual: { decrement: item.cantidad } 
-        }
-      });
+    if (estado === 'COMPLETADA' || estado === 'FACTURADA') {
+      // 3.c) Actualizar stock y crear MovimientoStock para cada item
+      for (const item of productosValidados) {
+        const resultado = await tx.producto.updateMany({
+          where: { 
+            id: item.productoId, 
+            stockActual: { gte: item.cantidad } 
+          },
+          data: { 
+            stockActual: { decrement: item.cantidad } 
+          }
+        });
 
-      if (resultado.count === 0) {
-        throw new Error(`Stock insuficiente para el producto: ${item.producto.nombre} (posible venta concurrente)`);
+        if (resultado.count === 0) {
+          throw new Error(`Stock insuficiente para el producto: ${item.producto.nombre} (posible venta concurrente)`);
+        }
+
+        await tx.movimientoStock.create({
+          data: {
+            comercioId,
+            productoId: item.productoId,
+            usuarioId,
+            tipo: 'SALIDA',
+            cantidad: item.cantidad,
+            motivo: 'Venta',
+            ventaId: venta.id
+          }
+        });
       }
 
-      await tx.movimientoStock.create({
+      // 3.d) Crear MovimientoCaja
+      await tx.movimientoCaja.create({
         data: {
-          comercioId,
-          productoId: item.productoId,
-          usuarioId,
-          tipo: 'SALIDA',
-          cantidad: item.cantidad,
-          motivo: 'Venta',
-          ventaId: venta.id
+          aperturaCajaId: apertura.id,
+          cajaId: apertura.cajaId,
+          ventaId: venta.id,
+          tipo: 'VENTA',
+          monto: total,
+          medioPago
         }
       });
     }
-
-    // 3.d) Crear MovimientoCaja
-    await tx.movimientoCaja.create({
-      data: {
-        aperturaCajaId: apertura.id,
-        cajaId: apertura.cajaId,
-        ventaId: venta.id,
-        tipo: 'VENTA',
-        monto: total,
-        medioPago
-      }
-    });
 
     // 4. Retornar la venta con sus items
     return venta;
@@ -211,55 +222,217 @@ async function anularVenta(comercioId, usuarioId, ventaId) {
       throw new Error('Venta no encontrada');
     }
 
-    if (venta.anulada) {
+    if (venta.anulada || venta.estado === 'ANULADA') {
       throw new Error('Esta venta ya se encuentra anulada');
     }
 
     // 1. Marcar como anulada
     await tx.venta.update({
       where: { id: venta.id },
-      data: { anulada: true }
+      data: { anulada: true, estado: 'ANULADA' }
     });
 
-    // 2. Devolver Stock y registrar movimientos
-    for (const item of venta.items) {
-      await tx.producto.update({
-        where: { id: item.productoId },
-        data: { stockActual: { increment: item.cantidad } }
-      });
+    if (venta.estado === 'COMPLETADA' || venta.estado === 'FACTURADA' || venta.estado === 'REMITO_APROBADO') {
+      // 2. Devolver Stock y registrar movimientos
+      for (const item of venta.items) {
+        await tx.producto.update({
+          where: { id: item.productoId },
+          data: { stockActual: { increment: item.cantidad } }
+        });
 
-      await tx.movimientoStock.create({
-        data: {
-          comercioId,
-          productoId: item.productoId,
-          usuarioId,
-          tipo: 'ENTRADA',
-          cantidad: item.cantidad,
-          motivo: `Anulación de Venta #${venta.id}`,
-          ventaId: venta.id
-        }
-      });
-    }
+        await tx.movimientoStock.create({
+          data: {
+            comercioId,
+            productoId: item.productoId,
+            usuarioId,
+            tipo: 'ENTRADA',
+            cantidad: item.cantidad,
+            motivo: `Anulación de Venta #${venta.id}`,
+            ventaId: venta.id
+          }
+        });
+      }
 
-    // 3. Devolver Dinero a la Caja
-    if (venta.movimientoCaja) {
-      await tx.movimientoCaja.create({
-        data: {
-          aperturaCajaId: venta.movimientoCaja.aperturaCajaId,
-          cajaId: venta.movimientoCaja.cajaId,
-          tipo: 'EGRESO_MANUAL',
-          monto: venta.movimientoCaja.monto,
-          medioPago: venta.movimientoCaja.medioPago,
-          descripcion: `Devolución por Anulación de Venta #${venta.id}`
-        }
-      });
+      // 3. Devolver Dinero a la Caja SOLO si movió dinero (FACTURADA o COMPLETADA)
+      if ((venta.estado === 'COMPLETADA' || venta.estado === 'FACTURADA') && venta.movimientoCaja) {
+        await tx.movimientoCaja.create({
+          data: {
+            aperturaCajaId: venta.movimientoCaja.aperturaCajaId,
+            cajaId: venta.movimientoCaja.cajaId,
+            tipo: 'EGRESO_MANUAL',
+            monto: venta.movimientoCaja.monto,
+            medioPago: venta.movimientoCaja.medioPago,
+            descripcion: `Devolución por Anulación de Venta #${venta.id}`
+          }
+        });
+      }
     }
 
     return venta;
   });
 }
 
+// Transición: REMITO_PENDIENTE -> REMITO_APROBADO
+// Descuenta stock. NO mueve caja.
+async function aprobarRemito({ comercioId, usuarioId, ventaId }) {
+  return await prisma.$transaction(async (tx) => {
+    const venta = await tx.venta.findFirst({
+      where: { id: ventaId, comercioId },
+      include: {
+        items: { include: { producto: true } }
+      }
+    });
+
+    if (!venta) throw new Error('Venta no encontrada');
+    if (venta.estado !== 'REMITO_PENDIENTE') throw new Error('La venta no se encuentra en estado REMITO_PENDIENTE');
+
+    // Actualizar stock
+    for (const item of venta.items) {
+      const resultado = await tx.producto.updateMany({
+        where: { id: item.productoId, stockActual: { gte: item.cantidad } },
+        data: { stockActual: { decrement: item.cantidad } }
+      });
+
+      if (resultado.count === 0) {
+        throw new Error(`Stock insuficiente para el producto: ${item.producto.nombre}. No se puede aprobar el remito.`);
+      }
+
+      await tx.movimientoStock.create({
+        data: {
+          comercioId, productoId: item.productoId, usuarioId,
+          tipo: 'SALIDA', cantidad: item.cantidad,
+          motivo: 'Aprobación de Remito', ventaId: venta.id
+        }
+      });
+    }
+
+    // Actualizar estado
+    return await tx.venta.update({
+      where: { id: venta.id },
+      data: { estado: 'REMITO_APROBADO' }
+    });
+  });
+}
+
+// Transición: REMITO_APROBADO -> FACTURADA
+// Mueve caja. NO descuenta stock (ya se descontó).
+async function facturarRemito({ comercioId, usuarioId, ventaId, aperturaCajaId, medioPago, montoRecibido }) {
+  return await prisma.$transaction(async (tx) => {
+    const venta = await tx.venta.findFirst({
+      where: { id: ventaId, comercioId }
+    });
+
+    if (!venta) throw new Error('Venta no encontrada');
+    if (venta.estado !== 'REMITO_APROBADO') throw new Error('La venta no se encuentra en estado REMITO_APROBADO');
+
+    const apertura = await tx.aperturaCaja.findFirst({
+      where: { id: aperturaCajaId, comercioId, cierre: null },
+      include: { caja: true }
+    });
+    if (!apertura) throw new Error('No hay una caja abierta válida con ese ID para cobrar');
+
+    let montoFinal = dinero.toDecimal(montoRecibido);
+    if (medioPago !== 'EFECTIVO') montoFinal = dinero.toDecimal(venta.total);
+    if (montoFinal.lessThan(dinero.toDecimal(venta.total))) {
+      throw new Error(`El monto recibido no cubre el total de la venta`);
+    }
+    const vuelto = dinero.calcularVuelto(venta.total, montoFinal.toNumber());
+
+    // Actualizar estado y caja
+    const ventaActualizada = await tx.venta.update({
+      where: { id: venta.id },
+      data: {
+        estado: 'FACTURADA',
+        medioPago, montoRecibido: montoFinal.toNumber(), vuelto,
+        puntoVentaId: apertura.caja.puntoVentaId
+      }
+    });
+
+    await tx.movimientoCaja.create({
+      data: {
+        aperturaCajaId: apertura.id, cajaId: apertura.cajaId, ventaId: venta.id,
+        tipo: 'VENTA', monto: venta.total, medioPago
+      }
+    });
+
+    return ventaActualizada;
+  });
+}
+
+// Transición: PRESUPUESTO -> FACTURADA
+// Descuenta stock Y mueve caja. (antiguo efectivizarPresupuesto)
+async function facturarPresupuesto({ comercioId, usuarioId, ventaId, aperturaCajaId, medioPago, montoRecibido }) {
+  return await prisma.$transaction(async (tx) => {
+    const venta = await tx.venta.findFirst({
+      where: { id: ventaId, comercioId },
+      include: { items: { include: { producto: true } } }
+    });
+
+    if (!venta) throw new Error('Venta no encontrada');
+    if (venta.estado !== 'PRESUPUESTO') throw new Error('La venta no se encuentra en estado PRESUPUESTO');
+
+    const apertura = await tx.aperturaCaja.findFirst({
+      where: { id: aperturaCajaId, comercioId, cierre: null },
+      include: { caja: true }
+    });
+    if (!apertura) throw new Error('No hay una caja abierta válida con ese ID para cobrar');
+
+    let montoFinal = dinero.toDecimal(montoRecibido);
+    if (medioPago !== 'EFECTIVO') montoFinal = dinero.toDecimal(venta.total);
+    if (montoFinal.lessThan(dinero.toDecimal(venta.total))) {
+      throw new Error(`El monto recibido no cubre el total de la venta`);
+    }
+    const vuelto = dinero.calcularVuelto(venta.total, montoFinal.toNumber());
+
+    for (const item of venta.items) {
+      const resultado = await tx.producto.updateMany({
+        where: { id: item.productoId, stockActual: { gte: item.cantidad } },
+        data: { stockActual: { decrement: item.cantidad } }
+      });
+      if (resultado.count === 0) throw new Error(`Stock insuficiente para el producto: ${item.producto.nombre}`);
+
+      await tx.movimientoStock.create({
+        data: {
+          comercioId, productoId: item.productoId, usuarioId,
+          tipo: 'SALIDA', cantidad: item.cantidad,
+          motivo: 'Venta (Presupuesto Facturado)', ventaId: venta.id
+        }
+      });
+    }
+
+    const ventaActualizada = await tx.venta.update({
+      where: { id: venta.id },
+      data: {
+        estado: 'FACTURADA',
+        medioPago, montoRecibido: montoFinal.toNumber(), vuelto,
+        puntoVentaId: apertura.caja.puntoVentaId
+      }
+    });
+
+    await tx.movimientoCaja.create({
+      data: {
+        aperturaCajaId: apertura.id, cajaId: apertura.cajaId, ventaId: venta.id,
+        tipo: 'VENTA', monto: venta.total, medioPago
+      }
+    });
+
+    return ventaActualizada;
+  });
+}
+
+// Transición: PRESUPUESTO -> REMITO_PENDIENTE
+async function convertirPresupuestoEnRemito({ comercioId, ventaId }) {
+  return await prisma.venta.updateMany({
+    where: { id: ventaId, comercioId, estado: 'PRESUPUESTO' },
+    data: { estado: 'REMITO_PENDIENTE' }
+  });
+}
+
 module.exports = {
   crearVenta,
-  anularVenta
+  anularVenta,
+  aprobarRemito,
+  facturarRemito,
+  facturarPresupuesto,
+  convertirPresupuestoEnRemito
 };

@@ -3,7 +3,7 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import { Search, Trash2, User, CreditCard, ShoppingCart, AlertTriangle, Edit2, Tag, Percent } from 'lucide-react';
 import ClienteModal from '../components/ClienteModal';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface ListaPrecio {
   id: number;
@@ -40,6 +40,7 @@ const calcularPrecioFinal = (precioBase: number, lista: ListaPrecio | null): num
 };
 
 const Ventas = () => {
+  const navigate = useNavigate();
   const [items, setItems] = useState<VentaItem[]>([]);
   const [montoRecibido, setMontoRecibido] = useState('');
   const [medioPago, setMedioPago] = useState('EFECTIVO');
@@ -47,6 +48,7 @@ const Ventas = () => {
 
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [showClienteModal, setShowClienteModal] = useState(false);
+  const [showGuardarComoModal, setShowGuardarComoModal] = useState(false);
 
   // Estado de Caja
   const [aperturaCajaId, setAperturaCajaId] = useState<number | null>(null);
@@ -346,10 +348,18 @@ const Ventas = () => {
     focusScan();
   };
 
-  const handleCobrar = async () => {
-    if (!canSubmit) return;
-    if (!aperturaCajaId) {
+  const handleCobrar = async (estadoVenta: 'COMPLETADA' | 'PRESUPUESTO' | 'REMITO_PENDIENTE' = 'COMPLETADA') => {
+    if (estadoVenta === 'COMPLETADA' && !canSubmit) return;
+    if (items.length === 0) return;
+    if (estadoVenta === 'COMPLETADA' && !aperturaCajaId) {
       toast.error('No hay caja abierta');
+      return;
+    }
+    
+    if (estadoVenta !== 'COMPLETADA' && !cliente) {
+      toast.error('Debe seleccionar un cliente para generar este documento');
+      setShowGuardarComoModal(false);
+      setShowClienteModal(true);
       return;
     }
 
@@ -361,41 +371,49 @@ const Ventas = () => {
           cantidad: i.cantidad,
           descuentoLinea: i.bonificacion
         })),
-        montoRecibido: montoRecibidoNum,
-        medioPago,
+        montoRecibido: estadoVenta !== 'COMPLETADA' ? total : montoRecibidoNum,
+        medioPago: estadoVenta !== 'COMPLETADA' ? 'OTRO' : medioPago,
         clienteId: cliente?.id || null,
-        aperturaCajaId,
+        aperturaCajaId: aperturaCajaId || -1, // Use -1 or valid ID for non-money tx
         listaPrecioId: (aplicarLista && listaSeleccionadaId) ? parseInt(listaSeleccionadaId, 10) : null,
-        descuentoGlobal: descNum
+        descuentoGlobal: descNum,
+        estado: estadoVenta
       };
 
       const res = await api.post('/ventas', payload);
 
-      const vueltoStr = esEfectivo ? Number(res.data.vuelto).toFixed(2) : '0.00';
-      toast.success(`Venta registrada con éxito | Vuelto: $${vueltoStr}`, {
-        duration: 5000,
-        style: { padding: '16px', fontWeight: 'bold', fontSize: '1.1rem' }
-      });
+      if (estadoVenta !== 'COMPLETADA') {
+        toast.success(`${estadoVenta === 'PRESUPUESTO' ? 'Presupuesto' : 'Remito'} guardado con éxito`);
+        setShowGuardarComoModal(false);
+        limpiarPOS();
+        navigate(`/ventas-historial?tab=${estadoVenta === 'PRESUPUESTO' ? 'PRESUPUESTO' : 'REMITOS'}`);
+      } else {
+        const vueltoStr = esEfectivo ? Number(res.data.vuelto).toFixed(2) : '0.00';
+        toast.success(`Venta registrada con éxito | Vuelto: $${vueltoStr}`, {
+          duration: 5000,
+          style: { padding: '16px', fontWeight: 'bold', fontSize: '1.1rem' }
+        });
 
-      const ventaImpresion = {
-        ...res.data,
-        cliente: cliente
-      };
+        const ventaImpresion = {
+          ...res.data,
+          cliente: cliente
+        };
 
-      try {
-        const { imprimirTicket } = await import('../services/ticket.service');
-        if (configImpresion === 'SIEMPRE') {
-          imprimirTicket(ventaImpresion);
-          limpiarPOS();
-        } else if (configImpresion === 'PREGUNTAR') {
-          setUltimaVenta(ventaImpresion);
-          setShowModalTicket(true);
-        } else {
+        try {
+          const { imprimirTicket } = await import('../services/ticket.service');
+          if (configImpresion === 'SIEMPRE') {
+            imprimirTicket(ventaImpresion);
+            limpiarPOS();
+          } else if (configImpresion === 'PREGUNTAR') {
+            setUltimaVenta(ventaImpresion);
+            setShowModalTicket(true);
+          } else {
+            limpiarPOS();
+          }
+        } catch (importErr) {
+          console.error('Error al cargar ticket.service', importErr);
           limpiarPOS();
         }
-      } catch (importErr) {
-        console.error('Error al cargar ticket.service', importErr);
-        limpiarPOS();
       }
 
     } catch (err: any) {
@@ -421,20 +439,29 @@ const Ventas = () => {
   }
 
   if (!aperturaCajaId) {
+    // Si no hay caja abierta, igual permitimos presupuestar
     return (
       <div className="h-full flex flex-col items-center justify-center bg-gray-50 p-6 text-center">
         <div className="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 max-w-lg w-full flex flex-col items-center">
           <AlertTriangle size={80} className="text-orange-500 mb-6 opacity-80" />
           <h2 className="text-3xl font-extrabold text-gray-800 mb-3 tracking-tight">CAJA CERRADA</h2>
           <p className="text-gray-500 mb-8 text-lg leading-relaxed">
-            Por favor, abrí tu turno en el módulo de Caja para poder registrar ventas y cobrar.
+            Por favor, abrí tu turno en el módulo de Caja para poder registrar ventas y cobrar. Podés seguir armando presupuestos pero no efectivizarlos.
           </p>
-          <Link
-            to="/caja"
-            className="w-full bg-brand-light text-brand-dark px-8 py-4 rounded-xl font-bold text-lg shadow-sm hover:shadow-md hover:bg-blue-400 transition-all flex justify-center items-center gap-2 uppercase tracking-wider"
-          >
-            <CreditCard size={24} /> Ir a Apertura de Caja
-          </Link>
+          <div className="flex w-full gap-4">
+            <Link
+              to="/caja"
+              className="flex-1 bg-brand-light text-brand-dark px-4 py-4 rounded-xl font-bold text-lg shadow-sm hover:shadow-md hover:bg-blue-400 transition-all flex justify-center items-center gap-2 uppercase tracking-wider"
+            >
+              <CreditCard size={20} /> Abrir Caja
+            </Link>
+            <button
+              onClick={() => setAperturaCajaId(-1)} // Un hack temporal para mostrar el POS y permitir hacer presupuestos (el backend ignorará el id -1 para presupuestos)
+              className="flex-1 bg-gray-100 text-gray-700 px-4 py-4 rounded-xl font-bold text-sm shadow-sm hover:bg-gray-200 transition-all flex justify-center items-center uppercase tracking-wider"
+            >
+              Hacer Presupuesto
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -763,12 +790,12 @@ const Ventas = () => {
         </div>
 
         {/* Action Button */}
-        <div className="p-4 border-t border-gray-200 bg-gray-50">
+        <div className="p-4 border-t border-gray-200 bg-gray-50 flex flex-col gap-3">
           <button
-            onClick={handleCobrar}
-            disabled={!canSubmit}
+            onClick={() => handleCobrar('COMPLETADA')}
+            disabled={!canSubmit || aperturaCajaId === -1} // -1 significa "modo presupuesto" por no haber caja
             className={`w-full py-4 text-xl font-bold rounded-lg uppercase tracking-wider transition-all
-              ${!canSubmit
+              ${(!canSubmit || aperturaCajaId === -1)
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-green-500 hover:bg-green-600 text-white shadow-md'
               }
@@ -776,8 +803,54 @@ const Ventas = () => {
           >
             {cobrando ? 'Procesando...' : 'Cobrar (Enter)'}
           </button>
+          
+          <button
+            onClick={() => setShowGuardarComoModal(true)}
+            disabled={items.length === 0 || cobrando}
+            className={`w-full py-3 text-sm font-bold rounded-lg uppercase tracking-wider transition-all border-2
+              ${(items.length === 0 || cobrando)
+                ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+                : 'border-blue-200 text-blue-600 hover:bg-blue-50 bg-white shadow-sm'
+              }
+            `}
+          >
+            Guardar como...
+          </button>
         </div>
       </div>
+
+      {showGuardarComoModal && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Guardar Documento Especial</h2>
+            <p className="text-gray-600 mb-6 text-sm">Selecciona el tipo de documento que deseas generar. Se requerirá que tengas un cliente seleccionado.</p>
+            
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => handleCobrar('PRESUPUESTO')}
+                disabled={cobrando}
+                className="w-full py-3 bg-blue-50 text-blue-700 font-bold border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+              >
+                Guardar como Presupuesto
+              </button>
+              <button
+                onClick={() => handleCobrar('REMITO_PENDIENTE')}
+                disabled={cobrando}
+                className="w-full py-3 bg-purple-50 text-purple-700 font-bold border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors disabled:opacity-50"
+              >
+                Guardar como Remito (Pendiente)
+              </button>
+              <div className="border-t border-gray-100 my-2"></div>
+              <button
+                onClick={() => setShowGuardarComoModal(false)}
+                className="w-full py-2 bg-gray-100 text-gray-600 font-bold rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showClienteModal && (
         <ClienteModal

@@ -7,6 +7,8 @@ interface Cliente {
   id: number;
   nombre: string;
   numeroDoc?: string;
+  direccion?: string;
+  condicionIva?: string;
 }
 
 interface ClienteModalProps {
@@ -23,6 +25,8 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect }) => {
   // Form para nuevo
   const [nuevoNombre, setNuevoNombre] = useState('');
   const [nuevoDoc, setNuevoDoc] = useState('');
+  const [nuevaDireccion, setNuevaDireccion] = useState('');
+  const [nuevaCondicionIva, setNuevaCondicionIva] = useState('Consumidor Final');
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
@@ -52,7 +56,9 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect }) => {
     try {
       const res = await api.post('/clientes', {
         nombre: nuevoNombre,
-        numeroDoc: nuevoDoc || undefined
+        numeroDoc: nuevoDoc || undefined,
+        direccion: nuevaDireccion || undefined,
+        condicionIva: nuevaCondicionIva || undefined
       });
       toast.success('Cliente creado');
       onSelect(res.data);
@@ -144,6 +150,30 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect }) => {
                   value={nuevoDoc}
                   onChange={e => setNuevoDoc(e.target.value)}
                 />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Dirección</label>
+                <input
+                  type="text"
+                  className="w-full p-2 border rounded focus:outline-none focus:border-brand-light"
+                  value={nuevaDireccion}
+                  onChange={e => setNuevaDireccion(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Condición IVA</label>
+                <select
+                  className="w-full p-2 border rounded focus:outline-none focus:border-brand-light"
+                  value={nuevaCondicionIva}
+                  onChange={e => setNuevaCondicionIva(e.target.value)}
+                >
+                  <option value="Consumidor Final">Consumidor Final</option>
+                  <option value="Responsable Inscripto">Responsable Inscripto</option>
+                  <option value="Monotributo">Monotributo</option>
+                  <option value="Exento">Exento</option>
+                </select>
               </div>
               
               <div className="flex justify-end gap-2 mt-2">
