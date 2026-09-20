@@ -143,7 +143,7 @@ async function reporteVentasPorRango({ comercioId, desde, hasta }) {
   };
 }
 
-async function listarMovimientos({ comercioId, aperturaCajaId }) {
+async function listarMovimientos({ comercioId, aperturaCajaId, page = 1, limit = 50 }) {
   const apertura = await prisma.aperturaCaja.findUnique({
     where: { id: aperturaCajaId }
   });
@@ -151,16 +151,31 @@ async function listarMovimientos({ comercioId, aperturaCajaId }) {
     throw new Error('Apertura de caja no encontrada');
   }
 
-  return prisma.movimientoCaja.findMany({
-    where: { aperturaCajaId },
-    orderBy: { createdAt: 'desc' },
-    include: {
-      venta: true
-    }
-  });
+  const pageNum = Math.max(1, Number(page));
+  const limitNum = Math.max(1, Number(limit));
+  const skip = (pageNum - 1) * limitNum;
+
+  const [totalCount, data] = await prisma.$transaction([
+    prisma.movimientoCaja.count({ where: { aperturaCajaId } }),
+    prisma.movimientoCaja.findMany({
+      where: { aperturaCajaId },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limitNum,
+      include: {
+        venta: true
+      }
+    })
+  ]);
+
+  return {
+    data,
+    totalCount,
+    totalPages: Math.ceil(totalCount / limitNum)
+  };
 }
 
-async function listarCierres({ comercioId, fechaDesde, fechaHasta }) {
+async function listarCierres({ comercioId, fechaDesde, fechaHasta, page = 1, limit = 50 }) {
   const whereClausula = {
     aperturaCaja: { comercioId }
   };
@@ -174,18 +189,33 @@ async function listarCierres({ comercioId, fechaDesde, fechaHasta }) {
     whereClausula.createdAt = { gte: desde, lte: hasta };
   }
 
-  return prisma.cierreCaja.findMany({
-    where: whereClausula,
-    orderBy: { createdAt: 'desc' },
-    include: {
-      usuario: { select: { id: true, nombre: true } },
-      aperturaCaja: {
-        include: {
-          caja: { select: { nombre: true, prefijo: true } }
+  const pageNum = Math.max(1, Number(page));
+  const limitNum = Math.max(1, Number(limit));
+  const skip = (pageNum - 1) * limitNum;
+
+  const [totalCount, data] = await prisma.$transaction([
+    prisma.cierreCaja.count({ where: whereClausula }),
+    prisma.cierreCaja.findMany({
+      where: whereClausula,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limitNum,
+      include: {
+        usuario: { select: { id: true, nombre: true } },
+        aperturaCaja: {
+          include: {
+            caja: { select: { nombre: true, prefijo: true } }
+          }
         }
       }
-    }
-  });
+    })
+  ]);
+
+  return {
+    data,
+    totalCount,
+    totalPages: Math.ceil(totalCount / limitNum)
+  };
 }
 
 async function obtenerDetalleCierre({ comercioId, cierreId }) {

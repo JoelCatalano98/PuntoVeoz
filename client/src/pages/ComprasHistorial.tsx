@@ -3,6 +3,7 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import { ShoppingCart, Search, FileText, Printer } from 'lucide-react';
 import { FacturaImpresion } from '../components/FacturaImpresion';
+import { Pagination } from '../components/Pagination';
 
 interface DetalleCompra {
   producto: { nombre: string; codigoBarras: string | null };
@@ -27,18 +28,31 @@ const ComprasHistorial = () => {
   const [compras, setCompras] = useState<Compra[]>([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const limit = 20;
+
   const [compraSeleccionada, setCompraSeleccionada] = useState<Compra | null>(null);
   const [impresionModo, setImpresionModo] = useState<'FACTURA' | 'ORDEN_RECEPCION'>('FACTURA');
 
   useEffect(() => {
-    cargarHistorial();
-  }, []);
+    const timeoutId = setTimeout(() => {
+      cargarHistorial(1, busqueda);
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [busqueda]);
 
-  const cargarHistorial = async () => {
+  const cargarHistorial = async (pageToLoad = page, searchTxt = busqueda) => {
     try {
       setCargando(true);
-      const res = await api.get('/compras');
-      setCompras(res.data);
+      const res = await api.get('/compras', {
+        params: { page: pageToLoad, limit, search: searchTxt }
+      });
+      setCompras(res.data.data);
+      setTotalPages(res.data.totalPages);
+      setTotalCount(res.data.totalCount);
+      setPage(pageToLoad);
     } catch (err) {
       toast.error('Error al cargar el historial de compras');
     } finally {
@@ -53,10 +67,7 @@ const ComprasHistorial = () => {
     }).format(d);
   };
 
-  const comprasFiltradas = compras.filter(c => 
-    c.proveedor.razonSocial.toLowerCase().includes(busqueda.toLowerCase()) ||
-    (c.numeroFactura && c.numeroFactura.toLowerCase().includes(busqueda.toLowerCase()))
-  );
+  const comprasFiltradas = compras;
 
   return (
     <div className="h-full flex flex-col bg-gray-50 p-6 print:p-0 print:bg-white">
@@ -110,6 +121,12 @@ const ComprasHistorial = () => {
               ))
             )}
           </div>
+          <Pagination 
+            currentPage={page} 
+            totalPages={totalPages} 
+            totalCount={totalCount} 
+            onPageChange={(newPage) => cargarHistorial(newPage)} 
+          />
         </div>
 
         {/* PANEL DERECHO: Detalle de la Compra */}

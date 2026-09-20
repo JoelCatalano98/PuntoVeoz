@@ -26,6 +26,7 @@ import ComprasHistorial from './pages/ComprasHistorial';
 import AjusteStock from './pages/AjusteStock';
 import HistorialStock from './pages/HistorialStock';
 import StockValorizado from './pages/StockValorizado';
+import DocumentoForm from './pages/DocumentoForm';
 
 function App() {
   return (
@@ -41,6 +42,8 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/ventas" element={<Ventas />} />
               <Route path="/ventas-historial" element={<VentasHistorial />} />
+              <Route path="/documento-form" element={<DocumentoForm />} />
+              <Route path="/documento-form/:id" element={<DocumentoForm />} />
               <Route path="/productos" element={<Productos />} />
               <Route path="/clientes" element={<Clientes />} />
               <Route path="/caja" element={<Caja />} />

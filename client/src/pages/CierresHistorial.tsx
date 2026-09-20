@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { Calendar, Wallet, Printer, FileText, ChevronDown } from 'lucide-react';
+import { Pagination } from '../components/Pagination';
 
 interface CierreCaja {
   id: number;
@@ -43,18 +44,26 @@ const CierresHistorial = () => {
   // Menú de acciones por fila
   const [menuAbierto, setMenuAbierto] = useState<number | null>(null);
 
+  // Paginación
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+
   useEffect(() => {
-    cargarCierres();
+    cargarCierres(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fechaDesde, fechaHasta]);
 
-  const cargarCierres = async () => {
+  const cargarCierres = async (pageToLoad = page) => {
     try {
       setCargando(true);
       const res = await api.get('/caja/cierres', {
-        params: { fechaDesde, fechaHasta }
+        params: { fechaDesde, fechaHasta, page: pageToLoad, limit: 15 }
       });
-      setCierres(res.data);
+      setCierres(res.data.data);
+      setTotalPages(res.data.totalPages);
+      setTotalCount(res.data.totalCount);
+      setPage(pageToLoad);
     } catch (error) {
       toast.error('Error al cargar historial de arqueos');
     } finally {
@@ -117,14 +126,14 @@ const CierresHistorial = () => {
             <input 
               type="date" 
               value={fechaDesde} 
-              onChange={e => setFechaDesde(e.target.value)}
+              onChange={e => { setFechaDesde(e.target.value); setPage(1); }}
               className="bg-transparent border-none focus:outline-none text-sm font-bold text-gray-700 w-32 cursor-pointer"
             />
             <span className="text-gray-400">-</span>
             <input 
               type="date" 
               value={fechaHasta} 
-              onChange={e => setFechaHasta(e.target.value)}
+              onChange={e => { setFechaHasta(e.target.value); setPage(1); }}
               className="bg-transparent border-none focus:outline-none text-sm font-bold text-gray-700 w-32 cursor-pointer"
             />
           </div>
@@ -137,7 +146,8 @@ const CierresHistorial = () => {
           ) : cierres.length === 0 ? (
             <div className="flex-1 flex items-center justify-center text-gray-400">No se encontraron cierres en este rango de fechas.</div>
           ) : (
-            <div className="flex-1 overflow-y-auto relative">
+            <>
+              <div className="flex-1 overflow-y-auto relative">
               <table className="w-full text-left border-collapse">
                 <thead className="bg-gray-50 sticky top-0 border-b border-gray-200 z-10 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
                   <tr>
@@ -202,6 +212,14 @@ const CierresHistorial = () => {
                 </tbody>
               </table>
             </div>
+              
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalCount={totalCount}
+                onPageChange={cargarCierres}
+              />
+            </>
           )}
         </div>
       </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, X, Users } from 'lucide-react';
+import { Pagination } from '../components/Pagination';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -7,28 +8,45 @@ interface Cliente {
   id: number;
   nombre: string;
   numeroDoc: string | null;
+  razonSocial: string | null;
+  direccion: string | null;
 }
 
 const Clientes = () => {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const limit = 20;
 
   // Estados Modal
   const [showModal, setShowModal] = useState(false);
   const [clienteActual, setClienteActual] = useState<Cliente | null>(null);
   const [nombre, setNombre] = useState('');
   const [numeroDoc, setNumeroDoc] = useState('');
+  const [razonSocial, setRazonSocial] = useState('');
+  const [direccion, setDireccion] = useState('');
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
-    cargarClientes();
-  }, []);
+    const timeoutId = setTimeout(() => {
+      cargarClientes(1, busqueda);
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [busqueda]);
 
-  const cargarClientes = async () => {
+  const cargarClientes = async (pageToLoad = page, searchTxt = busqueda) => {
+    setCargando(true);
     try {
-      const res = await api.get('/clientes');
-      setClientes(res.data);
+      const res = await api.get('/clientes', {
+        params: { page: pageToLoad, limit, search: searchTxt }
+      });
+      setClientes(res.data.data);
+      setTotalPages(res.data.totalPages);
+      setTotalCount(res.data.totalCount);
+      setPage(pageToLoad);
     } catch (err) {
       toast.error('Error al cargar clientes');
     } finally {
@@ -39,14 +57,18 @@ const Clientes = () => {
   const handleNuevo = () => {
     setClienteActual(null);
     setNombre('');
+    setRazonSocial('');
     setNumeroDoc('');
+    setDireccion('');
     setShowModal(true);
   };
 
   const handleEditar = (cliente: Cliente) => {
     setClienteActual(cliente);
     setNombre(cliente.nombre);
+    setRazonSocial(cliente.razonSocial || '');
     setNumeroDoc(cliente.numeroDoc || '');
+    setDireccion(cliente.direccion || '');
     setShowModal(true);
   };
 
@@ -71,7 +93,9 @@ const Clientes = () => {
     try {
       const payload = {
         nombre,
-        numeroDoc: numeroDoc.trim() === '' ? null : numeroDoc
+        razonSocial: razonSocial.trim() === '' ? null : razonSocial,
+        numeroDoc: numeroDoc.trim() === '' ? null : numeroDoc,
+        direccion: direccion.trim() === '' ? null : direccion
       };
 
       if (clienteActual) {
@@ -91,11 +115,8 @@ const Clientes = () => {
     }
   };
 
-  // Filtrado Frontend
-  const clientesFiltrados = clientes.filter(c => {
-    const b = busqueda.toLowerCase();
-    return c.nombre.toLowerCase().includes(b) || (c.numeroDoc && c.numeroDoc.toLowerCase().includes(b));
-  });
+  // El filtrado es server-side, no necesitamos clientesFiltrados
+  const clientesFiltrados = clientes;
 
   return (
     <div className="h-full flex flex-col p-6 bg-gray-50">
@@ -134,7 +155,8 @@ const Clientes = () => {
             <table className="w-full text-left border-collapse">
               <thead className="bg-white sticky top-0 border-b border-gray-100 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
                 <tr>
-                  <th className="p-4 text-xs font-bold text-gray-400 uppercase">Nombre / Razón Social</th>
+                  <th className="p-4 text-xs font-bold text-gray-400 uppercase">Nombre</th>
+                  <th className="p-4 text-xs font-bold text-gray-400 uppercase">Razón Social</th>
                   <th className="p-4 text-xs font-bold text-gray-400 uppercase">Documento (CUIT/DNI)</th>
                   <th className="p-4 text-xs font-bold text-gray-400 uppercase text-right w-32">Acciones</th>
                 </tr>
@@ -150,6 +172,7 @@ const Clientes = () => {
                   clientesFiltrados.map(cliente => (
                     <tr key={cliente.id} className="hover:bg-gray-50 transition-colors">
                       <td className="p-4 text-sm font-semibold text-gray-700">{cliente.nombre}</td>
+                      <td className="p-4 text-sm text-gray-600">{cliente.razonSocial || '-'}</td>
                       <td className="p-4 text-sm text-gray-500">
                         {cliente.numeroDoc || <span className="text-gray-300 italic">Sin especificar</span>}
                       </td>
@@ -178,6 +201,13 @@ const Clientes = () => {
             </table>
           )}
         </div>
+        
+        <Pagination 
+          currentPage={page} 
+          totalPages={totalPages} 
+          totalCount={totalCount} 
+          onPageChange={(newPage) => cargarClientes(newPage)} 
+        />
       </div>
 
       {/* Modal Crear / Editar */}
@@ -195,7 +225,7 @@ const Clientes = () => {
             
             <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-4">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Nombre o Razón Social *</label>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Nombre *</label>
                 <input
                   type="text"
                   required
@@ -208,6 +238,17 @@ const Clientes = () => {
               </div>
 
               <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Razón Social</label>
+                <input
+                  type="text"
+                  className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50"
+                  value={razonSocial}
+                  onChange={e => setRazonSocial(e.target.value)}
+                  placeholder="Opcional"
+                />
+              </div>
+
+              <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Documento (CUIT/DNI)</label>
                 <input
                   type="text"
@@ -215,6 +256,17 @@ const Clientes = () => {
                   value={numeroDoc}
                   onChange={e => setNumeroDoc(e.target.value)}
                   placeholder="Ej: 20-12345678-9"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Dirección</label>
+                <input
+                  type="text"
+                  className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50"
+                  value={direccion}
+                  onChange={e => setDireccion(e.target.value)}
+                  placeholder="Ej: San Martín 123"
                 />
               </div>
 

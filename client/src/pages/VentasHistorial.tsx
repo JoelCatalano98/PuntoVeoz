@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { RefreshCcw, XCircle, Search, AlertCircle, Printer, CheckCircle, FileText, PackageCheck, Send, Download } from 'lucide-react';
+import { RefreshCcw, XCircle, Search, AlertCircle, Printer, CheckCircle, FileText, PackageCheck, Send, Download, Edit2 } from 'lucide-react';
+import { Pagination } from '../components/Pagination';
 
 interface VentaItem {
   id: number;
@@ -34,6 +35,10 @@ const VentasHistorial = () => {
   const [cargando, setCargando] = useState(true);
   const [filtroTexto, setFiltroTexto] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<string>(searchParams.get('tab') || 'TODAS'); 
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const limit = 20;
 
   const [ventaAAnular, setVentaAAnular] = useState<Venta | null>(null);
   const [confirmarAnulacion, setConfirmarAnulacion] = useState(false);
@@ -47,14 +52,21 @@ const VentasHistorial = () => {
   const [aperturaCajaId, setAperturaCajaId] = useState<number | null>(null);
 
   // Empresa params
-  const [empresaDatos, setEmpresaDatos] = useState({ razonSocial: 'Empresa / Comercio', cuit: '', direccion: '', condicionIva: '' });
-  
+  const [empresaDatos, setEmpresaDatos] = useState({ razonSocial: 'Empresa / Comercio', cuit: '', direccion: '', condicionIva: '', logoUrl: '' });
+
   // Impresion A4
   const [documentoImprimir, setDocumentoImprimir] = useState<{venta: Venta, tipo: 'REMITO' | 'PRESUPUESTO' | 'FACTURA'} | null>(null);
 
   useEffect(() => {
-    cargarVentas();
+    cargarVentas(1);
   }, []);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      cargarVentas(1, filtroTexto);
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [filtroTexto]);
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -65,18 +77,24 @@ const VentasHistorial = () => {
     }
   }, [searchParams]);
 
-  const cargarVentas = async () => {
+  const cargarVentas = async (pageToLoad = page, searchTxt = filtroTexto, estadoTxt = filtroEstado) => {
     try {
       setCargando(true);
-      const res = await api.get('/ventas/historial');
-      setVentas(res.data);
+      const res = await api.get('/ventas/historial', {
+        params: { page: pageToLoad, limit, search: searchTxt, tab: estadoTxt !== 'TODAS' ? estadoTxt : undefined }
+      });
+      setVentas(res.data.data);
+      setTotalPages(res.data.totalPages);
+      setTotalCount(res.data.totalCount);
+      setPage(pageToLoad);
       
-      const [resCaja, resRS, resCuit, resDir, resIva] = await Promise.all([
+      const [resCaja, resRS, resCuit, resDir, resIva, resLogo] = await Promise.all([
         api.get('/caja/estado'),
         api.get('/parametros/empresaRazonSocial'),
         api.get('/parametros/empresaCuit'),
         api.get('/parametros/empresaDireccion'),
-        api.get('/parametros/empresaCondicionIva')
+        api.get('/parametros/empresaCondicionIva'),
+        api.get('/parametros/empresaLogoUrl')
       ]);
 
       if (resCaja.data.abierta) setAperturaCajaId(resCaja.data.apertura.id);
@@ -85,7 +103,8 @@ const VentasHistorial = () => {
         razonSocial: resRS.data?.valor || 'Empresa / Comercio',
         cuit: resCuit.data?.valor || '',
         direccion: resDir.data?.valor || '',
-        condicionIva: resIva.data?.valor || ''
+        condicionIva: resIva.data?.valor || '',
+        logoUrl: resLogo.data?.valor || ''
       });
 
     } catch (error) {
@@ -121,6 +140,8 @@ const VentasHistorial = () => {
     try {
       const url = ventaAFacturar.estado === 'PRESUPUESTO' 
         ? `/ventas/${ventaAFacturar.id}/facturar-presupuesto`
+        : ventaAFacturar.estado === 'REMITO_PENDIENTE'
+        ? `/ventas/${ventaAFacturar.id}/aprobar-facturar`
         : `/ventas/${ventaAFacturar.id}/facturar-remito`;
         
       await api.post(url, {
@@ -169,25 +190,7 @@ const VentasHistorial = () => {
     }, 500);
   };
 
-  const ventasFiltradas = ventas.filter(v => {
-    const isRemito = v.estado === 'REMITO_PENDIENTE' || v.estado === 'REMITO_APROBADO';
-    const isFacturada = v.estado === 'FACTURADA' || v.estado === 'COMPLETADA';
-    const isAnulada = v.estado === 'ANULADA' || v.anulada;
-    
-    if (filtroEstado !== 'TODAS') {
-      if (filtroEstado === 'REMITOS' && !isRemito) return false;
-      if (filtroEstado === 'FACTURADA' && !isFacturada && !isAnulada) return false; // if anulada but it was factura, it's ANULADA now
-      if (filtroEstado === 'PRESUPUESTO' && v.estado !== 'PRESUPUESTO') return false;
-      if (filtroEstado === 'ANULADA' && !isAnulada) return false;
-    }
-    
-    if (!filtroTexto) return true;
-    const txt = filtroTexto.toLowerCase();
-    return (
-      v.id.toString().includes(txt) ||
-      (v.cliente?.nombre || 'Consumidor Final').toLowerCase().includes(txt)
-    );
-  });
+  const ventasFiltradas = ventas;
 
   return (
     <div className="h-full flex flex-col p-6 bg-gray-50 print:p-0 print:bg-white print:h-auto print:block">
@@ -199,7 +202,7 @@ const VentasHistorial = () => {
         <div className="flex gap-2">
           {filtroEstado === 'PRESUPUESTO' && (
             <Link
-              to="/ventas"
+              to="/documento-form?tipo=PRESUPUESTO"
               className="flex items-center gap-2 px-4 py-2 bg-brand-light text-brand-dark font-bold rounded-lg hover:bg-blue-300 transition-colors shadow-sm"
             >
               + Nuevo Presupuesto
@@ -215,7 +218,7 @@ const VentasHistorial = () => {
           )}
           {filtroEstado === 'REMITOS' && (
             <Link
-              to="/ventas"
+              to="/documento-form?tipo=REMITO"
               className="flex items-center gap-2 px-4 py-2 bg-brand-light text-brand-dark font-bold rounded-lg hover:bg-blue-300 transition-colors shadow-sm"
             >
               + Nuevo Remito
@@ -239,6 +242,7 @@ const VentasHistorial = () => {
                 onClick={() => {
                   setFiltroEstado(est);
                   setSearchParams(est === 'TODAS' ? {} : { tab: est });
+                  cargarVentas(1, filtroTexto, est);
                 }}
                 className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all whitespace-nowrap ${filtroEstado === est ? 'bg-brand-light text-brand-dark shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
               >
@@ -322,6 +326,13 @@ const VentasHistorial = () => {
                             >
                               <Send size={16} /> A Remito
                             </button>
+                            <Link
+                              to={`/documento-form/${venta.id}`}
+                              className="text-blue-600 hover:text-blue-700 bg-blue-50 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
+                              title="Editar Presupuesto"
+                            >
+                              <Edit2 size={16} /> Editar
+                            </Link>
                             <button
                               onClick={() => { setVentaAFacturar(venta); setMontoRecibidoFacturar(venta.total.toString()); }}
                               className="text-green-600 hover:text-green-700 bg-green-50 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
@@ -346,6 +357,13 @@ const VentasHistorial = () => {
                               title="Aprobar (Descuenta Stock)"
                             >
                               <PackageCheck size={16} /> Aprobar
+                            </button>
+                            <button
+                              onClick={() => { setVentaAFacturar(venta); setMontoRecibidoFacturar(venta.total.toString()); }}
+                              className="text-green-600 hover:text-green-700 bg-green-50 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
+                              title="Aprobar y Facturar"
+                            >
+                              <CheckCircle size={16} /> Facturar
                             </button>
                             <button onClick={() => imprimirDocumento(venta, 'REMITO')} className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded" title="Imprimir Remito A4">
                               <FileText size={16} />
@@ -402,6 +420,12 @@ const VentasHistorial = () => {
             </tbody>
           </table>
         </div>
+        <Pagination 
+          currentPage={page} 
+          totalPages={totalPages} 
+          totalCount={totalCount} 
+          onPageChange={(newPage) => cargarVentas(newPage)} 
+        />
       </div>
 
       {/* Modal Confirmar Anulación */}
@@ -524,7 +548,7 @@ const VentasHistorial = () => {
             {/* Letra Central */}
             <div className="absolute left-1/2 -translate-x-1/2 top-0 flex flex-col items-center justify-start bg-white w-12 border-x-2 border-black border-b-2 h-16 rounded-b-md">
               <div className="text-3xl font-extrabold leading-none mt-2">
-                {documentoImprimir.tipo === 'REMITO' ? 'R' : documentoImprimir.tipo === 'PRESUPUESTO' ? 'X' : 'C'}
+                {documentoImprimir.tipo === 'REMITO' ? 'R' : 'X'}
               </div>
               <div className="text-[8px] font-bold mt-1 text-center">
                 CÓD. 000
@@ -533,7 +557,11 @@ const VentasHistorial = () => {
 
             {/* Caja Izquierda: Empresa */}
             <div className="flex-1 p-3 pr-8 flex flex-col justify-between">
-              <h2 className="text-2xl font-black uppercase tracking-tight mb-4">{empresaDatos.razonSocial || 'EMPRESA GENÉRICA'}</h2>
+              {empresaDatos.logoUrl ? (
+                <img src={empresaDatos.logoUrl} alt={empresaDatos.razonSocial} className="h-16 object-contain mb-4" />
+              ) : (
+                <h2 className="text-2xl font-black uppercase tracking-tight mb-4">{empresaDatos.razonSocial || 'EMPRESA GENÉRICA'}</h2>
+              )}
               <div>
                 <p className="text-xs mb-1"><strong>Razón Social:</strong> {empresaDatos.razonSocial}</p>
                 <p className="text-xs mb-1"><strong>Domicilio Comercial:</strong> {empresaDatos.direccion}</p>
@@ -545,7 +573,7 @@ const VentasHistorial = () => {
             <div className="flex-1 p-3 pl-10 border-l-2 border-transparent border-t-0 flex flex-col justify-between">
               <div>
                 <h1 className="text-2xl font-black uppercase tracking-tight">
-                  {documentoImprimir.tipo === 'REMITO' ? 'REMITO' : documentoImprimir.tipo === 'PRESUPUESTO' ? 'PRESUPUESTO' : 'FACTURA'}
+                  {documentoImprimir.tipo === 'REMITO' ? 'REMITO' : documentoImprimir.tipo === 'PRESUPUESTO' ? 'PRESUPUESTO' : 'COMPROBANTE NO FISCAL'}
                 </h1>
                 <div className="text-lg font-bold mt-1 mb-3">
                   N° 0001-{documentoImprimir.venta.id.toString().padStart(8, '0')}
@@ -568,8 +596,14 @@ const VentasHistorial = () => {
               <p><strong>Condición de venta:</strong> {documentoImprimir.venta.medioPago === 'EFECTIVO' ? 'Efectivo' : 'Otra'}</p>
             </div>
             <div className="flex flex-col gap-1 w-1/2 pl-4">
-              <p><strong>Señor/es:</strong> {documentoImprimir.venta.cliente?.nombre || 'Consumidor Final'}</p>
-              <p><strong>Domicilio:</strong> {documentoImprimir.venta.cliente?.direccion || '-'}</p>
+              {documentoImprimir.venta.cliente ? (
+                <>
+                  <p><strong>Señor/es:</strong> {documentoImprimir.venta.cliente.razonSocial || documentoImprimir.venta.cliente.nombre}</p>
+                  <p><strong>Domicilio:</strong> {documentoImprimir.venta.cliente.direccion || '-'}</p>
+                </>
+              ) : (
+                <p className="text-lg font-bold">CONSUMIDOR FINAL</p>
+              )}
             </div>
           </div>
 
@@ -641,7 +675,7 @@ const VentasHistorial = () => {
           )}
           
           <div className="fixed bottom-8 left-0 right-0 text-center font-bold text-[10px]">
-            {documentoImprimir.tipo === 'FACTURA' ? 'DOCUMENTO NO VÁLIDO COMO FACTURA - COMPROBANTE INTERNO' : 'DOCUMENTO NO VÁLIDO COMO FACTURA'} - Generado por PuntoVeloz
+            DOCUMENTO NO VÁLIDO COMO FACTURA - Generado por PuntoVeloz
           </div>
         </div>
       )}

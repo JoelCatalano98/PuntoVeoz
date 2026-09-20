@@ -7,6 +7,7 @@ interface Cliente {
   id: number;
   nombre: string;
   numeroDoc?: string;
+  razonSocial?: string;
   direccion?: string;
   condicionIva?: string;
 }
@@ -24,6 +25,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect }) => {
 
   // Form para nuevo
   const [nuevoNombre, setNuevoNombre] = useState('');
+  const [nuevaRazonSocial, setNuevaRazonSocial] = useState('');
   const [nuevoDoc, setNuevoDoc] = useState('');
   const [nuevaDireccion, setNuevaDireccion] = useState('');
   const [nuevaCondicionIva, setNuevaCondicionIva] = useState('Consumidor Final');
@@ -56,6 +58,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect }) => {
     try {
       const res = await api.post('/clientes', {
         nombre: nuevoNombre,
+        razonSocial: nuevaRazonSocial || undefined,
         numeroDoc: nuevoDoc || undefined,
         direccion: nuevaDireccion || undefined,
         condicionIva: nuevaCondicionIva || undefined
@@ -132,7 +135,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect }) => {
           ) : (
             <form onSubmit={handleCrear} className="flex flex-col gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Nombre / Razón Social *</label>
+                <label className="block text-sm font-medium mb-1">Nombre *</label>
                 <input
                   type="text"
                   autoFocus
@@ -140,6 +143,15 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect }) => {
                   className="w-full p-2 border rounded focus:outline-none focus:border-brand-light"
                   value={nuevoNombre}
                   onChange={e => setNuevoNombre(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Razón Social</label>
+                <input
+                  type="text"
+                  className="w-full p-2 border rounded focus:outline-none focus:border-brand-light"
+                  value={nuevaRazonSocial}
+                  onChange={e => setNuevaRazonSocial(e.target.value)}
                 />
               </div>
               <div>

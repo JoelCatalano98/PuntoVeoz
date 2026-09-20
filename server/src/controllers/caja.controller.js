@@ -176,6 +176,7 @@ async function cerrarCaja(req, res, next) {
 async function listarMovimientos(req, res, next) {
   try {
     const { aperturaCajaId } = req.params;
+    const { page, limit } = req.query;
     const comercioId = req.comercioId;
 
     if (!aperturaCajaId || isNaN(Number(aperturaCajaId))) {
@@ -184,7 +185,9 @@ async function listarMovimientos(req, res, next) {
 
     const movimientos = await cajaService.listarMovimientos({
       comercioId,
-      aperturaCajaId: Number(aperturaCajaId)
+      aperturaCajaId: Number(aperturaCajaId),
+      page,
+      limit
     });
 
     res.json(movimientos);
@@ -199,12 +202,14 @@ async function listarMovimientos(req, res, next) {
 async function listarCierres(req, res, next) {
   try {
     const comercioId = req.comercioId;
-    const { fechaDesde, fechaHasta } = req.query;
+    const { fechaDesde, fechaHasta, page, limit } = req.query;
 
     const cierres = await cajaService.listarCierres({
       comercioId,
       fechaDesde,
-      fechaHasta
+      fechaHasta,
+      page,
+      limit
     });
 
     res.json(cierres);

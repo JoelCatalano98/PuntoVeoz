@@ -1,7 +1,12 @@
 const prisma = require('../config/prisma');
 
 async function listar(req, res) {
-  const { busqueda, categoriaId, precioMin, precioMax, precioExacto, fechaDesde, fechaHasta } = req.query;
+  const { busqueda, search, categoriaId, precioMin, precioMax, precioExacto, fechaDesde, fechaHasta, page = 1, limit = 50 } = req.query;
+  const q = busqueda || search;
+
+  const pageNum = Math.max(1, Number(page));
+  const limitNum = Math.max(1, Number(limit));
+  const skip = (pageNum - 1) * limitNum;
 
   const whereClause = {
     comercioId: req.comercioId,
@@ -12,10 +17,10 @@ async function listar(req, res) {
     whereClause.categoriaId = Number(categoriaId);
   }
 
-  if (busqueda) {
+  if (q) {
     whereClause.OR = [
-      { nombre: { contains: busqueda } },
-      { codigoBarras: { contains: busqueda } }
+      { nombre: { contains: q } },
+      { codigoBarras: { contains: q } }
     ];
   }
 
@@ -33,15 +38,24 @@ async function listar(req, res) {
     if (fechaHasta) whereClause.createdAt.lte = new Date(fechaHasta + 'T23:59:59.999Z');
   }
 
-  const productos = await prisma.producto.findMany({
-    where: whereClause,
-    orderBy: { nombre: 'asc' },
-    include: {
-      categoria: { select: { id: true, nombre: true, color: true } },
-      unidadMedida: { select: { id: true, nombre: true, abreviatura: true } }
-    }
+  const [totalCount, productos] = await prisma.$transaction([
+    prisma.producto.count({ where: whereClause }),
+    prisma.producto.findMany({
+      where: whereClause,
+      orderBy: { nombre: 'asc' },
+      include: {
+        categoria: { select: { id: true, nombre: true, color: true } },
+        unidadMedida: { select: { id: true, nombre: true, abreviatura: true } }
+      },
+      skip,
+      take: limitNum
+    })
+  ]);
+  res.json({
+    data: productos,
+    totalCount,
+    totalPages: Math.ceil(totalCount / limitNum)
   });
-  res.json(productos);
 }
 
 async function buscarPorCodigoBarras(req, res) {

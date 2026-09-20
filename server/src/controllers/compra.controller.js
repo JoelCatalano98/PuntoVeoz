@@ -2,18 +2,41 @@ const prisma = require('../config/prisma');
 
 async function listar(req, res, next) {
   try {
-    const compras = await prisma.compra.findMany({
-      where: { comercioId: req.comercioId },
-      include: {
-        proveedor: { select: { razonSocial: true, cuit: true, direccion: true, condicionIva: true } },
-        usuario: { select: { nombre: true, username: true } },
-        detalles: {
-          include: { producto: { select: { nombre: true, codigoBarras: true } } }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
+    const { search, page = 1, limit = 50 } = req.query;
+    const pageNum = Math.max(1, Number(page));
+    const limitNum = Math.max(1, Number(limit));
+    const skip = (pageNum - 1) * limitNum;
+
+    const whereClause = { comercioId: req.comercioId };
+    if (search) {
+      whereClause.OR = [
+        { numeroFactura: { contains: search } },
+        { proveedor: { razonSocial: { contains: search } } }
+      ];
+    }
+
+    const [totalCount, compras] = await prisma.$transaction([
+      prisma.compra.count({ where: whereClause }),
+      prisma.compra.findMany({
+        where: whereClause,
+        include: {
+          proveedor: { select: { razonSocial: true, cuit: true, direccion: true, condicionIva: true } },
+          usuario: { select: { nombre: true, username: true } },
+          detalles: {
+            include: { producto: { select: { nombre: true, codigoBarras: true } } }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limitNum
+      })
+    ]);
+
+    res.json({
+      data: compras,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limitNum)
     });
-    res.json(compras);
   } catch (error) {
     next(error);
   }
@@ -124,7 +147,18 @@ async function crear(req, res, next) {
       return nuevaCompra;
     });
 
-    res.status(201).json(compra);
+    const compraCompleta = await prisma.compra.findFirst({
+      where: { id: compra.id, comercioId: req.comercioId },
+      include: {
+        proveedor: true,
+        usuario: { select: { nombre: true, username: true } },
+        detalles: {
+          include: { producto: { select: { nombre: true, codigoBarras: true } } }
+        }
+      }
+    });
+
+    res.status(201).json(compraCompleta);
   } catch (error) {
     if (error.message.includes('caja abierto')) {
       return res.status(400).json({ error: error.message });

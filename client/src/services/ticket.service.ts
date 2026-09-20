@@ -21,7 +21,7 @@ export const imprimirTicket = (venta: any) => {
   lines.push(`Ticket N°: ${venta.id.toString().padStart(8, '0')}`);
   lines.push(`Cajero: ${cajero}`);
   if (venta.cliente) {
-    lines.push(`Cliente: ${venta.cliente.nombre}`);
+    lines.push(`Cliente: ${venta.cliente.razonSocial || venta.cliente.nombre}`);
   }
   lines.push(`-----------------------------------`);
   lines.push(`CANT | DESCRIPCION        | SUBTOTAL`);

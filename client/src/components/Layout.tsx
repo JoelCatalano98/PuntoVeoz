@@ -224,6 +224,12 @@ const Layout = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Global Footer */}
+      <footer className="flex-none bg-white border-t border-gray-200 py-1.5 px-4 z-40 print:hidden flex justify-between items-center">
+        <div className="text-[11px] font-bold text-gray-400">Punto Veloz</div>
+        <div className="text-[11px] text-gray-400">v1.0 - <span className="text-green-500 font-bold">Activo</span></div>
+      </footer>
     </div>
   );
 };

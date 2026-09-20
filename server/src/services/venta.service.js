@@ -359,6 +359,74 @@ async function facturarRemito({ comercioId, usuarioId, ventaId, aperturaCajaId, 
   });
 }
 
+// Transición: REMITO_PENDIENTE -> FACTURADA
+// Descuenta stock Y mueve caja en un solo paso.
+async function aprobarYFacturarRemito({ comercioId, usuarioId, ventaId, aperturaCajaId, medioPago, montoRecibido }) {
+  return await prisma.$transaction(async (tx) => {
+    const venta = await tx.venta.findFirst({
+      where: { id: ventaId, comercioId },
+      include: {
+        items: { include: { producto: true } }
+      }
+    });
+
+    if (!venta) throw new Error('Venta no encontrada');
+    if (venta.estado !== 'REMITO_PENDIENTE') throw new Error('La venta no se encuentra en estado REMITO_PENDIENTE');
+
+    const apertura = await tx.aperturaCaja.findFirst({
+      where: { id: aperturaCajaId, comercioId, cierre: null },
+      include: { caja: true }
+    });
+    if (!apertura) throw new Error('No hay una caja abierta válida con ese ID para cobrar');
+
+    let montoFinal = dinero.toDecimal(montoRecibido);
+    if (medioPago !== 'EFECTIVO') montoFinal = dinero.toDecimal(venta.total);
+    if (montoFinal.lessThan(dinero.toDecimal(venta.total))) {
+      throw new Error(`El monto recibido no cubre el total de la venta`);
+    }
+    const vuelto = dinero.calcularVuelto(venta.total, montoFinal.toNumber());
+
+    // 1. Descontar Stock
+    for (const item of venta.items) {
+      const resultado = await tx.producto.updateMany({
+        where: { id: item.productoId, stockActual: { gte: item.cantidad } },
+        data: { stockActual: { decrement: item.cantidad } }
+      });
+
+      if (resultado.count === 0) {
+        throw new Error(`Stock insuficiente para el producto: ${item.producto.nombre}. No se puede aprobar el remito.`);
+      }
+
+      await tx.movimientoStock.create({
+        data: {
+          comercioId, productoId: item.productoId, usuarioId,
+          tipo: 'SALIDA', cantidad: item.cantidad,
+          motivo: 'Aprobación y Facturación de Remito', ventaId: venta.id
+        }
+      });
+    }
+
+    // 2. Mover Caja y Actualizar Estado
+    const ventaActualizada = await tx.venta.update({
+      where: { id: venta.id },
+      data: {
+        estado: 'FACTURADA',
+        medioPago, montoRecibido: montoFinal.toNumber(), vuelto,
+        puntoVentaId: apertura.caja.puntoVentaId
+      }
+    });
+
+    await tx.movimientoCaja.create({
+      data: {
+        aperturaCajaId: apertura.id, cajaId: apertura.cajaId, ventaId: venta.id,
+        tipo: 'VENTA', monto: venta.total, medioPago
+      }
+    });
+
+    return ventaActualizada;
+  });
+}
+
 // Transición: PRESUPUESTO -> FACTURADA
 // Descuenta stock Y mueve caja. (antiguo efectivizarPresupuesto)
 async function facturarPresupuesto({ comercioId, usuarioId, ventaId, aperturaCajaId, medioPago, montoRecibido }) {
@@ -428,11 +496,90 @@ async function convertirPresupuestoEnRemito({ comercioId, ventaId }) {
   });
 }
 
+async function actualizarPresupuesto({ comercioId, usuarioId, ventaId, clienteId, items }) {
+  return await prisma.$transaction(async (tx) => {
+    const venta = await tx.venta.findFirst({
+      where: { id: ventaId, comercioId }
+    });
+
+    if (!venta) {
+      throw new Error('Venta no encontrada');
+    }
+
+    if (venta.estado !== 'PRESUPUESTO') {
+      throw new Error('Solo se pueden editar ventas en estado PRESUPUESTO');
+    }
+
+    if (clienteId) {
+      const cliente = await tx.cliente.findFirst({
+        where: { id: clienteId, comercioId }
+      });
+      if (!cliente) {
+        throw new Error('El cliente indicado no existe o no pertenece a este comercio');
+      }
+    }
+
+    // 1. Borrar items actuales
+    await tx.ventaItem.deleteMany({
+      where: { ventaId }
+    });
+
+    // 2. Calcular nuevo total
+    let total = 0;
+    const itemsData = [];
+
+    for (const item of items) {
+      const producto = await tx.producto.findUnique({
+        where: { id: item.productoId }
+      });
+
+      if (!producto || producto.comercioId !== comercioId) {
+        throw new Error(`El producto con ID ${item.productoId} no existe`);
+      }
+
+      const precioUnitario = producto.precioVenta;
+      const subtotal = dinero.multiplicar(precioUnitario, item.cantidad);
+      total = dinero.sumar(total, subtotal);
+
+      itemsData.push({
+        productoId: producto.id,
+        cantidad: item.cantidad,
+        precioUnitario,
+        descuentoLinea: 0,
+        subtotal
+      });
+    }
+
+    // 3. Actualizar Venta y crear nuevos items
+    const ventaActualizada = await tx.venta.update({
+      where: { id: ventaId },
+      data: {
+        clienteId,
+        total,
+        usuarioId,
+        items: {
+          create: itemsData
+        }
+      },
+      include: {
+        items: {
+          include: { producto: true }
+        },
+        cliente: true
+      }
+    });
+
+    return ventaActualizada;
+  });
+}
+
 module.exports = {
   crearVenta,
   anularVenta,
   aprobarRemito,
   facturarRemito,
+  aprobarYFacturarRemito,
   facturarPresupuesto,
-  convertirPresupuestoEnRemito
+  convertirPresupuestoEnRemito,
+  actualizarPresupuesto
 };

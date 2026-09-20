@@ -3,17 +3,22 @@ import { AlertCircle, Printer, History } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { imprimirTicket } from '../services/ticket.service';
+import { Pagination } from '../components/Pagination';
 
 const CajaMovimientos = () => {
   const [cargando, setCargando] = useState(true);
   const [aperturaCajaId, setAperturaCajaId] = useState<number | null>(null);
   const [movimientos, setMovimientos] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const limit = 50;
 
   useEffect(() => {
-    cargarEstadoYMovimientos();
+    cargarEstadoYMovimientos(1);
   }, []);
 
-  const cargarEstadoYMovimientos = async () => {
+  const cargarEstadoYMovimientos = async (pageToLoad = page) => {
     try {
       // 1. Obtener estado para saber el aperturaCajaId actual
       const resEstado = await api.get('/caja/estado');
@@ -22,8 +27,11 @@ const CajaMovimientos = () => {
         setAperturaCajaId(id);
         
         // 2. Obtener los movimientos
-        const resMov = await api.get(`/caja/${id}/movimientos`);
-        setMovimientos(resMov.data);
+        const resMov = await api.get(`/caja/${id}/movimientos`, { params: { page: pageToLoad, limit } });
+        setMovimientos(resMov.data.data);
+        setTotalPages(resMov.data.totalPages);
+        setTotalCount(resMov.data.totalCount);
+        setPage(pageToLoad);
       } else {
         setAperturaCajaId(null);
       }
@@ -122,6 +130,12 @@ const CajaMovimientos = () => {
             </tbody>
           </table>
         </div>
+        <Pagination 
+          currentPage={page} 
+          totalPages={totalPages} 
+          totalCount={totalCount} 
+          onPageChange={(newPage) => cargarEstadoYMovimientos(newPage)} 
+        />
       </div>
     </div>
   );

@@ -331,6 +331,7 @@ model Cliente {
   comercioId Int
   comercio   Comercio @relation(fields: [comercioId], references: [id])
   nombre     String
+  razonSocial String?
   tipoDoc    String?
   numeroDoc  String?
   telefono     String?

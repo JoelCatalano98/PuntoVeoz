@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, X, AlertTriangle, Package, Barcode, FileSpreadsheet, Printer, Image as ImageIcon } from 'lucide-react';
+import { Pagination } from '../components/Pagination';
 import { useLocation, useNavigate } from 'react-router-dom';
 import JsBarcode from 'jsbarcode';
 import api from '../services/api';
@@ -44,6 +45,10 @@ const Productos = () => {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [filtro, setFiltro] = useState('');
   const [cargando, setCargando] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const limit = 20;
 
   // Filtros Backend
   const [filtroCategoria, setFiltroCategoria] = useState('');
@@ -89,10 +94,10 @@ const Productos = () => {
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      cargarProductos();
+      cargarProductos(1);
     }, 500);
     return () => clearTimeout(timeoutId);
-  }, [filtroCategoria, filtroPrecioOp, filtroPrecio, filtroFecha]);
+  }, [filtroCategoria, filtroPrecioOp, filtroPrecio, filtroFecha, filtro]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -143,9 +148,13 @@ const Productos = () => {
     }
   };
 
-  const cargarProductos = async () => {
+  const cargarProductos = async (pageToLoad = page) => {
+    setCargando(true);
     try {
       const params = new URLSearchParams();
+      params.append('page', pageToLoad.toString());
+      params.append('limit', limit.toString());
+      if (filtro) params.append('search', filtro);
       if (filtroCategoria) params.append('categoriaId', filtroCategoria);
       if (filtroPrecio) {
         if (filtroPrecioOp === '=') params.append('precioExacto', filtroPrecio);
@@ -158,7 +167,10 @@ const Productos = () => {
       }
 
       const res = await api.get('/productos', { params });
-      setProductos(res.data);
+      setProductos(res.data.data);
+      setTotalPages(res.data.totalPages);
+      setTotalCount(res.data.totalCount);
+      setPage(pageToLoad);
     } catch (err) {
       toast.error('Error al cargar productos');
     } finally {
@@ -337,7 +349,8 @@ const Productos = () => {
     
     setGuardandoAjuste(true);
     try {
-      await api.post(`/productos/${productoAjuste.id}/ajuste-stock`, {
+      await api.post(`/stock/ajustar`, {
+        productoId: productoAjuste.id,
         tipo: ajusteData.tipo,
         cantidad: Number(ajusteData.cantidad),
         motivo: ajusteData.motivo

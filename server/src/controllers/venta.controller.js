@@ -155,22 +155,55 @@ async function historialVentas(req, res, next) {
     const comercioId = req.comercioId;
     const prisma = require('../config/prisma');
 
-    const ventas = await prisma.venta.findMany({
-      where: { comercioId },
-      orderBy: { createdAt: 'desc' },
-      take: 100, // list up to 100 recent sales
-      include: {
-        cliente: true,
-        usuario: { select: { id: true, nombre: true } },
-        items: {
-          include: {
-            producto: true
+    const { search, page = 1, limit = 50, tab } = req.query;
+    const pageNum = Math.max(1, Number(page));
+    const limitNum = Math.max(1, Number(limit));
+    const skip = (pageNum - 1) * limitNum;
+
+    const whereClause = { comercioId };
+    if (tab === 'REMITOS') {
+      whereClause.estado = { in: ['REMITO_PENDIENTE', 'REMITO_APROBADO'] };
+    } else if (tab === 'PRESUPUESTO') {
+      whereClause.estado = 'PRESUPUESTO';
+    } else {
+      whereClause.estado = { in: ['COMPLETADA', 'FACTURADA', 'ANULADA'] };
+    }
+
+    if (search) {
+      const isNumber = !isNaN(Number(search));
+      whereClause.OR = [
+        { cliente: { nombre: { contains: search } } },
+        { cliente: { razonSocial: { contains: search } } }
+      ];
+      if (isNumber) {
+        whereClause.OR.push({ id: Number(search) });
+      }
+    }
+
+    const [totalCount, ventas] = await prisma.$transaction([
+      prisma.venta.count({ where: whereClause }),
+      prisma.venta.findMany({
+        where: whereClause,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limitNum,
+        include: {
+          cliente: true,
+          usuario: { select: { id: true, nombre: true } },
+          items: {
+            include: {
+              producto: true
+            }
           }
         }
-      }
-    });
+      })
+    ]);
 
-    res.json(ventas);
+    res.json({
+      data: ventas,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limitNum)
+    });
   } catch (error) {
     next(error);
   }
@@ -213,6 +246,30 @@ async function facturarRemito(req, res, next) {
   }
 }
 
+async function aprobarYFacturarRemito(req, res, next) {
+  try {
+    const comercioId = req.comercioId;
+    const usuarioId = req.user.userId;
+    const ventaId = Number(req.params.id);
+    const { aperturaCajaId, medioPago, montoRecibido } = req.body;
+
+    if (!aperturaCajaId || !medioPago || montoRecibido === undefined) {
+      return res.status(400).json({ error: 'Faltan datos obligatorios para facturar (caja, medio de pago, monto)' });
+    }
+
+    const venta = await ventaService.aprobarYFacturarRemito({
+      comercioId, usuarioId, ventaId,
+      aperturaCajaId: Number(aperturaCajaId), medioPago, montoRecibido: Number(montoRecibido)
+    });
+    res.json(venta);
+  } catch (error) {
+    if (error.message.includes('Stock insuficiente')) {
+      return res.status(400).json({ error: error.message });
+    }
+    next(error);
+  }
+}
+
 async function facturarPresupuesto(req, res, next) {
   try {
     const comercioId = req.comercioId;
@@ -248,6 +305,41 @@ async function convertirPresupuestoEnRemito(req, res, next) {
   }
 }
 
+async function actualizarPresupuesto(req, res, next) {
+  try {
+    const { items, clienteId } = req.body;
+    const comercioId = req.comercioId;
+    const usuarioId = req.user.userId;
+    const ventaId = Number(req.params.id);
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'La venta debe contener al menos un item' });
+    }
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (!Number.isInteger(item.productoId) || item.productoId <= 0) {
+        return res.status(400).json({ error: `El item en la posición ${i} tiene un productoId inválido` });
+      }
+      if (!Number.isInteger(item.cantidad) || item.cantidad <= 0) {
+        return res.status(400).json({ error: `La cantidad del producto con ID ${item.productoId} debe ser un número entero positivo` });
+      }
+    }
+
+    const venta = await ventaService.actualizarPresupuesto({
+      comercioId,
+      usuarioId,
+      ventaId,
+      clienteId: clienteId || null,
+      items
+    });
+
+    res.json(venta);
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   crearVenta,
   reporteVentas,
@@ -256,6 +348,8 @@ module.exports = {
   historialVentas,
   aprobarRemito,
   facturarRemito,
+  aprobarYFacturarRemito,
   facturarPresupuesto,
-  convertirPresupuestoEnRemito
+  convertirPresupuestoEnRemito,
+  actualizarPresupuesto
 };

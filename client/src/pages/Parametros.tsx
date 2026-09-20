@@ -12,6 +12,7 @@ const Parametros = () => {
   const [empresaCuit, setEmpresaCuit] = useState('');
   const [empresaDireccion, setEmpresaDireccion] = useState('');
   const [empresaCondicionIva, setEmpresaCondicionIva] = useState('Responsable Inscripto');
+  const [empresaLogoUrl, setEmpresaLogoUrl] = useState('');
 
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -22,13 +23,14 @@ const Parametros = () => {
 
   const cargarParametros = async () => {
     try {
-      const [resTicket, resEtiqueta, resRS, resCuit, resDir, resIva] = await Promise.all([
+      const [resTicket, resEtiqueta, resRS, resCuit, resDir, resIva, resLogo] = await Promise.all([
         api.get('/parametros/impresionTicket'),
         api.get('/parametros/etiquetaMostrarPrecio'),
         api.get('/parametros/empresaRazonSocial'),
         api.get('/parametros/empresaCuit'),
         api.get('/parametros/empresaDireccion'),
-        api.get('/parametros/empresaCondicionIva')
+        api.get('/parametros/empresaCondicionIva'),
+        api.get('/parametros/empresaLogoUrl')
       ]);
       if (resTicket.data?.valor) setImpresionTicket(resTicket.data.valor);
       if (resEtiqueta.data?.valor) setEtiquetaMostrarPrecio(resEtiqueta.data.valor);
@@ -36,6 +38,7 @@ const Parametros = () => {
       if (resCuit.data?.valor) setEmpresaCuit(resCuit.data.valor);
       if (resDir.data?.valor) setEmpresaDireccion(resDir.data.valor);
       if (resIva.data?.valor) setEmpresaCondicionIva(resIva.data.valor);
+      if (resLogo.data?.valor) setEmpresaLogoUrl(resLogo.data.valor);
     } catch (err) {
       toast.error('Error al cargar configuraciones');
     } finally {
@@ -54,7 +57,8 @@ const Parametros = () => {
         api.put('/parametros/empresaRazonSocial', { valor: empresaRazonSocial }),
         api.put('/parametros/empresaCuit', { valor: empresaCuit }),
         api.put('/parametros/empresaDireccion', { valor: empresaDireccion }),
-        api.put('/parametros/empresaCondicionIva', { valor: empresaCondicionIva })
+        api.put('/parametros/empresaCondicionIva', { valor: empresaCondicionIva }),
+        api.put('/parametros/empresaLogoUrl', { valor: empresaLogoUrl })
       ]);
       toast.success('Configuraciones guardadas exitosamente');
     } catch (err) {
@@ -174,6 +178,22 @@ const Parametros = () => {
                 <option value="Exento">Exento</option>
                 <option value="Consumidor Final">Consumidor Final</option>
               </select>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-bold text-gray-700 mb-2">URL del Logo (Opcional)</label>
+              <input
+                type="text"
+                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50"
+                value={empresaLogoUrl}
+                onChange={e => setEmpresaLogoUrl(e.target.value)}
+                placeholder="Ej. https://miempresa.com/logo.png"
+              />
+              {empresaLogoUrl && (
+                <div className="mt-2">
+                  <p className="text-xs text-gray-500 mb-1">Vista previa:</p>
+                  <img src={empresaLogoUrl} alt="Logo preview" className="h-16 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                </div>
+              )}
             </div>
           </div>
           
