@@ -86,54 +86,54 @@ const StockValorizado = () => {
   const totalInmovilizadoFiltro = productosFiltrados.reduce((acc, p) => acc + p.totalValorizado, 0);
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 p-6">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-slate-900 p-6 transition-colors duration-200">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-brand-dark">Stock Valorizado</h1>
-          <p className="text-gray-500 text-sm mt-1">Análisis del capital inmovilizado en el inventario</p>
+          <h1 className="text-2xl font-bold text-brand-dark dark:text-slate-200">Stock Valorizado</h1>
+          <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">Análisis del capital inmovilizado en el inventario</p>
         </div>
       </div>
 
       <div className="flex flex-1 gap-6 overflow-hidden">
         {/* COLUMNA IZQUIERDA: TABLA */}
-        <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-          <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-            <h2 className="font-bold text-gray-700">Detalle de Productos Activos</h2>
+        <div className="flex-1 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col transition-colors duration-200">
+          <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center bg-gray-50 dark:bg-slate-900/50 transition-colors">
+            <h2 className="font-bold text-gray-700 dark:text-slate-200">Detalle de Productos Activos</h2>
           </div>
 
           <div className="overflow-x-auto flex-1">
             <table className="w-full text-left border-collapse">
-              <thead className="bg-gray-100 border-b border-gray-200 sticky top-0 z-10">
+              <thead className="bg-gray-100 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 sticky top-0 z-10 transition-colors">
                 <tr>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-32">Código</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Producto</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right w-24">Cant.</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right w-32">Costo Unit.</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right w-40">Valorizado</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider w-32">Código</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Producto</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider text-right w-24">Cant.</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider text-right w-32">Costo Unit.</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider text-right w-40">Valorizado</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
                 {cargando ? (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-gray-400">Calculando inventario...</td>
+                    <td colSpan={5} className="p-8 text-center text-gray-400 dark:text-slate-500">Calculando inventario...</td>
                   </tr>
                 ) : productosFiltrados.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-gray-400">No hay productos en stock.</td>
+                    <td colSpan={5} className="p-8 text-center text-gray-400 dark:text-slate-500">No hay productos en stock.</td>
                   </tr>
                 ) : (
                   productosFiltrados.map(prod => (
-                    <tr key={prod.id} className="hover:bg-blue-50/50 transition-colors">
-                      <td className="p-4 text-sm text-gray-600 font-mono">{prod.codigoBarras || '-'}</td>
-                      <td className="p-4 text-sm font-medium text-gray-800">
+                    <tr key={prod.id} className="hover:bg-blue-50/50 dark:hover:bg-slate-700/50 transition-colors">
+                      <td className="p-4 text-sm text-gray-600 dark:text-slate-400 font-mono">{prod.codigoBarras || '-'}</td>
+                      <td className="p-4 text-sm font-medium text-gray-800 dark:text-slate-200">
                         {prod.nombre}
                         {prod.categoria && (
-                          <div className="text-xs text-gray-500 mt-1">{prod.categoria.nombre}</div>
+                          <div className="text-xs text-gray-500 dark:text-slate-400 mt-1">{prod.categoria.nombre}</div>
                         )}
                       </td>
-                      <td className="p-4 text-sm text-right font-bold text-gray-700">{prod.stockActual}</td>
-                      <td className="p-4 text-sm text-right text-gray-600">{formatearMoneda(prod.precioCosto)}</td>
-                      <td className="p-4 text-sm text-right font-bold text-brand-dark">{formatearMoneda(prod.totalValorizado)}</td>
+                      <td className="p-4 text-sm text-right font-bold text-gray-700 dark:text-slate-200">{prod.stockActual}</td>
+                      <td className="p-4 text-sm text-right text-gray-600 dark:text-slate-400">{formatearMoneda(prod.precioCosto)}</td>
+                      <td className="p-4 text-sm text-right font-bold text-brand-dark dark:text-slate-200">{formatearMoneda(prod.totalValorizado)}</td>
                     </tr>
                   ))
                 )}
@@ -160,19 +160,19 @@ const StockValorizado = () => {
           </div>
 
           {/* FILTROS */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex flex-col gap-5 flex-1 overflow-y-auto">
-            <h2 className="font-bold text-gray-700 uppercase text-xs tracking-wider border-b border-gray-100 pb-2 flex items-center gap-2">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4 flex flex-col gap-5 flex-1 overflow-y-auto transition-colors duration-200">
+            <h2 className="font-bold text-gray-700 dark:text-slate-200 uppercase text-xs tracking-wider border-b border-gray-100 dark:border-slate-700 pb-2 flex items-center gap-2 transition-colors">
               <Search size={14} /> Filtros de Búsqueda
             </h2>
             
             <div>
-              <label className="block text-xs font-bold text-gray-500 mb-1">Buscar Producto</label>
+              <label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">Buscar Producto</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                 <input
                   type="text"
                   placeholder="Nombre o código..."
-                  className="w-full pl-9 pr-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white transition-colors"
+                  className="w-full pl-9 pr-3 py-2 text-sm border dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 focus:bg-white dark:focus:bg-slate-800 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 transition-colors"
                   value={filtroTexto}
                   onChange={e => setFiltroTexto(e.target.value)}
                 />
@@ -180,9 +180,9 @@ const StockValorizado = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-500 mb-1">Categoría</label>
+              <label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">Categoría</label>
               <select 
-                className="w-full p-2 text-sm border rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-light"
+                className="w-full p-2 text-sm border dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-light transition-colors"
                 value={filtroCategoria}
                 onChange={e => setFiltroCategoria(e.target.value)}
               >
@@ -198,8 +198,8 @@ const StockValorizado = () => {
               </select>
             </div>
             
-            <div className="mt-auto pt-4 border-t border-gray-100">
-              <div className="text-sm text-gray-500 font-medium text-center bg-gray-50 py-2 rounded">
+            <div className="mt-auto pt-4 border-t border-gray-100 dark:border-slate-700 transition-colors">
+              <div className="text-sm text-gray-500 dark:text-slate-400 font-medium text-center bg-gray-50 dark:bg-slate-900/50 py-2 rounded transition-colors">
                 {productosFiltrados.length} productos listados
               </div>
             </div>

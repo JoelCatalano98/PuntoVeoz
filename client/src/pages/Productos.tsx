@@ -415,19 +415,19 @@ const Productos = () => {
   const subcategoriasDisponibles = categoriasLista.find(c => c.id.toString() === formData.categoriaId)?.subcategorias || [];
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 p-6">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-slate-900 p-6 transition-colors duration-200">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-brand-dark">Gestión de Productos</h1>
-          <p className="text-gray-500 text-sm mt-1">Administrá tu inventario y precios</p>
+          <h1 className="text-2xl font-bold text-brand-dark dark:text-brand-light">Gestión de Productos</h1>
+          <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">Administrá tu inventario y precios</p>
         </div>
       </div>
 
       <div className="flex flex-1 gap-6 overflow-hidden">
         {/* COLUMNA IZQUIERDA: TABLA */}
-        <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-          <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-            <h2 className="font-bold text-gray-700">Catálogo</h2>
+        <div className="flex-1 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col transition-colors duration-200">
+          <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center bg-gray-50 dark:bg-slate-900/50">
+            <h2 className="font-bold text-gray-700 dark:text-slate-200">Catálogo</h2>
             {puedeEditar && (
               <button 
                 onClick={abrirModalNuevo}
@@ -441,20 +441,20 @@ const Productos = () => {
 
           <div className="overflow-x-auto flex-1">
             <table className="w-full text-left border-collapse">
-              <thead className="bg-gray-100 border-b border-gray-200 sticky top-0 z-10">
+              <thead className="bg-gray-100 dark:bg-slate-900/80 border-b border-gray-200 dark:border-slate-700 sticky top-0 z-10">
                 <tr>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-16 text-center">Foto</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-32">Código</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Nombre</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right w-32">P. Costo</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right w-32">P. Venta</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right w-24">Stock</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider w-16 text-center">Foto</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider w-32">Código</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Nombre</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider text-right w-32">P. Costo</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider text-right w-32">P. Venta</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider text-right w-24">Stock</th>
                   {puedeEditar && (
-                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center w-28">Acciones</th>
+                    <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider text-center w-28">Acciones</th>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
                 {cargando ? (
                   <tr>
                     <td colSpan={7} className="p-8 text-center text-gray-400">Cargando productos...</td>
@@ -469,7 +469,7 @@ const Productos = () => {
                     return (
                       <tr 
                         key={prod.id} 
-                        className="hover:bg-blue-50/50 transition-colors"
+                        className="hover:bg-blue-50/50 dark:hover:bg-slate-700/50 transition-colors"
                         style={{ backgroundColor: prod.categoria?.color ? `${prod.categoria.color}1A` : undefined }}
                       >
                         <td className="p-4 text-center">
@@ -477,23 +477,23 @@ const Productos = () => {
                             <img 
                               src={`http://localhost:4000${prod.imagenUrl}`} 
                               alt={prod.nombre}
-                              className="w-10 h-10 rounded-full object-cover border border-gray-200 mx-auto"
+                              className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-slate-600 mx-auto"
                             />
                           ) : (
-                            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mx-auto text-gray-400">
+                            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center mx-auto text-gray-400 dark:text-slate-500">
                               <Package size={20} />
                             </div>
                           )}
                         </td>
-                        <td className="p-4 text-sm text-gray-600 font-mono">{prod.codigoBarras || '-'}</td>
-                        <td className="p-4 text-sm font-medium text-gray-800">
+                        <td className="p-4 text-sm text-gray-600 dark:text-slate-400 font-mono">{prod.codigoBarras || '-'}</td>
+                        <td className="p-4 text-sm font-medium text-gray-800 dark:text-slate-200">
                           {prod.nombre}
                           {prod.categoria && (
-                            <div className="text-xs text-gray-500 mt-1">{prod.categoria.nombre}</div>
+                            <div className="text-xs text-gray-500 dark:text-slate-500 mt-1">{prod.categoria.nombre}</div>
                           )}
                         </td>
-                        <td className="p-4 text-sm text-right text-gray-600">${Number(prod.precioCosto).toFixed(2)}</td>
-                        <td className="p-4 text-sm text-right font-bold text-brand-dark">${Number(prod.precioVenta).toFixed(2)}</td>
+                        <td className="p-4 text-sm text-right text-gray-600 dark:text-slate-400">${Number(prod.precioCosto).toFixed(2)}</td>
+                        <td className="p-4 text-sm text-right font-bold text-brand-dark dark:text-brand-light">${Number(prod.precioVenta).toFixed(2)}</td>
                         <td className="p-4 text-sm text-right">
                           <span className={`inline-flex items-center gap-1 font-bold ${bajoStock ? 'text-red-500' : 'text-green-600'}`}>
                             {bajoStock && <AlertTriangle size={14} />}
@@ -505,14 +505,14 @@ const Productos = () => {
                             <div className="flex items-center justify-center gap-2">
                               <button 
                                 onClick={() => abrirModalAjuste(prod)}
-                                className="p-1.5 text-green-600 hover:bg-green-100 rounded transition-colors bg-white/50"
+                                className="p-1.5 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/50 rounded transition-colors bg-white/50 dark:bg-slate-800/50"
                                 title="Ajuste de Stock"
                               >
                                 <Package size={16} />
                               </button>
                               <button 
                                 onClick={() => abrirModalEditar(prod)}
-                                className="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors bg-white/50"
+                                className="p-1.5 text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded transition-colors bg-white/50 dark:bg-slate-800/50"
                                 title="Editar"
                               >
                                 <Edit2 size={16} />
@@ -520,7 +520,7 @@ const Productos = () => {
                               {prod.codigoBarras && (
                                 <button 
                                   onClick={() => handleImprimirEtiqueta(prod)}
-                                  className="p-1.5 text-indigo-600 hover:bg-indigo-100 rounded transition-colors bg-white/50"
+                                  className="p-1.5 text-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded transition-colors bg-white/50 dark:bg-slate-800/50"
                                   title="Imprimir Etiqueta"
                                 >
                                   <Printer size={16} />
@@ -528,7 +528,7 @@ const Productos = () => {
                               )}
                               <button 
                                 onClick={() => handleEliminar(prod.id)}
-                                className="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors bg-white/50"
+                                className="p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 rounded transition-colors bg-white/50 dark:bg-slate-800/50"
                                 title="Eliminar"
                               >
                                 <Trash2 size={16} />
@@ -546,17 +546,17 @@ const Productos = () => {
         </div>
 
         {/* COLUMNA DERECHA: FILTROS */}
-        <div className="w-72 bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex flex-col gap-5 overflow-y-auto">
-          <h2 className="font-bold text-gray-700 uppercase text-xs tracking-wider border-b border-gray-100 pb-2">Filtros de Búsqueda</h2>
+        <div className="w-72 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4 flex flex-col gap-5 overflow-y-auto transition-colors duration-200">
+          <h2 className="font-bold text-gray-700 dark:text-slate-200 uppercase text-xs tracking-wider border-b border-gray-100 dark:border-slate-700 pb-2">Filtros de Búsqueda</h2>
           
           <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1">Buscar Producto</label>
+            <label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">Buscar Producto</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" size={16} />
               <input
                 type="text"
                 placeholder="Nombre o código..."
-                className="w-full pl-9 pr-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white transition-colors"
+                className="w-full pl-9 pr-3 py-2 text-sm border dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 transition-colors placeholder-gray-400 dark:placeholder-slate-500"
                 value={filtro}
                 onChange={e => setFiltro(e.target.value)}
               />
@@ -564,9 +564,9 @@ const Productos = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1">Categoría</label>
+            <label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">Categoría</label>
             <select 
-              className="w-full p-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light text-gray-600 bg-white"
+              className="w-full p-2 text-sm border dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light text-gray-600 dark:text-slate-200 bg-white dark:bg-slate-900"
               value={filtroCategoria}
               onChange={e => setFiltroCategoria(e.target.value)}
             >
@@ -583,10 +583,10 @@ const Productos = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1">Precio de Venta</label>
+            <label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">Precio de Venta</label>
             <div className="flex gap-2">
               <select 
-                className="w-16 p-2 text-sm border rounded-md bg-white text-gray-600 outline-none focus:ring-2 focus:ring-brand-light"
+                className="w-16 p-2 text-sm border dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-gray-600 dark:text-slate-200 outline-none focus:ring-2 focus:ring-brand-light"
                 value={filtroPrecioOp}
                 onChange={e => setFiltroPrecioOp(e.target.value)}
               >
@@ -597,7 +597,7 @@ const Productos = () => {
               <input 
                 type="number" 
                 placeholder="Monto..." 
-                className="flex-1 p-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light" 
+                className="flex-1 p-2 text-sm border dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 placeholder-gray-400 dark:placeholder-slate-500" 
                 value={filtroPrecio}
                 onChange={e => setFiltroPrecio(e.target.value)}
               />
@@ -605,16 +605,16 @@ const Productos = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1">Actualizado el</label>
+            <label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">Actualizado el</label>
             <input 
               type="date" 
-              className="w-full p-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light text-gray-600" 
+              className="w-full p-2 text-sm border dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light text-gray-600 dark:text-slate-200 bg-white dark:bg-slate-900" 
               value={filtroFecha}
               onChange={e => setFiltroFecha(e.target.value)}
             />
           </div>
           
-          <div className="mt-auto pt-4 border-t border-gray-100 flex flex-col gap-3">
+          <div className="mt-auto pt-4 border-t border-gray-100 dark:border-slate-700 flex flex-col gap-3">
             <button
               onClick={() => exportarProductosExcel(filtrados)}
               className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm text-sm"
@@ -623,7 +623,7 @@ const Productos = () => {
               <FileSpreadsheet size={18} />
               Exportar a Excel
             </button>
-            <div className="text-sm text-gray-500 font-medium text-center bg-gray-50 py-2 rounded">
+            <div className="text-sm text-gray-500 dark:text-slate-400 font-medium text-center bg-gray-50 dark:bg-slate-900/50 py-2 rounded">
               {filtrados.length} resultados
             </div>
           </div>
@@ -633,13 +633,13 @@ const Productos = () => {
       {/* MODAL FORMULARIO */}
       {mostrarModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] transition-colors duration-200">
             
-            <div className="flex justify-between items-center p-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-brand-dark">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100 dark:border-slate-700">
+              <h2 className="text-xl font-bold text-brand-dark dark:text-brand-light">
                 {productoEditando ? 'Editar Producto' : 'Nuevo Producto'}
               </h2>
-              <button onClick={cerrarModal} className="text-gray-400 hover:text-gray-800 transition-colors">
+              <button onClick={cerrarModal} className="text-gray-400 hover:text-gray-800 dark:hover:text-slate-200 transition-colors">
                 <X size={24} />
               </button>
             </div>
@@ -650,11 +650,11 @@ const Productos = () => {
                 {/* SECCIÓN FOTO Y DATOS BÁSICOS */}
                 <div className="flex gap-6 items-start">
                   <div className="flex flex-col items-center gap-2">
-                    <div className="w-32 h-32 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden relative group">
+                    <div className="w-32 h-32 rounded-lg border-2 border-dashed border-gray-300 dark:border-slate-600 flex items-center justify-center bg-gray-50 dark:bg-slate-900/50 overflow-hidden relative group">
                       {imagenPreview ? (
                         <img src={imagenPreview} alt="Preview" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="flex flex-col items-center text-gray-400">
+                        <div className="flex flex-col items-center text-gray-400 dark:text-slate-500">
                           <ImageIcon size={32} />
                           <span className="text-xs mt-1">Sin foto</span>
                         </div>
@@ -673,22 +673,22 @@ const Productos = () => {
                   
                   <div className="flex-1 flex flex-col gap-4">
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Nombre *</label>
+                      <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Nombre *</label>
                       <input
                         type="text"
                         required
                         autoFocus
-                        className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white"
+                        className="w-full p-2.5 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900"
                         value={formData.nombre}
                         onChange={e => setFormData({...formData, nombre: e.target.value})}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Código de Barras</label>
+                      <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Código de Barras</label>
                       <div className="flex gap-2">
                         <input
                           type="text"
-                          className="flex-1 p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light font-mono bg-gray-50 focus:bg-white"
+                          className="flex-1 p-2.5 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light font-mono bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900"
                           value={formData.codigoBarras}
                           onChange={e => setFormData({...formData, codigoBarras: e.target.value})}
                         />
@@ -705,7 +705,7 @@ const Productos = () => {
                         )}
                       </div>
                       {formData.codigoBarras && (
-                        <div className="mt-2 p-2 bg-white border border-gray-200 rounded-lg flex justify-center items-center">
+                        <div className="mt-2 p-2 bg-white border border-gray-200 rounded-lg flex justify-center items-center print:bg-white print:border-none">
                           <svg ref={barcodeRef} style={{ maxHeight: 60 }}></svg>
                         </div>
                       )}
@@ -714,12 +714,12 @@ const Productos = () => {
                 </div>
 
                 {/* SECCIÓN CATEGORIZACIÓN */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-slate-900/50 rounded-lg border border-gray-100 dark:border-slate-700">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Categoría Padre *</label>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Categoría Padre *</label>
                     <select
                       required
-                      className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-white"
+                      className="w-full p-2 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200"
                       value={formData.categoriaId}
                       onChange={e => setFormData({...formData, categoriaId: e.target.value, subcategoriaId: ''})}
                     >
@@ -730,9 +730,9 @@ const Productos = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Subcategoría (Opcional)</label>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Subcategoría (Opcional)</label>
                     <select
-                      className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-white"
+                      className="w-full p-2 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 disabled:bg-gray-100 dark:disabled:bg-slate-800 disabled:text-gray-400 dark:disabled:text-slate-500"
                       value={formData.subcategoriaId}
                       onChange={e => setFormData({...formData, subcategoriaId: e.target.value})}
                       disabled={!formData.categoriaId || subcategoriasDisponibles.length === 0}
@@ -744,10 +744,10 @@ const Productos = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Unidad de Medida *</label>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Unidad de Medida *</label>
                     <select
                       required
-                      className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-white"
+                      className="w-full p-2 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200"
                       value={formData.unidadMedidaId}
                       onChange={e => setFormData({...formData, unidadMedidaId: e.target.value})}
                     >
@@ -762,35 +762,35 @@ const Productos = () => {
                 {/* SECCIÓN PRECIOS */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-l-4 border-brand-light pl-4">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Costo ($) *</label>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Costo ($) *</label>
                     <input
                       type="number"
                       step="0.01"
                       min="0"
                       required
-                      className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light"
+                      className="w-full p-2 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200"
                       value={formData.precioCosto}
                       onChange={e => handlePrecioCostoChange(e.target.value)}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Rentabilidad (%)</label>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Rentabilidad (%)</label>
                     <input
                       type="number"
                       step="0.01"
-                      className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light"
+                      className="w-full p-2 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200"
                       value={formData.rentabilidad}
                       onChange={e => handleRentabilidadChange(e.target.value)}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Precio Venta ($) *</label>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Precio Venta ($) *</label>
                     <input
                       type="number"
                       step="0.01"
                       min="0"
                       required
-                      className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light font-bold text-brand-dark bg-blue-50"
+                      className="w-full p-2 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light font-bold text-brand-dark dark:text-brand-light bg-blue-50 dark:bg-blue-900/30"
                       value={formData.precioVenta}
                       onChange={e => handlePrecioVentaChange(e.target.value)}
                     />
@@ -803,7 +803,7 @@ const Productos = () => {
                       checked={formData.ivaIncluido}
                       onChange={e => setFormData({...formData, ivaIncluido: e.target.checked})}
                     />
-                    <label htmlFor="ivaIncluido" className="text-sm font-bold text-gray-600">
+                    <label htmlFor="ivaIncluido" className="text-sm font-bold text-gray-600 dark:text-slate-300">
                       El precio de venta incluye IVA
                     </label>
                   </div>
@@ -812,36 +812,36 @@ const Productos = () => {
                 {/* SECCIÓN STOCK */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Stock Actual {StockObligatorio ? '*' : ''}</label>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Stock Actual {StockObligatorio ? '*' : ''}</label>
                     <input
                       type="number"
                       step="1"
                       required={StockObligatorio}
                       disabled={!!productoEditando}
-                      className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                      className="w-full p-2.5 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light disabled:bg-gray-100 dark:disabled:bg-slate-800 disabled:text-gray-400 dark:disabled:text-slate-500 bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200"
                       value={formData.stockActual}
                       onChange={e => setFormData({...formData, stockActual: e.target.value})}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Stock Mínimo {StockObligatorio ? '*' : ''}</label>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Stock Mínimo {StockObligatorio ? '*' : ''}</label>
                     <input
                       type="number"
                       step="1"
                       min="0"
                       required={StockObligatorio}
-                      className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light"
+                      className="w-full p-2.5 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200"
                       value={formData.stockMinimo}
                       onChange={e => setFormData({...formData, stockMinimo: e.target.value})}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Stock Ideal (Opcional)</label>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Stock Ideal (Opcional)</label>
                     <input
                       type="number"
                       step="1"
                       min="0"
-                      className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light"
+                      className="w-full p-2.5 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200"
                       value={formData.stockIdeal}
                       onChange={e => setFormData({...formData, stockIdeal: e.target.value})}
                     />
@@ -851,11 +851,11 @@ const Productos = () => {
               </form>
             </div>
 
-            <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 rounded-b-xl">
+            <div className="p-6 border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 flex justify-end gap-3 rounded-b-xl">
               <button 
                 type="button" 
                 onClick={cerrarModal}
-                className="px-5 py-2.5 text-gray-600 font-bold hover:bg-gray-200 rounded-lg transition-colors"
+                className="px-5 py-2.5 text-gray-600 dark:text-slate-300 font-bold hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
               >
                 Cancelar
               </button>
@@ -876,30 +876,30 @@ const Productos = () => {
       {/* MODAL AJUSTE DE STOCK */}
       {mostrarModalAjuste && productoAjuste && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col">
-            <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-gray-50">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md flex flex-col transition-colors duration-200">
+            <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 rounded-t-xl">
               <div>
-                <h2 className="text-lg font-bold text-brand-dark flex items-center gap-2">
+                <h2 className="text-lg font-bold text-brand-dark dark:text-brand-light flex items-center gap-2">
                   <Package size={20} /> Ajuste Manual de Stock
                 </h2>
-                <p className="text-sm text-gray-500 mt-1">{productoAjuste.nombre}</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{productoAjuste.nombre}</p>
               </div>
-              <button onClick={() => setMostrarModalAjuste(false)} className="text-gray-400 hover:text-gray-800 transition-colors">
+              <button onClick={() => setMostrarModalAjuste(false)} className="text-gray-400 hover:text-gray-800 dark:hover:text-slate-200 transition-colors">
                 <X size={24} />
               </button>
             </div>
 
             <div className="p-6">
-              <div className="bg-blue-50 rounded-lg p-3 mb-5 flex justify-between items-center border border-blue-100">
-                <span className="text-sm font-semibold text-blue-800">Stock Actual:</span>
-                <span className="text-xl font-black text-blue-900">{productoAjuste.stockActual}</span>
+              <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-3 mb-5 flex justify-between items-center border border-blue-100 dark:border-blue-800">
+                <span className="text-sm font-semibold text-blue-800 dark:text-blue-300">Stock Actual:</span>
+                <span className="text-xl font-black text-blue-900 dark:text-blue-200">{productoAjuste.stockActual}</span>
               </div>
 
               <form onSubmit={handleAjusteStock} className="flex flex-col gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Tipo de Ajuste</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Tipo de Ajuste</label>
                   <select
-                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 font-semibold"
+                    className="w-full p-2.5 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200 font-semibold"
                     value={ajusteData.tipo}
                     onChange={e => setAjusteData({...ajusteData, tipo: e.target.value})}
                   >
@@ -909,33 +909,33 @@ const Productos = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Cantidad *</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Cantidad *</label>
                   <input
                     type="number"
                     min="1"
                     required
                     autoFocus
-                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 text-lg font-bold"
+                    className="w-full p-2.5 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200 text-lg font-bold"
                     value={ajusteData.cantidad}
                     onChange={e => setAjusteData({...ajusteData, cantidad: e.target.value})}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Motivo / Concepto *</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Motivo / Concepto *</label>
                   <input
                     type="text"
                     required
                     placeholder={ajusteData.tipo === 'ENTRADA' ? "Ej: Ingreso mercadería, Devolución..." : "Ej: Rotura, Vencimiento, Merma..."}
-                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50"
+                    className="w-full p-2.5 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200 placeholder-gray-400 dark:placeholder-slate-500"
                     value={ajusteData.motivo}
                     onChange={e => setAjusteData({...ajusteData, motivo: e.target.value})}
                   />
                 </div>
 
                 <div className="mt-4 flex gap-3">
-                  <button type="button" onClick={() => setMostrarModalAjuste(false)} className="flex-1 py-3 text-gray-600 font-bold bg-gray-100 hover:bg-gray-200 rounded-lg">Cancelar</button>
-                  <button type="submit" disabled={guardandoAjuste} className="flex-1 py-3 bg-brand-dark text-white font-bold rounded-lg hover:bg-black disabled:opacity-50 shadow-md">
+                  <button type="button" onClick={() => setMostrarModalAjuste(false)} className="flex-1 py-3 text-gray-600 dark:text-slate-300 font-bold bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg">Cancelar</button>
+                  <button type="submit" disabled={guardandoAjuste} className="flex-1 py-3 bg-brand-dark dark:bg-brand-light text-white dark:text-brand-dark font-bold rounded-lg hover:bg-black dark:hover:bg-white disabled:opacity-50 shadow-md">
                     {guardandoAjuste ? 'Guardando...' : 'Confirmar Ajuste'}
                   </button>
                 </div>

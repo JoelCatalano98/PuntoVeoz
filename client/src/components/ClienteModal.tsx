@@ -42,7 +42,13 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect }) => {
   const cargarClientes = async () => {
     try {
       const res = await api.get('/clientes');
-      setClientes(res.data);
+      if (res.data && Array.isArray(res.data.data)) {
+        setClientes(res.data.data);
+      } else if (Array.isArray(res.data)) {
+        setClientes(res.data);
+      } else {
+        setClientes([]);
+      }
     } catch (err) {
       toast.error('Error al cargar clientes');
     }
@@ -78,11 +84,11 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md flex flex-col max-h-[90vh]">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md flex flex-col max-h-[90vh] transition-colors duration-200">
         
-        <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-lg font-bold text-brand-dark">Seleccionar Cliente</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-black">
+        <div className="flex justify-between items-center p-4 border-b dark:border-slate-700">
+          <h2 className="text-lg font-bold text-brand-dark dark:text-brand-light">Seleccionar Cliente</h2>
+          <button onClick={onClose} className="text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -92,28 +98,28 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect }) => {
             <>
               <div className="flex gap-2">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" size={18} />
                   <input
                     ref={inputRef}
                     type="text"
                     placeholder="Buscar por nombre o doc..."
-                    className="w-full pl-9 pr-3 py-2 border rounded focus:outline-none focus:border-brand-light"
+                    className="w-full pl-9 pr-3 py-2 border dark:border-slate-600 rounded focus:outline-none focus:border-brand-light bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200 placeholder-gray-400 dark:placeholder-slate-500"
                     value={filtro}
                     onChange={e => setFiltro(e.target.value)}
                   />
                 </div>
                 <button 
                   onClick={() => setMostrarNuevo(true)}
-                  className="px-3 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 flex items-center gap-1 font-medium"
+                  className="px-3 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded hover:bg-gray-200 dark:hover:bg-slate-600 flex items-center gap-1 font-medium transition-colors"
                 >
                   <Plus size={18} /> Nuevo
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto border rounded divide-y">
+              <div className="flex-1 overflow-y-auto border dark:border-slate-700 rounded divide-y dark:divide-slate-700">
                 <button 
                   onClick={() => onSelect(null)}
-                  className="w-full text-left p-3 hover:bg-blue-50 focus:bg-blue-50 font-medium"
+                  className="w-full text-left p-3 hover:bg-blue-50 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-slate-700 font-medium text-gray-800 dark:text-slate-200 transition-colors"
                 >
                   Consumidor Final
                 </button>
@@ -121,63 +127,63 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect }) => {
                   <button 
                     key={c.id} 
                     onClick={() => onSelect(c)}
-                    className="w-full text-left p-3 hover:bg-blue-50 focus:bg-blue-50 flex justify-between"
+                    className="w-full text-left p-3 hover:bg-blue-50 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-slate-700 flex justify-between transition-colors"
                   >
-                    <span className="font-medium">{c.nombre}</span>
-                    <span className="text-sm text-gray-500">{c.numeroDoc}</span>
+                    <span className="font-medium text-gray-800 dark:text-slate-200">{c.nombre}</span>
+                    <span className="text-sm text-gray-500 dark:text-slate-400">{c.numeroDoc}</span>
                   </button>
                 ))}
                 {filtrados.length === 0 && (
-                  <div className="p-4 text-center text-gray-500 text-sm">No hay resultados</div>
+                  <div className="p-4 text-center text-gray-500 dark:text-slate-400 text-sm">No hay resultados</div>
                 )}
               </div>
             </>
           ) : (
             <form onSubmit={handleCrear} className="flex flex-col gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Nombre *</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-slate-300">Nombre *</label>
                 <input
                   type="text"
                   autoFocus
                   required
-                  className="w-full p-2 border rounded focus:outline-none focus:border-brand-light"
+                  className="w-full p-2 border dark:border-slate-600 rounded focus:outline-none focus:border-brand-light bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200"
                   value={nuevoNombre}
                   onChange={e => setNuevoNombre(e.target.value)}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Razón Social</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-slate-300">Razón Social</label>
                 <input
                   type="text"
-                  className="w-full p-2 border rounded focus:outline-none focus:border-brand-light"
+                  className="w-full p-2 border dark:border-slate-600 rounded focus:outline-none focus:border-brand-light bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200"
                   value={nuevaRazonSocial}
                   onChange={e => setNuevaRazonSocial(e.target.value)}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Documento (CUIT/DNI)</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-slate-300">Documento (CUIT/DNI)</label>
                 <input
                   type="text"
-                  className="w-full p-2 border rounded focus:outline-none focus:border-brand-light"
+                  className="w-full p-2 border dark:border-slate-600 rounded focus:outline-none focus:border-brand-light bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200"
                   value={nuevoDoc}
                   onChange={e => setNuevoDoc(e.target.value)}
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1">Dirección</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-slate-300">Dirección</label>
                 <input
                   type="text"
-                  className="w-full p-2 border rounded focus:outline-none focus:border-brand-light"
+                  className="w-full p-2 border dark:border-slate-600 rounded focus:outline-none focus:border-brand-light bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200"
                   value={nuevaDireccion}
                   onChange={e => setNuevaDireccion(e.target.value)}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Condición IVA</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-slate-300">Condición IVA</label>
                 <select
-                  className="w-full p-2 border rounded focus:outline-none focus:border-brand-light"
+                  className="w-full p-2 border dark:border-slate-600 rounded focus:outline-none focus:border-brand-light bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200"
                   value={nuevaCondicionIva}
                   onChange={e => setNuevaCondicionIva(e.target.value)}
                 >
@@ -192,14 +198,14 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect }) => {
                 <button 
                   type="button" 
                   onClick={() => setMostrarNuevo(false)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                  className="px-4 py-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit" 
                   disabled={guardando}
-                  className="px-4 py-2 bg-brand-light text-brand-dark font-bold rounded hover:bg-blue-400 disabled:opacity-50"
+                  className="px-4 py-2 bg-brand-light dark:bg-blue-500 text-brand-dark dark:text-white font-bold rounded hover:bg-blue-400 dark:hover:bg-blue-600 disabled:opacity-50 transition-colors"
                 >
                   {guardando ? 'Guardando...' : 'Guardar y Seleccionar'}
                 </button>

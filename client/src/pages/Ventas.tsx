@@ -3,6 +3,7 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import { Search, Trash2, User, CreditCard, ShoppingCart, AlertTriangle, Edit2, Tag, Percent } from 'lucide-react';
 import ClienteModal from '../components/ClienteModal';
+import Watermark from '../components/Watermark';
 import { Link, useNavigate } from 'react-router-dom';
 
 interface ListaPrecio {
@@ -174,8 +175,11 @@ const Ventas = () => {
           if (scanValue.trim()) params.append('busqueda', scanValue.trim());
 
           const res = await api.get('/productos', { params });
-          setProductosBuscados(res.data.slice(0, 15));
-        } catch (e) {}
+          const arrayDatos = (res.data && Array.isArray(res.data.data)) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+          setProductosBuscados(arrayDatos.slice(0, 15));
+        } catch (e) {
+          console.error("Error buscando productos:", e);
+        }
       }, 300);
       return () => clearTimeout(delay);
     } else {
@@ -441,11 +445,11 @@ const Ventas = () => {
   if (!aperturaCajaId) {
     // Si no hay caja abierta, igual permitimos presupuestar
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-gray-50 p-6 text-center">
-        <div className="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 max-w-lg w-full flex flex-col items-center">
+      <div className="h-full flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-900 p-6 text-center transition-colors duration-200">
+        <div className="bg-white dark:bg-slate-800 p-10 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 max-w-lg w-full flex flex-col items-center transition-colors">
           <AlertTriangle size={80} className="text-orange-500 mb-6 opacity-80" />
-          <h2 className="text-3xl font-extrabold text-gray-800 mb-3 tracking-tight">CAJA CERRADA</h2>
-          <p className="text-gray-500 mb-8 text-lg leading-relaxed">
+          <h2 className="text-3xl font-extrabold text-gray-800 dark:text-slate-200 mb-3 tracking-tight">CAJA CERRADA</h2>
+          <p className="text-gray-500 dark:text-slate-400 mb-8 text-lg leading-relaxed">
             Por favor, abrí tu turno en el módulo de Caja para poder registrar ventas y cobrar. Podés seguir armando presupuestos pero no efectivizarlos.
           </p>
           <div className="flex w-full gap-4">
@@ -457,7 +461,7 @@ const Ventas = () => {
             </Link>
             <button
               onClick={() => setAperturaCajaId(-1)} // Un hack temporal para mostrar el POS y permitir hacer presupuestos (el backend ignorará el id -1 para presupuestos)
-              className="flex-1 bg-gray-100 text-gray-700 px-4 py-4 rounded-xl font-bold text-sm shadow-sm hover:bg-gray-200 transition-all flex justify-center items-center uppercase tracking-wider"
+              className="flex-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-4 py-4 rounded-xl font-bold text-sm shadow-sm hover:bg-gray-200 dark:hover:bg-slate-600 transition-all flex justify-center items-center uppercase tracking-wider"
             >
               Hacer Presupuesto
             </button>
@@ -468,16 +472,17 @@ const Ventas = () => {
   }
 
   return (
-    <div className="h-full flex flex-row relative">
+    <div className="h-full flex flex-row relative bg-gray-50 dark:bg-slate-900 transition-colors duration-200">
       {/* COLUMNA IZQ: Carrito */}
-      <div className="flex-1 flex flex-col border-r border-gray-200 min-w-0">
+      <div className="flex-1 flex flex-col relative border-r border-gray-200 dark:border-slate-700 min-w-0 z-10">
+        <Watermark />
 
         {/* Header con Buscador y Select Lista de Precios */}
-        <div className="p-4 bg-white shadow-sm z-30 flex gap-4 items-center border-b border-gray-200 relative">
+        <div className="p-4 bg-white dark:bg-slate-800 shadow-sm z-30 flex gap-4 items-center border-b border-gray-200 dark:border-slate-700 relative transition-colors duration-200">
           <form onSubmit={handleScan} className="relative flex-1 max-w-xl flex gap-2">
             <div className="w-1/3">
               <select 
-                className="w-full p-3 border-2 border-brand-light rounded-lg focus:outline-none focus:border-blue-400 bg-white font-medium text-gray-700"
+                className="w-full p-3 border-2 border-brand-light rounded-lg focus:outline-none focus:border-blue-400 bg-white dark:bg-slate-900 font-medium text-gray-700 dark:text-slate-200"
                 value={filtroCategoria}
                 onChange={e => {
                   setFiltroCategoria(e.target.value);
@@ -502,7 +507,7 @@ const Ventas = () => {
                 ref={scanInputRef}
                 type="text"
                 placeholder="Escanear o buscar (min 2 letras)..."
-                className="w-full pl-10 pr-4 py-3 text-lg border-2 border-brand-light rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition-shadow"
+                className="w-full pl-10 pr-4 py-3 text-lg border-2 border-brand-light rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition-shadow bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500"
                 value={scanValue}
                 onChange={e => setScanValue(e.target.value)}
                 onKeyDown={e => {
@@ -536,11 +541,11 @@ const Ventas = () => {
 
               {/* Resultados Búsqueda Rápida */}
               {productosBuscados.length > 0 && (
-                <div ref={resultadosRef} className="absolute left-0 right-0 top-full mt-2 bg-white border border-gray-200 shadow-xl rounded-lg overflow-hidden z-[100] max-h-96 overflow-y-auto">
+                <div ref={resultadosRef} className="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xl rounded-lg overflow-hidden z-[100] max-h-96 overflow-y-auto">
                   {productosBuscados.map(prod => (
                     <div 
                       key={prod.id} 
-                      className="p-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer flex justify-between items-center transition-colors"
+                      className="p-3 border-b border-gray-100 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-slate-700 cursor-pointer flex justify-between items-center transition-colors"
                       onClick={() => {
                         agregarProducto(prod, 1);
                         setScanValue('');
@@ -549,11 +554,11 @@ const Ventas = () => {
                       }}
                     >
                       <div>
-                        <div className="font-bold text-gray-800">{prod.nombre}</div>
-                        <div className="text-xs text-gray-400">{prod.codigoBarras || 'S/N'} | {prod.categoria?.nombre || 'Sin cat.'}</div>
+                        <div className="font-bold text-gray-800 dark:text-slate-100">{prod.nombre}</div>
+                        <div className="text-xs text-gray-400 dark:text-slate-400">{prod.codigoBarras || 'S/N'} | {prod.categoria?.nombre || 'Sin cat.'}</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-bold text-brand-dark">${Number(prod.precioVenta).toFixed(2)}</div>
+                        <div className="text-sm font-bold text-brand-dark dark:text-brand-light">${Number(prod.precioVenta).toFixed(2)}</div>
                         <div className={`text-xs font-bold ${prod.stockActual <= 0 ? 'text-red-500' : 'text-gray-500'}`}>
                           Stock: {prod.stockActual}
                         </div>
@@ -574,7 +579,7 @@ const Ventas = () => {
                 checked={aplicarLista}
                 onChange={(e) => setAplicarLista(e.target.checked)}
               />
-              <label htmlFor="checkLista" className="flex items-center gap-1 text-xs font-bold text-gray-600 uppercase cursor-pointer">
+              <label htmlFor="checkLista" className="flex items-center gap-1 text-xs font-bold text-gray-600 dark:text-slate-300 uppercase cursor-pointer">
                 <Tag size={14} /> Aplicar Lista de Precios
               </label>
             </div>
@@ -582,7 +587,7 @@ const Ventas = () => {
               disabled={!aplicarLista}
               value={listaSeleccionadaId}
               onChange={e => setListaSeleccionadaId(e.target.value)}
-              className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-brand-light focus:ring-1 focus:ring-brand-light font-bold text-gray-700 bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400"
+              className="w-full p-2.5 border-2 border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-brand-light focus:ring-1 focus:ring-brand-light font-bold text-gray-700 dark:text-slate-200 bg-gray-50 dark:bg-slate-900 disabled:bg-gray-100 dark:disabled:bg-slate-800 disabled:text-gray-400 dark:disabled:text-slate-500"
             >
               {listasPrecio.map(lista => (
                 <option key={lista.id} value={lista.id}>
@@ -594,24 +599,24 @@ const Ventas = () => {
         </div>
 
         {/* Tabla (Scroll independiente) */}
-        <div className="flex-1 overflow-y-auto bg-gray-50 p-4 relative z-0">
+        <div className="flex-1 overflow-y-auto bg-transparent p-4 relative z-0">
           {items.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-gray-400">
+            <div className="h-full flex items-center justify-center text-gray-400 dark:text-slate-500">
               <div className="text-center">
-                <ShoppingCart size={64} className="mx-auto mb-4 opacity-20" />
+                <ShoppingCart size={64} className="mx-auto mb-4 opacity-20 dark:opacity-10" />
                 <p className="text-lg">El carrito está vacío</p>
                 <p className="text-sm">Escaneá un producto o búscalo por nombre</p>
               </div>
             </div>
           ) : (
-            <table className="w-full text-left bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-              <thead className="bg-gray-100 border-b border-gray-200">
+            <table className="w-full text-left bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden shadow-sm transition-colors duration-200">
+              <thead className="bg-gray-100 dark:bg-slate-900/50 border-b border-gray-200 dark:border-slate-700">
                 <tr>
-                  <th className="p-3 text-gray-600 font-semibold w-1/3">Producto</th>
-                  <th className="p-3 text-gray-600 font-semibold text-center w-20">Cant.</th>
-                  <th className="p-3 text-gray-600 font-semibold text-center w-24">Bonif. (%)</th>
-                  <th className="p-3 text-gray-600 font-semibold text-right w-32">Precio Unit.</th>
-                  <th className="p-3 text-gray-600 font-semibold text-right w-32">Subtotal</th>
+                  <th className="p-3 text-gray-600 dark:text-slate-300 font-semibold w-1/3">Producto</th>
+                  <th className="p-3 text-gray-600 dark:text-slate-300 font-semibold text-center w-20">Cant.</th>
+                  <th className="p-3 text-gray-600 dark:text-slate-300 font-semibold text-center w-24">Bonif. (%)</th>
+                  <th className="p-3 text-gray-600 dark:text-slate-300 font-semibold text-right w-32">Precio Unit.</th>
+                  <th className="p-3 text-gray-600 dark:text-slate-300 font-semibold text-right w-32">Subtotal</th>
                   <th className="p-3 text-center w-16"></th>
                 </tr>
               </thead>
@@ -622,18 +627,18 @@ const Ventas = () => {
                   return (
                     <tr
                       key={idx}
-                      className={`border-b border-gray-100 transition-colors cursor-default ${selectedIndex === idx ? 'bg-blue-100' : 'hover:bg-blue-50'}`}
+                      className={`border-b border-gray-100 dark:border-slate-700/50 transition-colors cursor-default ${selectedIndex === idx ? 'bg-blue-100 dark:bg-slate-700' : 'hover:bg-blue-50 dark:hover:bg-slate-700/50'}`}
                       onClick={() => { setSelectedIndex(idx); focusScan(); }}
                     >
-                      <td className="p-3 font-medium text-gray-800">{item.nombre}</td>
-                      <td className="p-3 text-center font-bold text-gray-700">{item.cantidad}</td>
+                      <td className="p-3 font-medium text-gray-800 dark:text-slate-200">{item.nombre}</td>
+                      <td className="p-3 text-center font-bold text-gray-700 dark:text-slate-300">{item.cantidad}</td>
                       <td className="p-3">
                         <div className="flex items-center justify-center">
                           <input 
                             type="number"
                             min="0"
                             max="100"
-                            className="w-16 p-1 border rounded text-center text-sm font-bold focus:outline-none focus:border-brand-light focus:ring-1 focus:ring-brand-light"
+                            className="w-16 p-1 border dark:border-slate-600 rounded text-center text-sm font-bold focus:outline-none focus:border-brand-light focus:ring-1 focus:ring-brand-light bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200"
                             value={item.bonificacion || ''}
                             onChange={(e) => updateBonificacion(idx, Number(e.target.value))}
                             onFocus={() => setSelectedIndex(idx)}
@@ -642,26 +647,26 @@ const Ventas = () => {
                       </td>
                       <td className="p-3 text-right">
                         {modificadoTotal && (
-                          <div className="text-xs text-gray-400 line-through mb-0.5">
+                          <div className="text-xs text-gray-400 dark:text-slate-500 line-through mb-0.5">
                             ${item.precioBase.toFixed(2)}
                           </div>
                         )}
-                        <div className={`font-medium ${modificadoTotal ? (item.precioUnitario > item.precioBase ? 'text-orange-600' : 'text-green-600') : 'text-gray-600'}`}>
+                        <div className={`font-medium ${modificadoTotal ? (item.precioUnitario > item.precioBase ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400') : 'text-gray-600 dark:text-slate-300'}`}>
                           ${item.precioUnitario.toFixed(2)}
                         </div>
                       </td>
-                      <td className="p-3 text-right font-bold text-brand-dark">${item.subtotal.toFixed(2)}</td>
+                      <td className="p-3 text-right font-bold text-brand-dark dark:text-brand-light">${item.subtotal.toFixed(2)}</td>
                       <td className="p-3 text-center">
                         <button
                           onClick={(e) => openEditModal(idx, e)}
-                          className="text-blue-400 hover:text-blue-600 p-1 rounded hover:bg-blue-50"
+                          className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-slate-600"
                           title="Editar Cantidad"
                         >
                           <Edit2 size={18} />
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); removeItem(idx); focusScan(); }}
-                          className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50"
+                          className="text-red-400 hover:text-red-600 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-slate-600"
                           title="Eliminar (Supr)"
                         >
                           <Trash2 size={18} />
@@ -677,12 +682,12 @@ const Ventas = () => {
       </div>
 
       {/* COLUMNA DER: Cobro */}
-      <div className="w-[400px] lg:w-[450px] xl:w-[500px] bg-white flex flex-col shadow-[rgba(0,0,0,0.05)_-4px_0_10px] z-20 shrink-0">
-        <div className="p-6 bg-brand-dark text-white flex flex-col items-end border-b-4 border-brand-light">
-          <div className="text-brand-light/80 text-sm font-semibold uppercase tracking-wider mb-1">Total a cobrar</div>
+      <div className="w-[400px] lg:w-[450px] xl:w-[500px] bg-white dark:bg-slate-800 flex flex-col shadow-[rgba(0,0,0,0.05)_-4px_0_10px] z-20 shrink-0 transition-colors duration-200">
+        <div className="p-6 bg-brand-dark dark:bg-slate-900 text-white flex flex-col items-end border-b-4 border-brand-light dark:border-slate-700">
+          <div className="text-brand-light/80 dark:text-brand-light text-sm font-semibold uppercase tracking-wider mb-1">Total a cobrar</div>
           <div className="text-5xl font-bold">${total.toFixed(2)}</div>
           {descNum > 0 && (
-            <div className="text-red-300 text-sm mt-1 font-medium">
+            <div className="text-red-300 dark:text-red-400 text-sm mt-1 font-medium">
               Subtotal: ${totalItems.toFixed(2)} - Descuento: ${descNum.toFixed(2)}
             </div>
           )}
@@ -692,16 +697,16 @@ const Ventas = () => {
 
           {/* Fila Cliente */}
           <div>
-            <label className="flex items-center gap-2 text-sm font-bold text-gray-600 uppercase mb-2">
+            <label className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-slate-300 uppercase mb-2">
               <User size={16} /> Cliente
             </label>
-            <div className="flex border rounded overflow-hidden focus-within:border-brand-light focus-within:ring-1 focus-within:ring-brand-light">
-              <div className="flex-1 p-3 bg-gray-50 text-gray-800 font-medium whitespace-nowrap overflow-hidden text-ellipsis">
+            <div className="flex border dark:border-slate-600 rounded overflow-hidden focus-within:border-brand-light focus-within:ring-1 focus-within:ring-brand-light">
+              <div className="flex-1 p-3 bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200 font-medium whitespace-nowrap overflow-hidden text-ellipsis">
                 {cliente ? cliente.nombre : 'Consumidor Final'}
               </div>
               <button
                 onClick={() => setShowClienteModal(true)}
-                className="px-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition-colors border-l"
+                className="px-4 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 font-medium transition-colors border-l dark:border-slate-600"
               >
                 Cambiar
               </button>
@@ -711,13 +716,13 @@ const Ventas = () => {
           <div className="flex gap-4">
             {/* Medio de Pago */}
             <div className="flex-1">
-              <label className="flex items-center gap-2 text-sm font-bold text-gray-600 uppercase mb-2">
+              <label className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-slate-300 uppercase mb-2">
                 <CreditCard size={16} /> Medio de pago
               </label>
               <select
                 value={medioPago}
                 onChange={e => { setMedioPago(e.target.value); }}
-                className="w-full p-3 border rounded font-medium text-gray-800 focus:outline-none focus:border-brand-light focus:ring-1 focus:ring-brand-light bg-white cursor-pointer"
+                className="w-full p-3 border dark:border-slate-600 rounded font-medium text-gray-800 dark:text-slate-200 focus:outline-none focus:border-brand-light focus:ring-1 focus:ring-brand-light bg-white dark:bg-slate-900 cursor-pointer"
               >
                 <option value="EFECTIVO">Efectivo</option>
                 <option value="TARJETA_DEBITO">Tarjeta Débito</option>
@@ -729,14 +734,14 @@ const Ventas = () => {
             </div>
             {/* Descuento Global */}
             <div className="w-1/3">
-              <label className="flex items-center gap-2 text-sm font-bold text-gray-600 uppercase mb-2">
+              <label className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-slate-300 uppercase mb-2">
                 <Percent size={16} /> Desc. ($)
               </label>
               <input
                 type="number"
                 min="0"
                 step="0.01"
-                className="w-full p-3 border rounded font-bold focus:outline-none focus:border-brand-light focus:ring-1 focus:ring-brand-light text-right text-red-600 bg-white"
+                className="w-full p-3 border dark:border-slate-600 rounded font-bold focus:outline-none focus:border-brand-light focus:ring-1 focus:ring-brand-light text-right text-red-600 dark:text-red-400 bg-white dark:bg-slate-900 placeholder-gray-400 dark:placeholder-slate-500"
                 value={descuentoGlobal}
                 onChange={e => setDescuentoGlobal(e.target.value)}
                 placeholder="0.00"
@@ -745,17 +750,17 @@ const Ventas = () => {
           </div>
 
           {/* Input Monto & Info Vuelto */}
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mt-auto">
-            <label className="block text-sm font-bold text-gray-600 uppercase mb-2">Monto Recibido</label>
+          <div className="bg-gray-50 dark:bg-slate-900/50 p-4 rounded-lg border border-gray-200 dark:border-slate-700 mt-auto">
+            <label className="block text-sm font-bold text-gray-600 dark:text-slate-400 uppercase mb-2">Monto Recibido</label>
             <div className="relative">
-              <span className={`absolute left-3 top-1/2 -translate-y-1/2 font-bold text-xl ${esEfectivo ? 'text-gray-500' : 'text-gray-300'}`}>$</span>
+              <span className={`absolute left-3 top-1/2 -translate-y-1/2 font-bold text-xl ${esEfectivo ? 'text-gray-500 dark:text-slate-400' : 'text-gray-300 dark:text-slate-600'}`}>$</span>
               <input
                 ref={montoInputRef}
                 type="number"
                 min="0"
                 step="0.01"
                 disabled={!esEfectivo}
-                className="w-full p-3 pl-8 text-2xl font-bold border rounded focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 text-right bg-white disabled:bg-gray-100 disabled:text-gray-400"
+                className="w-full p-3 pl-8 text-2xl font-bold border dark:border-slate-600 rounded focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 dark:focus:ring-green-900/50 text-right bg-white dark:bg-slate-900 dark:text-slate-100 disabled:bg-gray-100 dark:disabled:bg-slate-800 disabled:text-gray-400 dark:disabled:text-slate-500 transition-colors"
                 value={esEfectivo ? montoRecibido : total.toFixed(2)}
                 onChange={e => setMontoRecibido(e.target.value)}
                 onKeyDown={e => {
@@ -773,30 +778,30 @@ const Ventas = () => {
             </div>
 
             <div className="mt-4 flex justify-between items-center">
-              <span className="font-bold text-gray-600">Vuelto:</span>
+              <span className="font-bold text-gray-600 dark:text-slate-300">Vuelto:</span>
               {esEfectivo ? (
                 montoRecibidoNum >= total && total > 0 ? (
-                  <span className="text-2xl font-bold text-green-600">${(montoRecibidoNum - total).toFixed(2)}</span>
+                  <span className="text-2xl font-bold text-green-600 dark:text-green-400">${(montoRecibidoNum - total).toFixed(2)}</span>
                 ) : montoRecibidoNum > 0 && montoRecibidoNum < total ? (
-                  <span className="text-lg font-bold text-red-500">Falta ${(total - montoRecibidoNum).toFixed(2)}</span>
+                  <span className="text-lg font-bold text-red-500 dark:text-red-400">Falta ${(total - montoRecibidoNum).toFixed(2)}</span>
                 ) : (
-                  <span className="text-xl font-bold text-gray-400">$0.00</span>
+                  <span className="text-xl font-bold text-gray-400 dark:text-slate-500">$0.00</span>
                 )
               ) : (
-                <span className="text-xl font-bold text-gray-400">$0.00</span>
+                <span className="text-xl font-bold text-gray-400 dark:text-slate-500">$0.00</span>
               )}
             </div>
           </div>
         </div>
 
         {/* Action Button */}
-        <div className="p-4 border-t border-gray-200 bg-gray-50 flex flex-col gap-3">
+        <div className="p-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 flex flex-col gap-3 transition-colors duration-200">
           <button
             onClick={() => handleCobrar('COMPLETADA')}
             disabled={!canSubmit || aperturaCajaId === -1} // -1 significa "modo presupuesto" por no haber caja
             className={`w-full py-4 text-xl font-bold rounded-lg uppercase tracking-wider transition-all
               ${(!canSubmit || aperturaCajaId === -1)
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                ? 'bg-gray-300 dark:bg-slate-700 text-gray-500 dark:text-slate-500 cursor-not-allowed'
                 : 'bg-green-500 hover:bg-green-600 text-white shadow-md'
               }
             `}
@@ -821,29 +826,29 @@ const Ventas = () => {
 
       {showGuardarComoModal && (
         <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-2">Guardar Documento Especial</h2>
-            <p className="text-gray-600 mb-6 text-sm">Selecciona el tipo de documento que deseas generar. Se requerirá que tengas un cliente seleccionado.</p>
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 transition-colors duration-200">
+            <h2 className="text-xl font-bold text-gray-800 dark:text-slate-200 mb-2">Guardar Documento Especial</h2>
+            <p className="text-gray-600 dark:text-slate-400 mb-6 text-sm">Selecciona el tipo de documento que deseas generar. Se requerirá que tengas un cliente seleccionado.</p>
             
             <div className="flex flex-col gap-3">
               <button
                 onClick={() => handleCobrar('PRESUPUESTO')}
                 disabled={cobrando}
-                className="w-full py-3 bg-blue-50 text-blue-700 font-bold border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+                className="w-full py-3 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-800/50 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-800/50 transition-colors disabled:opacity-50"
               >
                 Guardar como Presupuesto
               </button>
               <button
                 onClick={() => handleCobrar('REMITO_PENDIENTE')}
                 disabled={cobrando}
-                className="w-full py-3 bg-purple-50 text-purple-700 font-bold border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors disabled:opacity-50"
+                className="w-full py-3 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-bold border border-purple-200 dark:border-purple-800/50 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-800/50 transition-colors disabled:opacity-50"
               >
                 Guardar como Remito (Pendiente)
               </button>
-              <div className="border-t border-gray-100 my-2"></div>
+              <div className="border-t border-gray-100 dark:border-slate-700 my-2"></div>
               <button
                 onClick={() => setShowGuardarComoModal(false)}
-                className="w-full py-2 bg-gray-100 text-gray-600 font-bold rounded-lg hover:bg-gray-200 transition-colors"
+                className="w-full py-2 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 font-bold rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
               >
                 Cancelar
               </button>
@@ -865,14 +870,14 @@ const Ventas = () => {
       {/* Modal Editar Cantidad */}
       {editandoItemIdx !== null && (
         <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-2">Editar Cantidad</h2>
-            <p className="text-gray-600 mb-4">{items[editandoItemIdx]?.nombre}</p>
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 transition-colors duration-200">
+            <h2 className="text-xl font-bold text-gray-800 dark:text-slate-200 mb-2">Editar Cantidad</h2>
+            <p className="text-gray-600 dark:text-slate-400 mb-4">{items[editandoItemIdx]?.nombre}</p>
             <input
               autoFocus
               type="number"
               min="1"
-              className="w-full p-3 border-2 border-brand-light rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-xl font-bold text-center mb-6"
+              className="w-full p-3 border-2 border-brand-light rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-xl font-bold text-center mb-6 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100"
               value={editCantidad}
               onChange={e => setEditCantidad(e.target.value)}
               onKeyDown={e => {
@@ -889,7 +894,7 @@ const Ventas = () => {
                   setEditandoItemIdx(null);
                   focusScan();
                 }}
-                className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition-colors"
+                className="flex-1 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 font-bold rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
               >
                 Cancelar
               </button>
@@ -904,23 +909,22 @@ const Ventas = () => {
         </div>
       )}
 
-      {/* Modal Ticket Preguntar */}
       {showModalTicket && (
         <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden text-center">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden text-center transition-colors duration-200">
             <div className="p-6">
-              <div className="w-16 h-16 bg-blue-50 text-brand-light rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 text-brand-light rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-3xl">🖨️</span>
               </div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">¿Imprimir ticket?</h2>
-              <p className="text-gray-500 mb-6">El cobro se realizó correctamente.</p>
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-200 mb-2">¿Imprimir ticket?</h2>
+              <p className="text-gray-500 dark:text-slate-400 mb-6">El cobro se realizó correctamente.</p>
 
               <div className="flex gap-3">
                 <button
                   ref={btnNoRef}
                   onKeyDown={(e) => handleTicketKeydown(e, false)}
                   onClick={() => handleDecisionTicket(false)}
-                  className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition-colors focus:ring-4 focus:ring-gray-300 outline-none"
+                  className="flex-1 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 font-bold rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors focus:ring-4 focus:ring-gray-300 dark:focus:ring-slate-600 outline-none"
                 >
                   NO
                 </button>

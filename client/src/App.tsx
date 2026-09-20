@@ -2,6 +2,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import Login from './pages/Login';
 import RutaProtegida from './components/RutaProtegida';
 import Ventas from './pages/Ventas';
@@ -30,8 +31,9 @@ import DocumentoForm from './pages/DocumentoForm';
 
 function App() {
   return (
-    <AuthProvider>
-      <Toaster position="top-right" />
+    <ThemeProvider>
+      <AuthProvider>
+        <Toaster position="top-right" />
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -84,7 +86,8 @@ function App() {
           </Route>
         </Routes>
       </BrowserRouter>
-    </AuthProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

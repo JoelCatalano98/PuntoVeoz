@@ -193,11 +193,11 @@ const VentasHistorial = () => {
   const ventasFiltradas = ventas;
 
   return (
-    <div className="h-full flex flex-col p-6 bg-gray-50 print:p-0 print:bg-white print:h-auto print:block">
+    <div className="h-full flex flex-col p-6 bg-gray-50 dark:bg-slate-900 transition-colors duration-200 print:p-0 print:bg-white print:h-auto print:block">
       <div className="flex justify-between items-center mb-6 print:hidden">
         <div>
-          <h1 className="text-2xl font-bold text-brand-dark">Historial y Documentos</h1>
-          <p className="text-gray-500 text-sm mt-1">Gestión de Facturas, Remitos y Presupuestos</p>
+          <h1 className="text-2xl font-bold text-brand-dark dark:text-brand-light">Historial y Documentos</h1>
+          <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">Gestión de Facturas, Remitos y Presupuestos</p>
         </div>
         <div className="flex gap-2">
           {filtroEstado === 'PRESUPUESTO' && (
@@ -226,16 +226,16 @@ const VentasHistorial = () => {
           )}
           <button
             onClick={cargarVentas}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
           >
             <RefreshCcw size={18} /> Actualizar
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col flex-1 overflow-hidden print:hidden">
-        <div className="p-4 border-b border-gray-200 bg-gray-50 flex gap-4 items-center overflow-x-auto">
-          <div className="flex gap-2 bg-white p-1 rounded-lg border border-gray-200 shadow-sm mr-4 shrink-0">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 flex flex-col flex-1 overflow-hidden print:hidden transition-colors duration-200">
+        <div className="p-4 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 flex gap-4 items-center overflow-x-auto">
+          <div className="flex gap-2 bg-white dark:bg-slate-900 p-1 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm mr-4 shrink-0">
             {['TODAS', 'FACTURADA', 'PRESUPUESTO', 'REMITOS', 'ANULADA'].map(est => (
               <button
                 key={est}
@@ -244,7 +244,7 @@ const VentasHistorial = () => {
                   setSearchParams(est === 'TODAS' ? {} : { tab: est });
                   cargarVentas(1, filtroTexto, est);
                 }}
-                className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all whitespace-nowrap ${filtroEstado === est ? 'bg-brand-light text-brand-dark shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all whitespace-nowrap ${filtroEstado === est ? 'bg-brand-light text-brand-dark shadow-sm' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800'}`}
               >
                 {est}
               </button>
@@ -252,11 +252,11 @@ const VentasHistorial = () => {
           </div>
 
           <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" size={18} />
             <input
               type="text"
               placeholder="Buscar por ID o Cliente..."
-              className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light"
+              className="w-full pl-10 pr-4 py-2 border dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 placeholder-gray-400 dark:placeholder-slate-500"
               value={filtroTexto}
               onChange={e => setFiltroTexto(e.target.value)}
             />
@@ -265,17 +265,17 @@ const VentasHistorial = () => {
 
         <div className="flex-1 overflow-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
-            <thead className="bg-gray-100 sticky top-0 z-10 border-b border-gray-200">
+            <thead className="bg-gray-100 dark:bg-slate-900/80 sticky top-0 z-10 border-b border-gray-200 dark:border-slate-700">
               <tr>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-24">N° Doc</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Fecha</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Total</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Estado</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Acciones</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider w-24">N° Doc</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Fecha</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Cliente</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Total</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider text-center">Estado</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
               {cargando ? (
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-gray-400">Cargando documentos...</td>
@@ -290,15 +290,15 @@ const VentasHistorial = () => {
                   const isFacturada = venta.estado === 'FACTURADA' || venta.estado === 'COMPLETADA';
                   
                   return (
-                  <tr key={venta.id} className={`hover:bg-gray-50 transition-colors ${isAnulada ? 'bg-red-50/30' : ''}`}>
-                    <td className="p-4 font-mono text-sm text-gray-600">#{venta.id}</td>
-                    <td className="p-4 text-sm text-gray-800">
+                  <tr key={venta.id} className={`hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors ${isAnulada ? 'bg-red-50/30 dark:bg-red-900/10' : ''}`}>
+                    <td className="p-4 font-mono text-sm text-gray-600 dark:text-slate-400">#{venta.id}</td>
+                    <td className="p-4 text-sm text-gray-800 dark:text-slate-200">
                       {new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(venta.createdAt))}
                     </td>
-                    <td className="p-4 text-sm text-gray-800 font-medium">
+                    <td className="p-4 text-sm text-gray-800 dark:text-slate-200 font-medium">
                       {venta.cliente?.nombre || 'Consumidor Final'}
                     </td>
-                    <td className="p-4 text-sm font-bold text-brand-dark">
+                    <td className="p-4 text-sm font-bold text-brand-dark dark:text-brand-light">
                       ${Number(venta.total).toFixed(2)}
                     </td>
                     <td className="p-4 text-center">
@@ -321,29 +321,29 @@ const VentasHistorial = () => {
                           <>
                             <button
                               onClick={() => handleConvertirPresupuesto(venta.id)}
-                              className="text-purple-600 hover:text-purple-700 bg-purple-50 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
+                              className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 bg-purple-50 dark:bg-purple-900/30 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
                               title="Convertir a Remito"
                             >
                               <Send size={16} /> A Remito
                             </button>
                             <Link
                               to={`/documento-form/${venta.id}`}
-                              className="text-blue-600 hover:text-blue-700 bg-blue-50 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-900/30 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
                               title="Editar Presupuesto"
                             >
                               <Edit2 size={16} /> Editar
                             </Link>
                             <button
                               onClick={() => { setVentaAFacturar(venta); setMontoRecibidoFacturar(venta.total.toString()); }}
-                              className="text-green-600 hover:text-green-700 bg-green-50 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
+                              className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 bg-green-50 dark:bg-green-900/30 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
                               title="Facturar y Cobrar"
                             >
                               <CheckCircle size={16} /> Facturar
                             </button>
-                            <button onClick={() => imprimirDocumento(venta, 'PRESUPUESTO')} className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded" title="Imprimir A4">
+                            <button onClick={() => imprimirDocumento(venta, 'PRESUPUESTO')} className="text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 p-1.5 rounded" title="Imprimir A4">
                               <Printer size={16} />
                             </button>
-                            <button onClick={() => imprimirDocumento(venta, 'PRESUPUESTO', true)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 p-1.5 rounded" title="Guardar como PDF">
+                            <button onClick={() => imprimirDocumento(venta, 'PRESUPUESTO', true)} className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-1.5 rounded" title="Guardar como PDF">
                               <Download size={16} />
                             </button>
                           </>
@@ -353,25 +353,25 @@ const VentasHistorial = () => {
                           <>
                             <button
                               onClick={() => handleAprobarRemito(venta.id)}
-                              className="text-teal-600 hover:text-teal-700 bg-teal-50 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
+                              className="text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 bg-teal-50 dark:bg-teal-900/30 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
                               title="Aprobar (Descuenta Stock)"
                             >
                               <PackageCheck size={16} /> Aprobar
                             </button>
                             <button
                               onClick={() => { setVentaAFacturar(venta); setMontoRecibidoFacturar(venta.total.toString()); }}
-                              className="text-green-600 hover:text-green-700 bg-green-50 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
+                              className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 bg-green-50 dark:bg-green-900/30 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
                               title="Aprobar y Facturar"
                             >
                               <CheckCircle size={16} /> Facturar
                             </button>
-                            <button onClick={() => imprimirDocumento(venta, 'REMITO')} className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded" title="Imprimir Remito A4">
+                            <button onClick={() => imprimirDocumento(venta, 'REMITO')} className="text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 p-1.5 rounded" title="Imprimir Remito A4">
                               <FileText size={16} />
                             </button>
-                            <button onClick={() => imprimirDocumento(venta, 'REMITO', true)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 p-1.5 rounded" title="Guardar como PDF">
+                            <button onClick={() => imprimirDocumento(venta, 'REMITO', true)} className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-1.5 rounded" title="Guardar como PDF">
                               <Download size={16} />
                             </button>
-                            <button onClick={() => setVentaAAnular(venta)} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded" title="Anular">
+                            <button onClick={() => setVentaAAnular(venta)} className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded" title="Anular">
                               <XCircle size={16} />
                             </button>
                           </>
@@ -400,13 +400,13 @@ const VentasHistorial = () => {
 
                         {!isAnulada && isFacturada && (
                           <>
-                            <button onClick={() => imprimirDocumento(venta, 'FACTURA')} className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded" title="Imprimir Comprobante A4">
+                            <button onClick={() => imprimirDocumento(venta, 'FACTURA')} className="text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 p-1.5 rounded" title="Imprimir Comprobante A4">
                               <Printer size={16} />
                             </button>
-                            <button onClick={() => imprimirDocumento(venta, 'FACTURA', true)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 p-1.5 rounded" title="Guardar como PDF">
+                            <button onClick={() => imprimirDocumento(venta, 'FACTURA', true)} className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-1.5 rounded" title="Guardar como PDF">
                               <Download size={16} />
                             </button>
-                            <button onClick={() => setVentaAAnular(venta)} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded" title="Anular (Devolver Stock y Dinero)">
+                            <button onClick={() => setVentaAAnular(venta)} className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded" title="Anular (Devolver Stock y Dinero)">
                               <XCircle size={16} />
                             </button>
                           </>
@@ -431,14 +431,14 @@ const VentasHistorial = () => {
       {/* Modal Confirmar Anulación */}
       {ventaAAnular && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full overflow-hidden transition-colors duration-200">
             <div className="bg-red-500 p-6 flex flex-col items-center justify-center text-white">
               <AlertCircle size={48} className="mb-2" />
               <h2 className="text-xl font-bold">¿Anular Documento #{ventaAAnular.id}?</h2>
             </div>
             
             <div className="p-6">
-              <p className="text-gray-600 text-center mb-6">
+              <p className="text-gray-600 dark:text-slate-300 text-center mb-6">
                 Esta acción cancelará el documento.
                 {ventaAAnular.estado === 'REMITO_APROBADO' && " Se devolverá el stock."}
                 {(ventaAAnular.estado === 'FACTURADA' || ventaAAnular.estado === 'COMPLETADA') && " Se devolverá el stock y se registrará el egreso de dinero en la caja."}
@@ -446,7 +446,7 @@ const VentasHistorial = () => {
               
               {!confirmarAnulacion ? (
                 <div className="flex gap-3">
-                  <button onClick={() => setVentaAAnular(null)} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition-colors">
+                  <button onClick={() => setVentaAAnular(null)} className="flex-1 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 font-bold rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
                     Cancelar
                   </button>
                   <button onClick={() => setConfirmarAnulacion(true)} className="flex-1 py-3 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 transition-colors shadow-sm">
@@ -455,11 +455,11 @@ const VentasHistorial = () => {
                 </div>
               ) : (
                 <div className="flex gap-3 flex-col">
-                  <div className="bg-red-50 p-3 rounded text-red-800 text-sm font-semibold mb-2 border border-red-100 text-center">
+                  <div className="bg-red-50 dark:bg-red-900/30 p-3 rounded text-red-800 dark:text-red-300 text-sm font-semibold mb-2 border border-red-100 dark:border-red-800/50 text-center">
                     ¿Estás absolutamente seguro? Esta acción no se puede deshacer.
                   </div>
                   <div className="flex gap-3">
-                    <button onClick={() => setConfirmarAnulacion(false)} disabled={anulando} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50">
+                    <button onClick={() => setConfirmarAnulacion(false)} disabled={anulando} className="flex-1 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 font-bold rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50">
                       Atrás
                     </button>
                     <button onClick={handleAnular} disabled={anulando} className="flex-1 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors shadow-sm disabled:opacity-50">
@@ -476,7 +476,7 @@ const VentasHistorial = () => {
       {/* Modal Facturar (Cobrar) */}
       {ventaAFacturar && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full overflow-hidden transition-colors duration-200">
             <div className="bg-green-500 p-6 flex flex-col items-center justify-center text-white">
               <CheckCircle size={48} className="mb-2" />
               <h2 className="text-xl font-bold">Facturar Documento #{ventaAFacturar.id}</h2>
@@ -491,11 +491,11 @@ const VentasHistorial = () => {
               ) : (
                 <>
                   <div className="mb-4">
-                    <label className="block text-sm font-bold text-gray-600 uppercase mb-2">Medio de pago</label>
+                    <label className="block text-sm font-bold text-gray-600 dark:text-slate-300 uppercase mb-2">Medio de pago</label>
                     <select
                       value={medioPagoFacturar}
                       onChange={e => setMedioPagoFacturar(e.target.value)}
-                      className="w-full p-3 border rounded font-medium focus:border-brand-light focus:ring-1"
+                      className="w-full p-3 border dark:border-slate-600 rounded font-medium focus:border-brand-light focus:ring-1 bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 outline-none"
                     >
                       <option value="EFECTIVO">Efectivo</option>
                       <option value="TARJETA_DEBITO">Tarjeta Débito</option>
@@ -505,11 +505,11 @@ const VentasHistorial = () => {
                     </select>
                   </div>
                   <div className="mb-6">
-                    <label className="block text-sm font-bold text-gray-600 uppercase mb-2">Monto Recibido</label>
+                    <label className="block text-sm font-bold text-gray-600 dark:text-slate-300 uppercase mb-2">Monto Recibido</label>
                     <input
                       type="number"
                       disabled={medioPagoFacturar !== 'EFECTIVO'}
-                      className="w-full p-3 border rounded font-bold text-xl disabled:bg-gray-100"
+                      className="w-full p-3 border dark:border-slate-600 rounded font-bold text-xl disabled:bg-gray-100 dark:disabled:bg-slate-700 bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 disabled:text-gray-500 dark:disabled:text-slate-400 outline-none focus:border-brand-light focus:ring-1"
                       value={medioPagoFacturar === 'EFECTIVO' ? montoRecibidoFacturar : ventaAFacturar.total}
                       onChange={e => setMontoRecibidoFacturar(e.target.value)}
                     />
@@ -518,13 +518,13 @@ const VentasHistorial = () => {
               )}
               
               <div className="flex gap-3">
-                <button onClick={() => setVentaAFacturar(null)} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200">
+                <button onClick={() => setVentaAFacturar(null)} className="flex-1 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 font-bold rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
                   Cancelar
                 </button>
                 <button
                   onClick={handleFacturar}
                   disabled={!aperturaCajaId || facturando || (medioPagoFacturar === 'EFECTIVO' && Number(montoRecibidoFacturar) < ventaAFacturar.total)}
-                  className="flex-1 py-3 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:bg-gray-400"
+                  className="flex-1 py-3 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:bg-gray-400 dark:disabled:bg-slate-600 transition-colors shadow-sm"
                 >
                   {facturando ? 'Procesando...' : 'Facturar y Cobrar'}
                 </button>

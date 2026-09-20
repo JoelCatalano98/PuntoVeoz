@@ -124,20 +124,20 @@ const Usuarios = () => {
 
   if (!tienePermiso) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-6 bg-gray-50 text-gray-500">
+      <div className="h-full flex flex-col items-center justify-center p-6 bg-gray-50 dark:bg-slate-900 text-gray-500 dark:text-slate-400 transition-colors duration-200">
         <ShieldAlert size={48} className="mb-4 text-red-400" />
-        <h2 className="text-xl font-bold">Acceso Denegado</h2>
+        <h2 className="text-xl font-bold dark:text-slate-200">Acceso Denegado</h2>
         <p>No tienes permisos para ver esta sección.</p>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 p-6">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-slate-900 p-6 transition-colors duration-200">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-brand-dark">Gestión de Usuarios</h1>
-          <p className="text-gray-500 text-sm mt-1">Administrá el acceso y roles de tu equipo</p>
+          <h1 className="text-2xl font-bold text-brand-dark dark:text-slate-200">Gestión de Usuarios</h1>
+          <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">Administrá el acceso y roles de tu equipo</p>
         </div>
         <button 
           onClick={abrirModalNuevo}
@@ -148,36 +148,36 @@ const Usuarios = () => {
         </button>
       </div>
 
-      <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+      <div className="flex-1 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col transition-colors duration-200">
         <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
+            <thead className="bg-gray-50 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 sticky top-0">
               <tr>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Nombre</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Rol</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center w-28">Acciones</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Nombre</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Usuario</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Email</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Rol</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider text-center w-28">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
               {cargando ? (
                 <tr>
-                  <td colSpan={4} className="p-8 text-center text-gray-400">Cargando usuarios...</td>
+                  <td colSpan={4} className="p-8 text-center text-gray-400 dark:text-slate-500">Cargando usuarios...</td>
                 </tr>
               ) : usuarios.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="p-8 text-center text-gray-400">No hay usuarios registrados</td>
+                  <td colSpan={4} className="p-8 text-center text-gray-400 dark:text-slate-500">No hay usuarios registrados</td>
                 </tr>
               ) : (
                 usuarios.map(u => (
-                  <tr key={u.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="p-4 text-sm font-medium text-gray-800">{u.nombre}</td>
-                    <td className="p-4 text-sm font-medium text-blue-600">@{u.username}</td>
-                    <td className="p-4 text-sm text-gray-600">{u.email}</td>
+                  <tr key={u.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/50 transition-colors">
+                    <td className="p-4 text-sm font-medium text-gray-800 dark:text-slate-200">{u.nombre}</td>
+                    <td className="p-4 text-sm font-medium text-blue-600 dark:text-blue-400">@{u.username}</td>
+                    <td className="p-4 text-sm text-gray-600 dark:text-slate-400">{u.email}</td>
                     <td className="p-4 text-sm">
                       <span className={`px-2 py-1 text-xs font-bold rounded-full ${
-                        u.rol === 'ADMIN' || u.rol === 'SUPERADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                        u.rol === 'ADMIN' || u.rol === 'SUPERADMIN' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
                       }`}>
                         {u.rol}
                       </span>
@@ -187,7 +187,7 @@ const Usuarios = () => {
                         <button 
                           onClick={() => abrirModalEditar(u)}
                           disabled={u.rol === 'SUPERADMIN' && usuario?.rol !== 'SUPERADMIN'}
-                          className="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                          className="p-1.5 text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
                           title="Editar"
                         >
                           <Edit2 size={16} />
@@ -195,7 +195,7 @@ const Usuarios = () => {
                         <button 
                           onClick={() => handleEliminar(u.id)}
                           disabled={usuario?.id === u.id || (u.rol === 'SUPERADMIN' && usuario?.rol !== 'SUPERADMIN')}
-                          className="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                          className="p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
                           title="Deshabilitar"
                         >
                           <Trash2 size={16} />
@@ -211,13 +211,13 @@ const Usuarios = () => {
       </div>
 
       {mostrarModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col">
-            <div className="flex justify-between items-center p-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-brand-dark">
+        <div className="fixed inset-0 bg-black/60 dark:bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md flex flex-col transition-colors duration-200">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100 dark:border-slate-700">
+              <h2 className="text-xl font-bold text-brand-dark dark:text-slate-200">
                 {editando ? 'Editar Usuario' : 'Nuevo Usuario'}
               </h2>
-              <button onClick={cerrarModal} className="text-gray-400 hover:text-gray-800 transition-colors">
+              <button onClick={cerrarModal} className="text-gray-400 dark:text-slate-500 hover:text-gray-800 dark:hover:text-slate-200 transition-colors">
                 <X size={24} />
               </button>
             </div>
@@ -225,44 +225,44 @@ const Usuarios = () => {
             <div className="p-6">
               <form onSubmit={handleGuardar} className="flex flex-col gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Nombre *</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Nombre *</label>
                   <input
                     type="text"
                     required
                     autoFocus
-                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white"
+                    className="w-full p-2.5 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 transition-colors"
                     value={formData.nombre}
                     onChange={e => setFormData({...formData, nombre: e.target.value})}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Usuario (Login) *</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Usuario (Login) *</label>
                   <input
                     type="text"
                     required
-                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white"
+                    className="w-full p-2.5 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 transition-colors"
                     value={formData.username}
                     onChange={e => setFormData({...formData, username: e.target.value})}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Email *</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Email *</label>
                   <input
                     type="email"
                     required
-                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white"
+                    className="w-full p-2.5 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 transition-colors"
                     value={formData.email}
                     onChange={e => setFormData({...formData, email: e.target.value})}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Rol *</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Rol *</label>
                   <select
                     required
-                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white"
+                    className="w-full p-2.5 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 transition-colors"
                     value={formData.rol}
                     onChange={e => setFormData({...formData, rol: e.target.value})}
                   >
@@ -273,18 +273,18 @@ const Usuarios = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Contraseña {editando ? '(Dejar en blanco para mantener actual)' : '*'}</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Contraseña {editando ? '(Dejar en blanco para mantener actual)' : '*'}</label>
                   <input
                     type="password"
                     required={!editando}
-                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white"
+                    className="w-full p-2.5 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 transition-colors"
                     value={formData.password}
                     onChange={e => setFormData({...formData, password: e.target.value})}
                   />
                 </div>
 
                 <div className="mt-4 flex gap-3">
-                  <button type="button" onClick={cerrarModal} className="flex-1 py-3 text-gray-600 font-bold bg-gray-100 hover:bg-gray-200 rounded-lg">
+                  <button type="button" onClick={cerrarModal} className="flex-1 py-3 text-gray-600 dark:text-slate-300 font-bold bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors">
                     Cancelar
                   </button>
                   <button type="submit" disabled={guardando} className="flex-1 py-3 bg-brand-dark text-white font-bold rounded-lg hover:bg-black disabled:opacity-50 shadow-md">

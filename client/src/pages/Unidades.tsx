@@ -104,11 +104,11 @@ const Unidades = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 p-6">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-slate-900 p-6 transition-colors duration-200">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-brand-dark">Unidades de Medida</h1>
-          <p className="text-gray-500 text-sm mt-1">Definición de formatos de venta (Pack, Kg, Litro)</p>
+          <h1 className="text-2xl font-bold text-brand-dark dark:text-slate-200">Unidades de Medida</h1>
+          <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">Definición de formatos de venta (Pack, Kg, Litro)</p>
         </div>
         {puedeEditar && (
           <button 
@@ -121,45 +121,45 @@ const Unidades = () => {
         )}
       </div>
 
-      <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+      <div className="flex-1 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col transition-colors duration-200">
         <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-gray-100 border-b border-gray-200 sticky top-0 z-10">
+            <thead className="bg-gray-100 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 sticky top-0 z-10">
               <tr>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Nombre</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Abreviatura</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Nombre</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Abreviatura</th>
                 {puedeEditar && (
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center w-28">Acciones</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider text-center w-28">Acciones</th>
                 )}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
               {cargando ? (
                 <tr>
-                  <td colSpan={3} className="p-8 text-center text-gray-400">Cargando unidades...</td>
+                  <td colSpan={3} className="p-8 text-center text-gray-400 dark:text-slate-500">Cargando unidades...</td>
                 </tr>
               ) : unidades.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="p-8 text-center text-gray-400">No se encontraron unidades</td>
+                  <td colSpan={3} className="p-8 text-center text-gray-400 dark:text-slate-500">No se encontraron unidades</td>
                 </tr>
               ) : (
                 unidades.map(uni => (
-                  <tr key={uni.id} className="hover:bg-blue-50/50 transition-colors">
-                    <td className="p-4 text-sm font-medium text-gray-800">{uni.nombre}</td>
-                    <td className="p-4 text-sm font-mono text-gray-600">{uni.abreviatura || '-'}</td>
+                  <tr key={uni.id} className="hover:bg-blue-50/50 dark:hover:bg-slate-700/50 transition-colors">
+                    <td className="p-4 text-sm font-medium text-gray-800 dark:text-slate-200">{uni.nombre}</td>
+                    <td className="p-4 text-sm font-mono text-gray-600 dark:text-slate-400">{uni.abreviatura || '-'}</td>
                     {puedeEditar && (
                       <td className="p-4">
                         <div className="flex items-center justify-center gap-2">
                           <button 
                             onClick={() => abrirModalEditar(uni)}
-                            className="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors"
+                            className="p-1.5 text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors"
                             title="Editar"
                           >
                             <Edit2 size={16} />
                           </button>
                           <button 
                             onClick={() => handleEliminar(uni.id)}
-                            className="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors"
+                            className="p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors"
                             title="Eliminar"
                           >
                             <Trash2 size={16} />
@@ -176,13 +176,13 @@ const Unidades = () => {
       </div>
 
       {mostrarModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col">
-            <div className="flex justify-between items-center p-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-brand-dark">
+        <div className="fixed inset-0 bg-black/60 dark:bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md flex flex-col transition-colors duration-200">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100 dark:border-slate-700">
+              <h2 className="text-xl font-bold text-brand-dark dark:text-slate-200">
                 {editando ? 'Editar Unidad' : 'Nueva Unidad'}
               </h2>
-              <button onClick={cerrarModal} className="text-gray-400 hover:text-gray-800 transition-colors">
+              <button onClick={cerrarModal} className="text-gray-400 dark:text-slate-500 hover:text-gray-800 dark:hover:text-slate-200 transition-colors">
                 <X size={24} />
               </button>
             </div>
@@ -190,25 +190,25 @@ const Unidades = () => {
             <div className="p-6">
               <form id="unidad-form" onSubmit={handleGuardar} className="flex flex-col gap-5">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Nombre *</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Nombre *</label>
                   <input
                     type="text"
                     required
                     autoFocus
                     placeholder="Ej: Bulto Cerrado"
-                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white"
+                    className="w-full p-2.5 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 placeholder-gray-400 dark:placeholder-slate-500 transition-colors"
                     value={formData.nombre}
                     onChange={e => setFormData({...formData, nombre: e.target.value})}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Abreviatura</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Abreviatura</label>
                   <input
                     type="text"
                     placeholder="Ej: BC"
                     maxLength={10}
-                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light font-mono bg-gray-50 focus:bg-white uppercase"
+                    className="w-full p-2.5 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light font-mono bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 uppercase placeholder-gray-400 dark:placeholder-slate-500 transition-colors"
                     value={formData.abreviatura}
                     onChange={e => setFormData({...formData, abreviatura: e.target.value.toUpperCase()})}
                   />
@@ -216,11 +216,11 @@ const Unidades = () => {
               </form>
             </div>
 
-            <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 rounded-b-xl">
+            <div className="p-6 border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 flex justify-end gap-3 rounded-b-xl transition-colors">
               <button 
                 type="button" 
                 onClick={cerrarModal}
-                className="px-5 py-2.5 text-gray-600 font-bold hover:bg-gray-200 rounded-lg transition-colors"
+                className="px-5 py-2.5 text-gray-600 dark:text-slate-300 font-bold hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
               >
                 Cancelar
               </button>

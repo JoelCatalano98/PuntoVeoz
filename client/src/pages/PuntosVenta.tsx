@@ -96,22 +96,22 @@ const PuntosVenta = () => {
 
   if (!tienePermiso) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-6 bg-gray-50 text-gray-500">
+      <div className="h-full flex flex-col items-center justify-center p-6 bg-gray-50 dark:bg-slate-900 text-gray-500 dark:text-slate-400 transition-colors">
         <ShieldAlert size={48} className="mb-4 text-red-400" />
-        <h2 className="text-xl font-bold">Acceso Denegado</h2>
+        <h2 className="text-xl font-bold dark:text-slate-200">Acceso Denegado</h2>
         <p>No tienes permisos para ver esta sección.</p>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 p-6">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-slate-900 p-6 transition-colors duration-200">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-brand-dark flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-brand-dark dark:text-slate-200 flex items-center gap-2">
             <Store /> Puntos de Venta
           </h1>
-          <p className="text-gray-500 text-sm mt-1">Administrá las bocas de facturación y puestos</p>
+          <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">Administrá las bocas de facturación y puestos</p>
         </div>
         <button 
           onClick={abrirModalNuevo}
@@ -122,32 +122,32 @@ const PuntosVenta = () => {
         </button>
       </div>
 
-      <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+      <div className="flex-1 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col transition-colors duration-200">
         <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
+            <thead className="bg-gray-50 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 sticky top-0 transition-colors">
               <tr>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-32">Número</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Tipo</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center w-28">Acciones</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider w-32">Número</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Tipo</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider text-center w-28">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
               {cargando ? (
                 <tr>
-                  <td colSpan={3} className="p-8 text-center text-gray-400">Cargando puntos de venta...</td>
+                  <td colSpan={3} className="p-8 text-center text-gray-400 dark:text-slate-500">Cargando puntos de venta...</td>
                 </tr>
               ) : puntosVenta.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="p-8 text-center text-gray-400">No hay puntos de venta registrados</td>
+                  <td colSpan={3} className="p-8 text-center text-gray-400 dark:text-slate-500">No hay puntos de venta registrados</td>
                 </tr>
               ) : (
                 puntosVenta.map(pv => (
-                  <tr key={pv.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="p-4 text-sm font-black text-gray-800">{pv.nombre.padStart(4, '0')}</td>
+                  <tr key={pv.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/50 transition-colors">
+                    <td className="p-4 text-sm font-black text-gray-800 dark:text-slate-200">{pv.nombre.padStart(4, '0')}</td>
                     <td className="p-4 text-sm">
                       <span className={`px-2 py-1 text-xs font-bold rounded-full ${
-                        pv.tipo === 'WEBSERVICE' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-700'
+                        pv.tipo === 'WEBSERVICE' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
                       }`}>
                         {pv.tipo}
                       </span>
@@ -156,7 +156,7 @@ const PuntosVenta = () => {
                       <div className="flex items-center justify-center gap-2">
                         <button 
                           onClick={() => abrirModalEditar(pv)}
-                          className="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors"
+                          className="p-1.5 text-blue-500 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-slate-600 rounded transition-colors"
                           title="Editar"
                         >
                           <Edit2 size={16} />
@@ -173,12 +173,12 @@ const PuntosVenta = () => {
 
       {mostrarModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col">
-            <div className="flex justify-between items-center p-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-brand-dark">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md flex flex-col transition-colors duration-200">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100 dark:border-slate-700">
+              <h2 className="text-xl font-bold text-brand-dark dark:text-slate-200">
                 {editando ? 'Editar Punto de Venta' : 'Nuevo Punto de Venta'}
               </h2>
-              <button onClick={cerrarModal} className="text-gray-400 hover:text-gray-800 transition-colors">
+              <button onClick={cerrarModal} className="text-gray-400 dark:text-slate-500 hover:text-gray-800 dark:hover:text-slate-200 transition-colors">
                 <X size={24} />
               </button>
             </div>
@@ -186,24 +186,24 @@ const PuntosVenta = () => {
             <div className="p-6">
               <form onSubmit={handleGuardar} className="flex flex-col gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Número (Ej: 1) *</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Número (Ej: 1) *</label>
                   <input
                     type="number"
                     min="1"
                     required
                     autoFocus
-                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white text-lg font-bold"
+                    className="w-full p-2.5 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 focus:bg-white dark:focus:bg-slate-800 text-gray-900 dark:text-slate-100 text-lg font-bold transition-colors"
                     value={formData.nombre}
                     onChange={e => setFormData({...formData, nombre: e.target.value})}
                   />
-                  <p className="text-xs text-gray-500 mt-1">El número de punto de venta (0001, 0002, etc).</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">El número de punto de venta (0001, 0002, etc).</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Tipo *</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Tipo *</label>
                   <select
                     required
-                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white"
+                    className="w-full p-2.5 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 focus:bg-white dark:focus:bg-slate-800 text-gray-900 dark:text-slate-100 transition-colors"
                     value={formData.tipo}
                     onChange={e => setFormData({...formData, tipo: e.target.value})}
                   >
@@ -213,7 +213,7 @@ const PuntosVenta = () => {
                 </div>
 
                 <div className="mt-4 flex gap-3">
-                  <button type="button" onClick={cerrarModal} className="flex-1 py-3 text-gray-600 font-bold bg-gray-100 hover:bg-gray-200 rounded-lg">
+                  <button type="button" onClick={cerrarModal} className="flex-1 py-3 text-gray-600 dark:text-slate-300 font-bold bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors">
                     Cancelar
                   </button>
                   <button type="submit" disabled={guardando} className="flex-1 py-3 bg-brand-dark text-white font-bold rounded-lg hover:bg-black disabled:opacity-50 shadow-md">

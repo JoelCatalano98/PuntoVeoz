@@ -112,11 +112,11 @@ const Categorias = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 p-6">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-slate-900 p-6 transition-colors duration-200">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-brand-dark">Categorías</h1>
-          <p className="text-gray-500 text-sm mt-1">Gestión de rubros de productos</p>
+          <h1 className="text-2xl font-bold text-brand-dark dark:text-slate-200">Categorías</h1>
+          <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">Gestión de rubros de productos</p>
         </div>
         {puedeEditar && (
           <button 
@@ -129,52 +129,52 @@ const Categorias = () => {
         )}
       </div>
 
-      <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+      <div className="flex-1 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col transition-colors duration-200">
         <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-gray-100 border-b border-gray-200 sticky top-0 z-10">
+            <thead className="bg-gray-100 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 sticky top-0 z-10">
               <tr>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-16">Color</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Nombre</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider w-16">Color</th>
+                <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Nombre</th>
                 {puedeEditar && (
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center w-28">Acciones</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider text-center w-28">Acciones</th>
                 )}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
               {cargando ? (
                 <tr>
-                  <td colSpan={3} className="p-8 text-center text-gray-400">Cargando categorías...</td>
+                  <td colSpan={3} className="p-8 text-center text-gray-400 dark:text-slate-500">Cargando categorías...</td>
                 </tr>
               ) : categorias.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="p-8 text-center text-gray-400">No se encontraron categorías</td>
+                  <td colSpan={3} className="p-8 text-center text-gray-400 dark:text-slate-500">No se encontraron categorías</td>
                 </tr>
               ) : (
                 categorias.map(cat => (
                   <React.Fragment key={cat.id}>
-                    <tr className="hover:bg-blue-50/50 transition-colors bg-white">
+                    <tr className="hover:bg-blue-50/50 dark:hover:bg-slate-700/50 transition-colors bg-white dark:bg-slate-800">
                       <td className="p-4">
                         <div 
-                          className="w-6 h-6 rounded border shadow-sm"
+                          className="w-6 h-6 rounded border dark:border-slate-600 shadow-sm"
                           style={{ backgroundColor: cat.color }}
                           title={cat.color}
                         />
                       </td>
-                      <td className="p-4 text-sm font-bold text-gray-800">{cat.nombre}</td>
+                      <td className="p-4 text-sm font-bold text-gray-800 dark:text-slate-200">{cat.nombre}</td>
                       {puedeEditar && (
                         <td className="p-4">
                           <div className="flex items-center justify-center gap-2">
                             <button 
                               onClick={() => abrirModalEditar(cat)}
-                              className="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors"
+                              className="p-1.5 text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors"
                               title="Editar"
                             >
                               <Edit2 size={16} />
                             </button>
                             <button 
                               onClick={() => handleEliminar(cat.id)}
-                              className="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors"
+                              className="p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors"
                               title="Eliminar"
                             >
                               <Trash2 size={16} />
@@ -184,10 +184,10 @@ const Categorias = () => {
                       )}
                     </tr>
                     {cat.subcategorias?.map(sub => (
-                      <tr key={sub.id} className="hover:bg-blue-50/50 transition-colors bg-gray-50/50">
+                      <tr key={sub.id} className="hover:bg-blue-50/50 dark:hover:bg-slate-700/50 transition-colors bg-gray-50/50 dark:bg-slate-900/50">
                         <td className="p-4">
                         </td>
-                        <td className="p-4 text-sm font-medium text-gray-600 pl-8 border-l-2 border-gray-200">
+                        <td className="p-4 text-sm font-medium text-gray-600 dark:text-slate-400 pl-8 border-l-2 border-gray-200 dark:border-slate-700">
                           ↳ {sub.nombre}
                         </td>
                         {puedeEditar && (
@@ -195,14 +195,14 @@ const Categorias = () => {
                             <div className="flex items-center justify-center gap-2">
                               <button 
                                 onClick={() => abrirModalEditar(sub, cat.id)}
-                                className="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors"
+                                className="p-1.5 text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors"
                                 title="Editar"
                               >
                                 <Edit2 size={16} />
                               </button>
                               <button 
                                 onClick={() => handleEliminar(sub.id)}
-                                className="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors"
+                                className="p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors"
                                 title="Eliminar"
                               >
                                 <Trash2 size={16} />
@@ -221,13 +221,13 @@ const Categorias = () => {
       </div>
 
       {mostrarModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col">
-            <div className="flex justify-between items-center p-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-brand-dark">
+        <div className="fixed inset-0 bg-black/60 dark:bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md flex flex-col transition-colors duration-200">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100 dark:border-slate-700">
+              <h2 className="text-xl font-bold text-brand-dark dark:text-slate-200">
                 {editando ? 'Editar Categoría' : 'Nueva Categoría'}
               </h2>
-              <button onClick={cerrarModal} className="text-gray-400 hover:text-gray-800 transition-colors">
+              <button onClick={cerrarModal} className="text-gray-400 dark:text-slate-500 hover:text-gray-800 dark:hover:text-slate-200 transition-colors">
                 <X size={24} />
               </button>
             </div>
@@ -235,21 +235,21 @@ const Categorias = () => {
             <div className="p-6">
               <form id="categoria-form" onSubmit={handleGuardar} className="flex flex-col gap-5">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Nombre *</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Nombre *</label>
                   <input
                     type="text"
                     required
                     autoFocus
-                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white"
+                    className="w-full p-2.5 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 transition-colors"
                     value={formData.nombre}
                     onChange={e => setFormData({...formData, nombre: e.target.value})}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Categoría Padre (Opcional)</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Categoría Padre (Opcional)</label>
                   <select
-                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 focus:bg-white text-gray-700"
+                    className="w-full p-2.5 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 text-gray-700 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 transition-colors"
                     value={formData.categoriaPadreId}
                     onChange={e => setFormData({...formData, categoriaPadreId: e.target.value})}
                   >
@@ -258,29 +258,29 @@ const Categorias = () => {
                       <option key={cat.id} value={cat.id} disabled={editando?.id === cat.id}>{cat.nombre}</option>
                     ))}
                   </select>
-                  <p className="text-xs text-gray-500 mt-1">Si seleccionas una categoría padre, esta se convertirá en una subcategoría.</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Si seleccionas una categoría padre, esta se convertirá en una subcategoría.</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Color Identificatorio</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Color Identificatorio</label>
                   <div className="flex items-center gap-3">
                     <input
                       type="color"
-                      className="w-12 h-12 p-1 border rounded cursor-pointer"
+                      className="w-12 h-12 p-1 border dark:border-slate-600 rounded cursor-pointer bg-white dark:bg-slate-900"
                       value={formData.color}
                       onChange={e => setFormData({...formData, color: e.target.value})}
                     />
-                    <span className="text-sm text-gray-500 font-mono uppercase">{formData.color}</span>
+                    <span className="text-sm text-gray-500 dark:text-slate-400 font-mono uppercase">{formData.color}</span>
                   </div>
                 </div>
               </form>
             </div>
 
-            <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 rounded-b-xl">
+            <div className="p-6 border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 flex justify-end gap-3 rounded-b-xl transition-colors">
               <button 
                 type="button" 
                 onClick={cerrarModal}
-                className="px-5 py-2.5 text-gray-600 font-bold hover:bg-gray-200 rounded-lg transition-colors"
+                className="px-5 py-2.5 text-gray-600 dark:text-slate-300 font-bold hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
               >
                 Cancelar
               </button>
