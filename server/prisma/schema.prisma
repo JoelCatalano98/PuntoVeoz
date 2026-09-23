@@ -25,6 +25,16 @@ model Comercio {
   activo      Boolean  @default(true)
   createdAt   DateTime @default(now())
 
+  // Campos de configuración de ARCA/AFIP
+  arcaCuit           String?
+  arcaPtoVta         Int?
+  arcaModo           String?   @default("homologacion") // "homologacion" o "produccion"
+  
+  // Certificados cifrados
+  arcaCertEncrypted  String?   @db.Text
+  arcaKeyEncrypted   String?   @db.Text
+  arcaCertUploadedAt DateTime?
+
   usuarios         Usuario[]
   puntosVenta      PuntoVenta[]
   cajas            Caja[]
@@ -184,7 +194,7 @@ model Venta {
 
   // --- Campos reservados para integración futura con ARCA ---
   tipoComprobante   String? // "Ticket", "Factura A/B/C"
-  numeroComprobante Int?
+  nroFactura        Int?
   cae               String?
   vencimientoCae    DateTime?
   estadoFiscal      EstadoFiscal @default(NO_APLICA)
@@ -471,4 +481,20 @@ model DetalleCompra {
 
   @@index([compraId])
   @@map("detalle_compras")
+}
+
+// ------------------------------------------------------------
+// ARCA: Autenticación WSAA
+// ------------------------------------------------------------
+model ArcaToken {
+  id             Int      @id @default(autoincrement())
+  comercioId     Int
+  service        String
+  token          String   @db.Text
+  sign           String   @db.Text
+  expirationTime DateTime
+  createdAt      DateTime @default(now())
+
+  @@unique([comercioId, service])
+  @@map("arca_tokens")
 }

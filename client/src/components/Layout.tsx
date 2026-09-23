@@ -111,7 +111,7 @@ const Layout = () => {
                 { label: 'Historial de ventas', to: '/ventas-historial' },
                 { label: 'Órdenes de retiro/remitos', to: '/ventas-historial?tab=REMITOS' },
                 { label: 'Presupuestos', to: '/ventas-historial?tab=PRESUPUESTO' },
-                { label: 'Facturas de venta', disabled: true }
+                { label: 'Facturación (AFIP)', to: '/facturacion' }
               ]} 
             />
             
@@ -225,6 +225,13 @@ const Layout = () => {
               <Users size={24} />
               <span className="font-medium">Clientes</span>
             </Link>
+
+            {(usuario?.rol === 'ADMIN' || usuario?.rol === 'SUPERADMIN') && (
+              <Link to="/facturacion" className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-gray-200 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 hover:border-blue-100 transition-colors gap-2 text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">
+                <Package size={24} />
+                <span className="font-medium">Facturación</span>
+              </Link>
+            )}
           </div>
         </aside>
 

@@ -14,6 +14,8 @@ router.post('/:id/aprobar-remito', ventaController.aprobarRemito);
 router.post('/:id/facturar-remito', ventaController.facturarRemito);
 router.post('/:id/aprobar-facturar', ventaController.aprobarYFacturarRemito);
 router.post('/:id/facturar-presupuesto', ventaController.facturarPresupuesto);
+router.post('/:id/facturar-afip', ventaController.facturarAfip);
+router.get('/test-arca', ventaController.testArcaConnection);
 router.post('/:id/presupuesto-a-remito', ventaController.convertirPresupuestoEnRemito);
 router.get('/historial', ventaController.historialVentas);
 router.get('/:id', ventaController.obtenerPorId);

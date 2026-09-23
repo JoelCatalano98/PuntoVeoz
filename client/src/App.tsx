@@ -28,6 +28,7 @@ import AjusteStock from './pages/AjusteStock';
 import HistorialStock from './pages/HistorialStock';
 import StockValorizado from './pages/StockValorizado';
 import DocumentoForm from './pages/DocumentoForm';
+import FacturacionDiferida from './pages/FacturacionDiferida';
 
 function App() {
   return (
@@ -66,6 +67,7 @@ function App() {
                 <Route path="/ajuste-stock" element={<AjusteStock />} />
                 <Route path="/historial-stock" element={<HistorialStock />} />
                 <Route path="/stock-valorizado" element={<StockValorizado />} />
+                <Route path="/facturacion" element={<FacturacionDiferida />} />
               </Route>
 
               {/* Rutas solo para SUPERADMIN */}

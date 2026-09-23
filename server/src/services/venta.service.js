@@ -573,6 +573,76 @@ async function actualizarPresupuesto({ comercioId, usuarioId, ventaId, clienteId
   });
 }
 
+const arcaService = require('./arca.service');
+
+// ... (other functions)
+
+async function facturarAfip({ comercioId, ventaId, clienteId }) {
+  // 1. Validar venta y cliente fuera de la transacción si AFIP tarda
+  const venta = await prisma.venta.findFirst({
+    where: { id: ventaId, comercioId },
+    include: { cliente: true }
+  });
+
+  if (!venta) {
+    throw new Error('Venta no encontrada');
+  }
+
+  if (venta.cae) {
+    throw new Error('Esta venta ya posee un CAE generado');
+  }
+
+  if (venta.estado !== 'COMPLETADA' && venta.estado !== 'FACTURADA') {
+    throw new Error('Solo se pueden facturar en ARCA las ventas en estado COMPLETADA o FACTURADA');
+  }
+
+  const cliente = await prisma.cliente.findFirst({
+    where: { id: clienteId, comercioId }
+  });
+
+  if (!cliente) {
+    throw new Error('El cliente indicado no existe o no pertenece a este comercio');
+  }
+
+  if (!cliente.numeroDoc || !cliente.condicionIva) {
+    throw new Error('El cliente debe tener Documento y Condición de IVA para facturar electrónicamente');
+  }
+
+  let docTipo = 99;
+  if (cliente.numeroDoc.length === 11) docTipo = 80; // CUIT
+  else if (cliente.numeroDoc.length >= 7 && cliente.numeroDoc.length <= 8) docTipo = 96; // DNI
+
+  const datosVenta = {
+    puntoVenta: 1, // Podría venir de venta.puntoVenta.numeroArca
+    tipoCbte: 11, // Factura C
+    clienteDocTipo: docTipo,
+    clienteDocNro: Number(cliente.numeroDoc.replace(/\D/g, '')),
+    total: venta.total.toNumber()
+  };
+
+  // 2. Llamada a AFIP (fuera de la transacción de DB para evitar lockeos largos)
+  const afipResponse = await arcaService.emitirFactura(comercioId, datosVenta);
+
+  // 3. Si todo salió bien, actualizar Venta
+  const ventaActualizada = await prisma.venta.update({
+    where: { id: ventaId },
+    data: {
+      clienteId: cliente.id,
+      tipoComprobante: 'FACTURA_C', // Asumido
+      nroFactura: afipResponse.nroFactura,
+      cae: afipResponse.cae,
+      vencimientoCae: afipResponse.vencimientoCae ? new Date(
+        afipResponse.vencimientoCae.substring(0,4) + '-' +
+        afipResponse.vencimientoCae.substring(4,6) + '-' +
+        afipResponse.vencimientoCae.substring(6,8)
+      ) : null,
+      estadoFiscal: 'TIMBRADA'
+    }
+  });
+
+  return ventaActualizada;
+}
+
 module.exports = {
   crearVenta,
   anularVenta,
@@ -581,5 +651,6 @@ module.exports = {
   aprobarYFacturarRemito,
   facturarPresupuesto,
   convertirPresupuestoEnRemito,
-  actualizarPresupuesto
+  actualizarPresupuesto,
+  facturarAfip
 };

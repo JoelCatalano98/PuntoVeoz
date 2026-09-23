@@ -15,20 +15,22 @@ interface Cliente {
 interface ClienteModalProps {
   onClose: () => void;
   onSelect: (cliente: Cliente | null) => void;
+  clienteAEditar?: Cliente;
+  requiereDatosFiscales?: boolean;
 }
 
-const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect }) => {
+const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect, clienteAEditar, requiereDatosFiscales }) => {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [filtro, setFiltro] = useState('');
-  const [mostrarNuevo, setMostrarNuevo] = useState(false);
+  const [mostrarNuevo, setMostrarNuevo] = useState(!!clienteAEditar);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Form para nuevo
-  const [nuevoNombre, setNuevoNombre] = useState('');
-  const [nuevaRazonSocial, setNuevaRazonSocial] = useState('');
-  const [nuevoDoc, setNuevoDoc] = useState('');
-  const [nuevaDireccion, setNuevaDireccion] = useState('');
-  const [nuevaCondicionIva, setNuevaCondicionIva] = useState('Consumidor Final');
+  // Form para nuevo/edición
+  const [nuevoNombre, setNuevoNombre] = useState(clienteAEditar?.nombre || '');
+  const [nuevaRazonSocial, setNuevaRazonSocial] = useState(clienteAEditar?.razonSocial || '');
+  const [nuevoDoc, setNuevoDoc] = useState(clienteAEditar?.numeroDoc || '');
+  const [nuevaDireccion, setNuevaDireccion] = useState(clienteAEditar?.direccion || '');
+  const [nuevaCondicionIva, setNuevaCondicionIva] = useState(clienteAEditar?.condicionIva || (requiereDatosFiscales ? '' : 'Consumidor Final'));
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
@@ -60,19 +62,43 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect }) => {
       toast.error('El nombre es obligatorio');
       return;
     }
+    
+    if (requiereDatosFiscales) {
+      if (!nuevoDoc.trim()) {
+        toast.error('El Documento/CUIT es obligatorio para facturación electrónica');
+        return;
+      }
+      if (!nuevaDireccion.trim()) {
+        toast.error('La Dirección es obligatoria para facturación electrónica');
+        return;
+      }
+      if (!nuevaCondicionIva || nuevaCondicionIva === 'Consumidor Final Sin Datos') {
+        toast.error('La Condición de IVA es obligatoria para facturación electrónica');
+        return;
+      }
+    }
+
     setGuardando(true);
     try {
-      const res = await api.post('/clientes', {
+      const payload = {
         nombre: nuevoNombre,
         razonSocial: nuevaRazonSocial || undefined,
         numeroDoc: nuevoDoc || undefined,
         direccion: nuevaDireccion || undefined,
         condicionIva: nuevaCondicionIva || undefined
-      });
-      toast.success('Cliente creado');
+      };
+
+      let res;
+      if (clienteAEditar) {
+        res = await api.put(`/clientes/${clienteAEditar.id}`, payload);
+        toast.success('Cliente actualizado');
+      } else {
+        res = await api.post('/clientes', payload);
+        toast.success('Cliente creado');
+      }
       onSelect(res.data);
     } catch (err) {
-      toast.error('Error al crear cliente');
+      toast.error(clienteAEditar ? 'Error al actualizar cliente' : 'Error al crear cliente');
       setGuardando(false);
     }
   };
@@ -87,7 +113,9 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect }) => {
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md flex flex-col max-h-[90vh] transition-colors duration-200">
         
         <div className="flex justify-between items-center p-4 border-b dark:border-slate-700">
-          <h2 className="text-lg font-bold text-brand-dark dark:text-brand-light">Seleccionar Cliente</h2>
+          <h2 className="text-lg font-bold text-brand-dark dark:text-brand-light">
+            {clienteAEditar ? 'Editar Cliente' : 'Seleccionar Cliente'}
+          </h2>
           <button onClick={onClose} className="text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors">
             <X size={20} />
           </button>
@@ -161,9 +189,12 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect }) => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-slate-300">Documento (CUIT/DNI)</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-slate-300">
+                  Documento (CUIT/DNI) {requiereDatosFiscales && '*'}
+                </label>
                 <input
                   type="text"
+                  required={requiereDatosFiscales}
                   className="w-full p-2 border dark:border-slate-600 rounded focus:outline-none focus:border-brand-light bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200"
                   value={nuevoDoc}
                   onChange={e => setNuevoDoc(e.target.value)}
@@ -171,9 +202,12 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect }) => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-slate-300">Dirección</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-slate-300">
+                  Dirección {requiereDatosFiscales && '*'}
+                </label>
                 <input
                   type="text"
+                  required={requiereDatosFiscales}
                   className="w-full p-2 border dark:border-slate-600 rounded focus:outline-none focus:border-brand-light bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200"
                   value={nuevaDireccion}
                   onChange={e => setNuevaDireccion(e.target.value)}
@@ -181,12 +215,16 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-slate-300">Condición IVA</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-slate-300">
+                  Condición IVA {requiereDatosFiscales && '*'}
+                </label>
                 <select
+                  required={requiereDatosFiscales}
                   className="w-full p-2 border dark:border-slate-600 rounded focus:outline-none focus:border-brand-light bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200"
                   value={nuevaCondicionIva}
                   onChange={e => setNuevaCondicionIva(e.target.value)}
                 >
+                  {requiereDatosFiscales && <option value="" disabled>-- Seleccione --</option>}
                   <option value="Consumidor Final">Consumidor Final</option>
                   <option value="Responsable Inscripto">Responsable Inscripto</option>
                   <option value="Monotributo">Monotributo</option>

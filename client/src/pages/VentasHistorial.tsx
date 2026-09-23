@@ -34,7 +34,7 @@ const VentasHistorial = () => {
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [cargando, setCargando] = useState(true);
   const [filtroTexto, setFiltroTexto] = useState('');
-  const [filtroEstado, setFiltroEstado] = useState<string>(searchParams.get('tab') || 'TODAS'); 
+  const [filtroEstado, setFiltroEstado] = useState<string>(searchParams.get('tab') || 'TODAS');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -52,10 +52,11 @@ const VentasHistorial = () => {
   const [aperturaCajaId, setAperturaCajaId] = useState<number | null>(null);
 
   // Empresa params
-  const [empresaDatos, setEmpresaDatos] = useState({ razonSocial: 'Empresa / Comercio', cuit: '', direccion: '', condicionIva: '', logoUrl: '' });
+  const [empresaDatos, setEmpresaDatos] = useState({ razonSocial: 'Empresa / Comercio', cuit: '', direccion: '', condicionIva: '' });
+  const [logoError, setLogoError] = useState(false);
 
   // Impresion A4
-  const [documentoImprimir, setDocumentoImprimir] = useState<{venta: Venta, tipo: 'REMITO' | 'PRESUPUESTO' | 'FACTURA'} | null>(null);
+  const [documentoImprimir, setDocumentoImprimir] = useState<{ venta: Venta, tipo: 'REMITO' | 'PRESUPUESTO' | 'FACTURA' } | null>(null);
 
   useEffect(() => {
     cargarVentas(1);
@@ -87,24 +88,22 @@ const VentasHistorial = () => {
       setTotalPages(res.data.totalPages);
       setTotalCount(res.data.totalCount);
       setPage(pageToLoad);
-      
-      const [resCaja, resRS, resCuit, resDir, resIva, resLogo] = await Promise.all([
+
+      const [resCaja, resRS, resCuit, resDir, resIva] = await Promise.all([
         api.get('/caja/estado'),
         api.get('/parametros/empresaRazonSocial'),
         api.get('/parametros/empresaCuit'),
         api.get('/parametros/empresaDireccion'),
-        api.get('/parametros/empresaCondicionIva'),
-        api.get('/parametros/empresaLogoUrl')
+        api.get('/parametros/empresaCondicionIva')
       ]);
 
       if (resCaja.data.abierta) setAperturaCajaId(resCaja.data.apertura.id);
-      
+
       setEmpresaDatos({
         razonSocial: resRS.data?.valor || 'Empresa / Comercio',
         cuit: resCuit.data?.valor || '',
         direccion: resDir.data?.valor || '',
-        condicionIva: resIva.data?.valor || '',
-        logoUrl: resLogo.data?.valor || ''
+        condicionIva: resIva.data?.valor || ''
       });
 
     } catch (error) {
@@ -133,17 +132,17 @@ const VentasHistorial = () => {
   const handleFacturar = async () => {
     if (!ventaAFacturar || !aperturaCajaId) return;
     setFacturando(true);
-    
+
     let montoNum = Number(montoRecibidoFacturar);
     if (medioPagoFacturar !== 'EFECTIVO') montoNum = ventaAFacturar.total;
 
     try {
-      const url = ventaAFacturar.estado === 'PRESUPUESTO' 
+      const url = ventaAFacturar.estado === 'PRESUPUESTO'
         ? `/ventas/${ventaAFacturar.id}/facturar-presupuesto`
         : ventaAFacturar.estado === 'REMITO_PENDIENTE'
-        ? `/ventas/${ventaAFacturar.id}/aprobar-facturar`
-        : `/ventas/${ventaAFacturar.id}/facturar-remito`;
-        
+          ? `/ventas/${ventaAFacturar.id}/aprobar-facturar`
+          : `/ventas/${ventaAFacturar.id}/facturar-remito`;
+
       await api.post(url, {
         aperturaCajaId,
         medioPago: medioPagoFacturar,
@@ -288,143 +287,143 @@ const VentasHistorial = () => {
                 ventasFiltradas.map(venta => {
                   const isAnulada = venta.anulada || venta.estado === 'ANULADA';
                   const isFacturada = venta.estado === 'FACTURADA' || venta.estado === 'COMPLETADA';
-                  
+
                   return (
-                  <tr key={venta.id} className={`hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors ${isAnulada ? 'bg-red-50/30 dark:bg-red-900/10' : ''}`}>
-                    <td className="p-4 font-mono text-sm text-gray-600 dark:text-slate-400">#{venta.id}</td>
-                    <td className="p-4 text-sm text-gray-800 dark:text-slate-200">
-                      {new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(venta.createdAt))}
-                    </td>
-                    <td className="p-4 text-sm text-gray-800 dark:text-slate-200 font-medium">
-                      {venta.cliente?.nombre || 'Consumidor Final'}
-                    </td>
-                    <td className="p-4 text-sm font-bold text-brand-dark dark:text-brand-light">
-                      ${Number(venta.total).toFixed(2)}
-                    </td>
-                    <td className="p-4 text-center">
-                      {isAnulada ? (
-                        <span className="inline-block px-2 py-1 bg-red-100 text-red-800 text-xs font-bold rounded">ANULADA</span>
-                      ) : venta.estado === 'PRESUPUESTO' ? (
-                        <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded">PRESUPUESTO</span>
-                      ) : venta.estado === 'REMITO_PENDIENTE' ? (
-                        <span className="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded">REM. PENDIENTE</span>
-                      ) : venta.estado === 'REMITO_APROBADO' ? (
-                        <span className="inline-block px-2 py-1 bg-teal-100 text-teal-800 text-xs font-bold rounded">REM. APROBADO</span>
-                      ) : (
-                        <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs font-bold rounded">FACTURADA</span>
-                      )}
-                    </td>
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        
-                        {!isAnulada && venta.estado === 'PRESUPUESTO' && (
-                          <>
-                            <button
-                              onClick={() => handleConvertirPresupuesto(venta.id)}
-                              className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 bg-purple-50 dark:bg-purple-900/30 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
-                              title="Convertir a Remito"
-                            >
-                              <Send size={16} /> A Remito
-                            </button>
-                            <Link
-                              to={`/documento-form/${venta.id}`}
-                              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-900/30 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
-                              title="Editar Presupuesto"
-                            >
-                              <Edit2 size={16} /> Editar
-                            </Link>
-                            <button
-                              onClick={() => { setVentaAFacturar(venta); setMontoRecibidoFacturar(venta.total.toString()); }}
-                              className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 bg-green-50 dark:bg-green-900/30 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
-                              title="Facturar y Cobrar"
-                            >
-                              <CheckCircle size={16} /> Facturar
-                            </button>
-                            <button onClick={() => imprimirDocumento(venta, 'PRESUPUESTO')} className="text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 p-1.5 rounded" title="Imprimir A4">
-                              <Printer size={16} />
-                            </button>
-                            <button onClick={() => imprimirDocumento(venta, 'PRESUPUESTO', true)} className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-1.5 rounded" title="Guardar como PDF">
-                              <Download size={16} />
-                            </button>
-                          </>
+                    <tr key={venta.id} className={`hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors ${isAnulada ? 'bg-red-50/30 dark:bg-red-900/10' : ''}`}>
+                      <td className="p-4 font-mono text-sm text-gray-600 dark:text-slate-400">#{venta.id}</td>
+                      <td className="p-4 text-sm text-gray-800 dark:text-slate-200">
+                        {new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(venta.createdAt))}
+                      </td>
+                      <td className="p-4 text-sm text-gray-800 dark:text-slate-200 font-medium">
+                        {venta.cliente?.nombre || 'Consumidor Final'}
+                      </td>
+                      <td className="p-4 text-sm font-bold text-brand-dark dark:text-brand-light">
+                        ${Number(venta.total).toFixed(2)}
+                      </td>
+                      <td className="p-4 text-center">
+                        {isAnulada ? (
+                          <span className="inline-block px-2 py-1 bg-red-100 text-red-800 text-xs font-bold rounded">ANULADA</span>
+                        ) : venta.estado === 'PRESUPUESTO' ? (
+                          <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded">PRESUPUESTO</span>
+                        ) : venta.estado === 'REMITO_PENDIENTE' ? (
+                          <span className="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded">REM. PENDIENTE</span>
+                        ) : venta.estado === 'REMITO_APROBADO' ? (
+                          <span className="inline-block px-2 py-1 bg-teal-100 text-teal-800 text-xs font-bold rounded">REM. APROBADO</span>
+                        ) : (
+                          <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs font-bold rounded">FACTURADA</span>
                         )}
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
 
-                        {!isAnulada && venta.estado === 'REMITO_PENDIENTE' && (
-                          <>
-                            <button
-                              onClick={() => handleAprobarRemito(venta.id)}
-                              className="text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 bg-teal-50 dark:bg-teal-900/30 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
-                              title="Aprobar (Descuenta Stock)"
-                            >
-                              <PackageCheck size={16} /> Aprobar
-                            </button>
-                            <button
-                              onClick={() => { setVentaAFacturar(venta); setMontoRecibidoFacturar(venta.total.toString()); }}
-                              className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 bg-green-50 dark:bg-green-900/30 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
-                              title="Aprobar y Facturar"
-                            >
-                              <CheckCircle size={16} /> Facturar
-                            </button>
-                            <button onClick={() => imprimirDocumento(venta, 'REMITO')} className="text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 p-1.5 rounded" title="Imprimir Remito A4">
-                              <FileText size={16} />
-                            </button>
-                            <button onClick={() => imprimirDocumento(venta, 'REMITO', true)} className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-1.5 rounded" title="Guardar como PDF">
-                              <Download size={16} />
-                            </button>
-                            <button onClick={() => setVentaAAnular(venta)} className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded" title="Anular">
-                              <XCircle size={16} />
-                            </button>
-                          </>
-                        )}
+                          {!isAnulada && venta.estado === 'PRESUPUESTO' && (
+                            <>
+                              <button
+                                onClick={() => handleConvertirPresupuesto(venta.id)}
+                                className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 bg-purple-50 dark:bg-purple-900/30 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
+                                title="Convertir a Remito"
+                              >
+                                <Send size={16} /> A Remito
+                              </button>
+                              <Link
+                                to={`/documento-form/${venta.id}`}
+                                className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-900/30 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
+                                title="Editar Presupuesto"
+                              >
+                                <Edit2 size={16} /> Editar
+                              </Link>
+                              <button
+                                onClick={() => { setVentaAFacturar(venta); setMontoRecibidoFacturar(venta.total.toString()); }}
+                                className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 bg-green-50 dark:bg-green-900/30 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
+                                title="Facturar y Cobrar"
+                              >
+                                <CheckCircle size={16} /> Facturar
+                              </button>
+                              <button onClick={() => imprimirDocumento(venta, 'PRESUPUESTO')} className="text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 p-1.5 rounded" title="Imprimir A4">
+                                <Printer size={16} />
+                              </button>
+                              <button onClick={() => imprimirDocumento(venta, 'PRESUPUESTO', true)} className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-1.5 rounded" title="Guardar como PDF">
+                                <Download size={16} />
+                              </button>
+                            </>
+                          )}
 
-                        {!isAnulada && venta.estado === 'REMITO_APROBADO' && (
-                          <>
-                            <button
-                              onClick={() => { setVentaAFacturar(venta); setMontoRecibidoFacturar(venta.total.toString()); }}
-                              className="text-green-600 hover:text-green-700 bg-green-50 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
-                              title="Facturar (Cobrar)"
-                            >
-                              <CheckCircle size={16} /> Facturar
-                            </button>
-                            <button onClick={() => imprimirDocumento(venta, 'REMITO')} className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded" title="Imprimir Remito A4">
-                              <FileText size={16} />
-                            </button>
-                            <button onClick={() => imprimirDocumento(venta, 'REMITO', true)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 p-1.5 rounded" title="Guardar como PDF">
-                              <Download size={16} />
-                            </button>
-                            <button onClick={() => setVentaAAnular(venta)} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded" title="Anular">
-                              <XCircle size={16} />
-                            </button>
-                          </>
-                        )}
+                          {!isAnulada && venta.estado === 'REMITO_PENDIENTE' && (
+                            <>
+                              <button
+                                onClick={() => handleAprobarRemito(venta.id)}
+                                className="text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 bg-teal-50 dark:bg-teal-900/30 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
+                                title="Aprobar (Descuenta Stock)"
+                              >
+                                <PackageCheck size={16} /> Aprobar
+                              </button>
+                              <button
+                                onClick={() => { setVentaAFacturar(venta); setMontoRecibidoFacturar(venta.total.toString()); }}
+                                className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 bg-green-50 dark:bg-green-900/30 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
+                                title="Aprobar y Facturar"
+                              >
+                                <CheckCircle size={16} /> Facturar
+                              </button>
+                              <button onClick={() => imprimirDocumento(venta, 'REMITO')} className="text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 p-1.5 rounded" title="Imprimir Remito A4">
+                                <FileText size={16} />
+                              </button>
+                              <button onClick={() => imprimirDocumento(venta, 'REMITO', true)} className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-1.5 rounded" title="Guardar como PDF">
+                                <Download size={16} />
+                              </button>
+                              <button onClick={() => setVentaAAnular(venta)} className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded" title="Anular">
+                                <XCircle size={16} />
+                              </button>
+                            </>
+                          )}
 
-                        {!isAnulada && isFacturada && (
-                          <>
-                            <button onClick={() => imprimirDocumento(venta, 'FACTURA')} className="text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 p-1.5 rounded" title="Imprimir Comprobante A4">
-                              <Printer size={16} />
-                            </button>
-                            <button onClick={() => imprimirDocumento(venta, 'FACTURA', true)} className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-1.5 rounded" title="Guardar como PDF">
-                              <Download size={16} />
-                            </button>
-                            <button onClick={() => setVentaAAnular(venta)} className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded" title="Anular (Devolver Stock y Dinero)">
-                              <XCircle size={16} />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                          {!isAnulada && venta.estado === 'REMITO_APROBADO' && (
+                            <>
+                              <button
+                                onClick={() => { setVentaAFacturar(venta); setMontoRecibidoFacturar(venta.total.toString()); }}
+                                className="text-green-600 hover:text-green-700 bg-green-50 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold"
+                                title="Facturar (Cobrar)"
+                              >
+                                <CheckCircle size={16} /> Facturar
+                              </button>
+                              <button onClick={() => imprimirDocumento(venta, 'REMITO')} className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded" title="Imprimir Remito A4">
+                                <FileText size={16} />
+                              </button>
+                              <button onClick={() => imprimirDocumento(venta, 'REMITO', true)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 p-1.5 rounded" title="Guardar como PDF">
+                                <Download size={16} />
+                              </button>
+                              <button onClick={() => setVentaAAnular(venta)} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded" title="Anular">
+                                <XCircle size={16} />
+                              </button>
+                            </>
+                          )}
+
+                          {!isAnulada && isFacturada && (
+                            <>
+                              <button onClick={() => imprimirDocumento(venta, 'FACTURA')} className="text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 p-1.5 rounded" title="Imprimir Comprobante A4">
+                                <Printer size={16} />
+                              </button>
+                              <button onClick={() => imprimirDocumento(venta, 'FACTURA', true)} className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-1.5 rounded" title="Guardar como PDF">
+                                <Download size={16} />
+                              </button>
+                              <button onClick={() => setVentaAAnular(venta)} className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded" title="Anular (Devolver Stock y Dinero)">
+                                <XCircle size={16} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
                   );
                 })
               )}
             </tbody>
           </table>
         </div>
-        <Pagination 
-          currentPage={page} 
-          totalPages={totalPages} 
-          totalCount={totalCount} 
-          onPageChange={(newPage) => cargarVentas(newPage)} 
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          onPageChange={(newPage) => cargarVentas(newPage)}
         />
       </div>
 
@@ -436,14 +435,14 @@ const VentasHistorial = () => {
               <AlertCircle size={48} className="mb-2" />
               <h2 className="text-xl font-bold">¿Anular Documento #{ventaAAnular.id}?</h2>
             </div>
-            
+
             <div className="p-6">
               <p className="text-gray-600 dark:text-slate-300 text-center mb-6">
                 Esta acción cancelará el documento.
                 {ventaAAnular.estado === 'REMITO_APROBADO' && " Se devolverá el stock."}
                 {(ventaAAnular.estado === 'FACTURADA' || ventaAAnular.estado === 'COMPLETADA') && " Se devolverá el stock y se registrará el egreso de dinero en la caja."}
               </p>
-              
+
               {!confirmarAnulacion ? (
                 <div className="flex gap-3">
                   <button onClick={() => setVentaAAnular(null)} className="flex-1 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 font-bold rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
@@ -482,7 +481,7 @@ const VentasHistorial = () => {
               <h2 className="text-xl font-bold">Facturar Documento #{ventaAFacturar.id}</h2>
               <div className="text-3xl font-extrabold mt-2">${Number(ventaAFacturar.total).toFixed(2)}</div>
             </div>
-            
+
             <div className="p-6">
               {!aperturaCajaId ? (
                 <div className="text-red-500 font-bold text-center mb-4">
@@ -516,7 +515,7 @@ const VentasHistorial = () => {
                   </div>
                 </>
               )}
-              
+
               <div className="flex gap-3">
                 <button onClick={() => setVentaAFacturar(null)} className="flex-1 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 font-bold rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
                   Cancelar
@@ -557,8 +556,13 @@ const VentasHistorial = () => {
 
             {/* Caja Izquierda: Empresa */}
             <div className="flex-1 p-3 pr-8 flex flex-col justify-between">
-              {empresaDatos.logoUrl ? (
-                <img src={empresaDatos.logoUrl} alt={empresaDatos.razonSocial} className="h-16 object-contain mb-4" />
+              {!logoError ? (
+                <img
+                  src="/Logoempresa.png"
+                  alt={empresaDatos.razonSocial}
+                  className="h-20 object-contain mb-4"
+                  onError={() => setLogoError(true)}
+                />
               ) : (
                 <h2 className="text-2xl font-black uppercase tracking-tight mb-4">{empresaDatos.razonSocial || 'EMPRESA GENÉRICA'}</h2>
               )}
@@ -673,7 +677,7 @@ const VentasHistorial = () => {
               </div>
             </div>
           )}
-          
+
           <div className="fixed bottom-8 left-0 right-0 text-center font-bold text-[10px]">
             DOCUMENTO NO VÁLIDO COMO FACTURA - Generado por PuntoVeloz
           </div>

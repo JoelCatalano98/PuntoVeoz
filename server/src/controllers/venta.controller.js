@@ -155,7 +155,7 @@ async function historialVentas(req, res, next) {
     const comercioId = req.comercioId;
     const prisma = require('../config/prisma');
 
-    const { search, page = 1, limit = 50, tab } = req.query;
+    const { search, page = 1, limit = 50, tab, sinCae } = req.query;
     const pageNum = Math.max(1, Number(page));
     const limitNum = Math.max(1, Number(limit));
     const skip = (pageNum - 1) * limitNum;
@@ -167,6 +167,11 @@ async function historialVentas(req, res, next) {
       whereClause.estado = 'PRESUPUESTO';
     } else {
       whereClause.estado = { in: ['COMPLETADA', 'FACTURADA', 'ANULADA'] };
+    }
+
+    if (sinCae === 'true') {
+      whereClause.cae = null;
+      whereClause.estado = { in: ['COMPLETADA', 'FACTURADA'] };
     }
 
     if (search) {
@@ -340,6 +345,46 @@ async function actualizarPresupuesto(req, res, next) {
   }
 }
 
+async function facturarAfip(req, res, next) {
+  try {
+    const comercioId = req.comercioId;
+    const ventaId = Number(req.params.id);
+    const { clienteId } = req.body;
+
+    if (!clienteId || isNaN(Number(clienteId))) {
+      return res.status(400).json({ error: 'El clienteId es obligatorio y debe ser válido' });
+    }
+
+    const ventaActualizada = await ventaService.facturarAfip({
+      comercioId,
+      ventaId,
+      clienteId: Number(clienteId)
+    });
+
+    res.json(ventaActualizada);
+  } catch (error) {
+    // Si el error viene de AFIP o es de validación
+    res.status(400).json({ error: error.message || 'Error al comunicarse con AFIP' });
+  }
+}
+
+async function testArcaConnection(req, res, next) {
+  try {
+    const comercioId = req.comercioId;
+    const arcaService = require('../services/arca.service');
+    const prisma = require('../config/prisma');
+    
+    const comercio = await prisma.comercio.findUnique({ where: { id: comercioId } });
+    const ptoVta = comercio?.arcaPtoVta || 1;
+
+    // Factura C (11) por defecto para test
+    const ultimoCmp = await arcaService.obtenerUltimoComprobante(comercioId, ptoVta, 11);
+    res.json({ success: true, ultimoComprobante: ultimoCmp });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
 module.exports = {
   crearVenta,
   reporteVentas,
@@ -351,5 +396,7 @@ module.exports = {
   aprobarYFacturarRemito,
   facturarPresupuesto,
   convertirPresupuestoEnRemito,
-  actualizarPresupuesto
+  actualizarPresupuesto,
+  facturarAfip,
+  testArcaConnection
 };

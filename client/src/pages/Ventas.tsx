@@ -5,6 +5,9 @@ import { Search, Trash2, User, CreditCard, ShoppingCart, AlertTriangle, Edit2, T
 import ClienteModal from '../components/ClienteModal';
 import Watermark from '../components/Watermark';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { TicketVenta } from '../components/TicketVenta';
+import { FacturaA4 } from '../components/FacturaA4';
 
 interface ListaPrecio {
   id: number;
@@ -42,6 +45,7 @@ const calcularPrecioFinal = (precioBase: number, lista: ListaPrecio | null): num
 
 const Ventas = () => {
   const navigate = useNavigate();
+  const { usuario } = useAuth();
   const [items, setItems] = useState<VentaItem[]>([]);
   const [montoRecibido, setMontoRecibido] = useState('');
   const [medioPago, setMedioPago] = useState('EFECTIVO');
@@ -77,6 +81,7 @@ const Ventas = () => {
   // Modal Ticket
   const [showModalTicket, setShowModalTicket] = useState(false);
   const [ultimaVenta, setUltimaVenta] = useState<any>(null);
+  const [ticketAImprimir, setTicketAImprimir] = useState<any>(null);
 
   // Edit Manual Quantity
   const [editandoItemIdx, setEditandoItemIdx] = useState<number | null>(null);
@@ -404,9 +409,12 @@ const Ventas = () => {
         };
 
         try {
-          const { imprimirTicket } = await import('../services/ticket.service');
           if (configImpresion === 'SIEMPRE') {
-            imprimirTicket(ventaImpresion);
+            setTicketAImprimir(ventaImpresion);
+            setTimeout(() => {
+              window.print();
+              setTimeout(() => setTicketAImprimir(null), 1000);
+            }, 500);
             limpiarPOS();
           } else if (configImpresion === 'PREGUNTAR') {
             setUltimaVenta(ventaImpresion);
@@ -429,9 +437,11 @@ const Ventas = () => {
 
   const handleDecisionTicket = (imprimir: boolean) => {
     if (imprimir && ultimaVenta) {
-      import('../services/ticket.service').then(({ imprimirTicket }) => {
-        imprimirTicket(ultimaVenta);
-      });
+      setTicketAImprimir(ultimaVenta);
+      setTimeout(() => {
+        window.print();
+        setTimeout(() => setTicketAImprimir(null), 1000);
+      }, 500);
     }
     setShowModalTicket(false);
     setUltimaVenta(null);
@@ -821,6 +831,15 @@ const Ventas = () => {
           >
             Guardar como...
           </button>
+          
+          {(usuario?.rol === 'ADMIN' || usuario?.rol === 'SUPERADMIN') && (
+            <Link
+              to="/facturacion"
+              className="w-full py-3 text-sm font-bold rounded-lg uppercase tracking-wider transition-all border-2 border-purple-200 text-purple-600 hover:bg-purple-50 bg-white shadow-sm flex items-center justify-center gap-2"
+            >
+              Ir a Facturación Electrónica
+            </Link>
+          )}
         </div>
       </div>
 
@@ -940,6 +959,14 @@ const Ventas = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {ticketAImprimir && (
+        ticketAImprimir.cae ? (
+          <FacturaA4 venta={ticketAImprimir} />
+        ) : (
+          <TicketVenta venta={ticketAImprimir} />
+        )
       )}
     </div>
   );
