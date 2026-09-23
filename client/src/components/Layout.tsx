@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { ShoppingCart, Wallet, Package, Users, LogOut, Bell, BarChart3, Moon, Sun } from 'lucide-react';
+import { ShoppingCart, Wallet, Package, Users, LogOut, Bell, BarChart3, Moon, Sun, ShieldAlert } from 'lucide-react';
 import api from '../services/api';
 
 const NavDropdown = ({ title, items }: { title: string, items: {label: string, disabled?: boolean, to?: string}[] }) => {
@@ -164,7 +164,8 @@ const Layout = () => {
               items={[
                 (usuario?.rol === 'SUPERADMIN' || usuario?.rol === 'ADMIN') ? { label: 'Puntos de venta', to: '/puntos-venta' } : null,
                 (usuario?.rol === 'SUPERADMIN' || usuario?.rol === 'ADMIN') ? { label: 'Usuarios', to: '/usuarios' } : null,
-                usuario?.rol === 'SUPERADMIN' ? { label: 'Parámetros', to: '/parametros' } : null
+                usuario?.rol === 'SUPERADMIN' ? { label: 'Parámetros', to: '/parametros' } : null,
+                usuario?.rol === 'SUPERADMIN' ? { label: 'Configuración ARCA', to: '/admin/configuraciones' } : null
               ].filter(Boolean) as any} 
             />
           </nav>
@@ -229,7 +230,14 @@ const Layout = () => {
             {(usuario?.rol === 'ADMIN' || usuario?.rol === 'SUPERADMIN') && (
               <Link to="/facturacion" className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-gray-200 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 hover:border-blue-100 transition-colors gap-2 text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">
                 <Package size={24} />
-                <span className="font-medium">Facturación</span>
+                <span className="font-medium text-center">Facturación AFIP</span>
+              </Link>
+            )}
+
+            {usuario?.rol === 'SUPERADMIN' && (
+              <Link to="/admin/configuraciones" className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-gray-200 dark:bg-slate-700 hover:bg-red-50 dark:hover:bg-red-900/30 hover:border-red-100 transition-colors gap-2 text-gray-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400">
+                <ShieldAlert size={24} />
+                <span className="font-medium text-center">Conf. ARCA</span>
               </Link>
             )}
           </div>

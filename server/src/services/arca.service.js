@@ -62,7 +62,7 @@ class ArcaService {
             
             const ptoVta = comercio?.arcaPtoVta || datosVenta.puntoVenta || 1;
             const cbteTipo = datosVenta.tipoCbte || 11;
-            const concepto = 1;
+            const concepto = datosVenta.concepto || 1;
             const docTipo = datosVenta.clienteDocTipo || 99;
             const docNro = datosVenta.clienteDocNro || 0;
             const total = datosVenta.total;
@@ -94,6 +94,14 @@ class ArcaService {
                 MonId: 'PES',
                 MonCotiz: 1
             };
+
+            // Campos OBLIGATORIOS si es un Servicio (2) o Producto+Servicio (3)
+            if (concepto === 2 || concepto === 3) {
+                const dateNum = parseInt(date);
+                payload.FchServDesde = datosVenta.fechaServicioDesde ? parseInt(datosVenta.fechaServicioDesde) : dateNum;
+                payload.FchServHasta = datosVenta.fechaServicioHasta ? parseInt(datosVenta.fechaServicioHasta) : dateNum;
+                payload.FchVtoPago = datosVenta.vtoPago ? parseInt(datosVenta.vtoPago) : dateNum;
+            }
 
             const res = await wsfe.FECAESolicitar({
                 token, sign, cuit, payload

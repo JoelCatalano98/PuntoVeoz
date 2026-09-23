@@ -197,7 +197,11 @@ model Venta {
   nroFactura        Int?
   cae               String?
   vencimientoCae    DateTime?
+  vtoCae            String?
   estadoFiscal      EstadoFiscal @default(NO_APLICA)
+  concepto          Int?
+  fechaServicioDesde String?
+  fechaServicioHasta String?
 
   listaPrecioId   Int?
   listaPrecio     ListaPrecio? @relation(fields: [listaPrecioId], references: [id])
@@ -360,7 +364,9 @@ model PuntoVenta {
   id         Int            @id @default(autoincrement())
   comercioId Int
   comercio   Comercio       @relation(fields: [comercioId], references: [id])
-  nombre     String
+  nombre     String?
+  descripcion String?
+  numero     Int?
   tipo       TipoPuntoVenta @default(MANUAL)
   numeroArca Int?
   activo     Boolean        @default(true)

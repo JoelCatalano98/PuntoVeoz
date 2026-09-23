@@ -83,7 +83,20 @@ async function postArcaConfig(req, res, next) {
     }
 }
 
+async function deleteArcaTokens(req, res, next) {
+    try {
+        const comercioId = req.comercioId;
+        await prisma.arcaToken.deleteMany({
+            where: { comercioId }
+        });
+        res.json({ message: 'Tokens purgados con éxito' });
+    } catch (error) {
+        next(error);
+    }
+}
+
 module.exports = {
     getArcaConfig,
-    postArcaConfig
+    postArcaConfig,
+    deleteArcaTokens
 };

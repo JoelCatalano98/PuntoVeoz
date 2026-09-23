@@ -577,7 +577,7 @@ const arcaService = require('./arca.service');
 
 // ... (other functions)
 
-async function facturarAfip({ comercioId, ventaId, clienteId }) {
+async function facturarAfip({ comercioId, ventaId, clienteId, concepto = 1 }) {
   // 1. Validar venta y cliente fuera de la transacción si AFIP tarda
   const venta = await prisma.venta.findFirst({
     where: { id: ventaId, comercioId },
@@ -617,7 +617,8 @@ async function facturarAfip({ comercioId, ventaId, clienteId }) {
     tipoCbte: 11, // Factura C
     clienteDocTipo: docTipo,
     clienteDocNro: Number(cliente.numeroDoc.replace(/\D/g, '')),
-    total: venta.total.toNumber()
+    total: venta.total.toNumber(),
+    concepto
   };
 
   // 2. Llamada a AFIP (fuera de la transacción de DB para evitar lockeos largos)

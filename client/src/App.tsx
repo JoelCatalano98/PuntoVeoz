@@ -28,7 +28,8 @@ import AjusteStock from './pages/AjusteStock';
 import HistorialStock from './pages/HistorialStock';
 import StockValorizado from './pages/StockValorizado';
 import DocumentoForm from './pages/DocumentoForm';
-import FacturacionDiferida from './pages/FacturacionDiferida';
+import Facturacion from './pages/Facturacion';
+import ConfiguracionesAdmin from './pages/ConfiguracionesAdmin';
 
 function App() {
   return (
@@ -67,12 +68,13 @@ function App() {
                 <Route path="/ajuste-stock" element={<AjusteStock />} />
                 <Route path="/historial-stock" element={<HistorialStock />} />
                 <Route path="/stock-valorizado" element={<StockValorizado />} />
-                <Route path="/facturacion" element={<FacturacionDiferida />} />
+                <Route path="/facturacion" element={<Facturacion />} />
               </Route>
 
               {/* Rutas solo para SUPERADMIN */}
               <Route element={<RutaProtegida rolesPermitidos={['SUPERADMIN']} />}>
                 <Route path="/parametros" element={<Parametros />} />
+                <Route path="/admin/configuraciones" element={<ConfiguracionesAdmin />} />
               </Route>
 
               <Route path="/" element={<Navigate to="/dashboard" replace />} />

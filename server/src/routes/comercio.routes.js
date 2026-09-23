@@ -10,5 +10,6 @@ router.use(requireAuth, attachTenant, requireRole('SUPERADMIN'));
 
 router.get('/arca-config', comercioController.getArcaConfig);
 router.post('/arca-config', comercioController.postArcaConfig);
+router.delete('/arca-tokens', comercioController.deleteArcaTokens);
 
 module.exports = router;

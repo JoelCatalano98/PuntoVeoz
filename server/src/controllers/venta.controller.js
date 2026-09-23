@@ -349,7 +349,7 @@ async function facturarAfip(req, res, next) {
   try {
     const comercioId = req.comercioId;
     const ventaId = Number(req.params.id);
-    const { clienteId } = req.body;
+    const { clienteId, concepto } = req.body;
 
     if (!clienteId || isNaN(Number(clienteId))) {
       return res.status(400).json({ error: 'El clienteId es obligatorio y debe ser válido' });
@@ -358,7 +358,8 @@ async function facturarAfip(req, res, next) {
     const ventaActualizada = await ventaService.facturarAfip({
       comercioId,
       ventaId,
-      clienteId: Number(clienteId)
+      clienteId: Number(clienteId),
+      concepto: concepto ? Number(concepto) : 1
     });
 
     res.json(ventaActualizada);

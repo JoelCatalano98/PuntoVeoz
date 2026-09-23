@@ -21,6 +21,7 @@ const stockRoutes = require('./routes/stock.routes');
 const listaPrecioRoutes = require('./routes/listaPrecio.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const comercioRoutes = require('./routes/comercio.routes');
+const arcaRoutes = require('./routes/arca.routes');
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use('/api/stock', stockRoutes);
 app.use('/api/listas-precio', listaPrecioRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/comercio', comercioRoutes);
+app.use('/api/arca', arcaRoutes);
 
 // Endpoint de prueba (Health Check)
 app.get('/api/health', (req, res) => {
