@@ -17,11 +17,18 @@ async function crearVenta(req, res, next) {
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      if (!Number.isInteger(item.productoId) || item.productoId <= 0) {
+      const esItemManual = item.productoId === null || item.productoId === undefined;
+
+      if (esItemManual) {
+        if (!item.descripcion || typeof item.descripcion !== 'string' || !item.descripcion.trim()) {
+          return res.status(400).json({ error: `El item en la posición ${i} no tiene producto ni descripción manual` });
+        }
+      } else if (!Number.isInteger(item.productoId) || item.productoId <= 0) {
         return res.status(400).json({ error: `El item en la posición ${i} tiene un productoId inválido` });
       }
+
       if (!Number.isInteger(item.cantidad) || item.cantidad <= 0) {
-        return res.status(400).json({ error: `La cantidad del producto con ID ${item.productoId} debe ser un número entero positivo` });
+        return res.status(400).json({ error: `La cantidad del item en la posición ${i} debe ser un número entero positivo` });
       }
     }
 
@@ -323,11 +330,18 @@ async function actualizarPresupuesto(req, res, next) {
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      if (!Number.isInteger(item.productoId) || item.productoId <= 0) {
+      const esItemManual = item.productoId === null || item.productoId === undefined;
+
+      if (esItemManual) {
+        if (!item.descripcion || typeof item.descripcion !== 'string' || !item.descripcion.trim()) {
+          return res.status(400).json({ error: `El item en la posición ${i} no tiene producto ni descripción manual` });
+        }
+      } else if (!Number.isInteger(item.productoId) || item.productoId <= 0) {
         return res.status(400).json({ error: `El item en la posición ${i} tiene un productoId inválido` });
       }
+
       if (!Number.isInteger(item.cantidad) || item.cantidad <= 0) {
-        return res.status(400).json({ error: `La cantidad del producto con ID ${item.productoId} debe ser un número entero positivo` });
+        return res.status(400).json({ error: `La cantidad del item en la posición ${i} debe ser un número entero positivo` });
       }
     }
 
@@ -349,7 +363,7 @@ async function facturarAfip(req, res, next) {
   try {
     const comercioId = req.comercioId;
     const ventaId = Number(req.params.id);
-    const { clienteId, concepto } = req.body;
+    const { clienteId, concepto, esVentaNueva } = req.body;
 
     if (!clienteId || isNaN(Number(clienteId))) {
       return res.status(400).json({ error: 'El clienteId es obligatorio y debe ser válido' });
@@ -364,7 +378,33 @@ async function facturarAfip(req, res, next) {
 
     res.json(ventaActualizada);
   } catch (error) {
-    // Si el error viene de AFIP o es de validación
+    // Si fue una venta creada en este mismo instante y AFIP falló, hacemos ROLLBACK DURO (borrado)
+    if (req.body.esVentaNueva) {
+      try {
+        const prisma = require('../config/prisma');
+        const ventaId = Number(req.params.id);
+        const comercioId = req.comercioId;
+
+        // 1. Restaurar stock de los items
+        const venta = await prisma.venta.findUnique({ where: { id: ventaId }, include: { items: true } });
+        if (venta) {
+          for (const item of venta.items) {
+            await prisma.producto.update({
+              where: { id: item.productoId },
+              data: { stockActual: { increment: item.cantidad } }
+            });
+          }
+          // 2. Borrar dependencias y la venta
+          await prisma.movimientoStock.deleteMany({ where: { ventaId } });
+          await prisma.movimientoCaja.deleteMany({ where: { ventaId } });
+          await prisma.ventaItem.deleteMany({ where: { ventaId } });
+          await prisma.venta.delete({ where: { id: ventaId, comercioId } });
+        }
+      } catch (rollbackError) {
+        console.error('Error FATAL durante el rollback de Venta:', rollbackError);
+      }
+    }
+
     res.status(400).json({ error: error.message || 'Error al comunicarse con AFIP' });
   }
 }
@@ -374,12 +414,27 @@ async function testArcaConnection(req, res, next) {
     const comercioId = req.comercioId;
     const arcaService = require('../services/arca.service');
     const prisma = require('../config/prisma');
-    
-    const comercio = await prisma.comercio.findUnique({ where: { id: comercioId } });
-    const ptoVta = comercio?.arcaPtoVta || 1;
 
-    // Factura C (11) por defecto para test
-    const ultimoCmp = await arcaService.obtenerUltimoComprobante(comercioId, ptoVta, 11);
+    let { ptoVta, cbteTipo } = req.query;
+
+    if (!ptoVta || !cbteTipo) {
+      const comercio = await prisma.comercio.findUnique({ where: { id: comercioId } });
+      ptoVta = ptoVta || comercio?.arcaPtoVta || 1;
+      cbteTipo = cbteTipo || 11; // Factura C (11) por defecto
+    }
+
+    const comercioActualizado = await prisma.comercio.findUnique({ where: { id: comercioId } });
+    const modoBD = comercioActualizado?.arcaModo;
+    const isProductionVal = modoBD === 'produccion';
+
+    const ultimoCmp = await arcaService.obtenerUltimoComprobante(comercioId, Number(ptoVta), Number(cbteTipo));
+
+    console.log(`[TEST ARCA] Entorno Detectado: ${modoBD} (isProduction: ${isProductionVal}) | CUIT: ${comercioActualizado?.arcaCuit} | PtoVta: ${ptoVta} | CbteTipo: ${cbteTipo} | RAW CbteNro AFIP: ${ultimoCmp}`);
+
+    if (ultimoCmp === 0 || ultimoCmp === '0') {
+      return res.json({ success: true, isZero: true, message: 'No tienes comprobantes emitidos para este Punto de Venta y Tipo' });
+    }
+
     res.json({ success: true, ultimoComprobante: ultimoCmp });
   } catch (error) {
     res.status(500).json({ error: error.message });

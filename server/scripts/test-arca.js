@@ -13,8 +13,9 @@ async function runTests() {
     }
     
     // Verificamos el modo
+    const isProduction = comercio.arcaModo === 'produccion';
     console.log(`Comercio ID: ${comercio.id}, CUIT: ${comercio.arcaCuit}, MODO ACTUAL EN BD: ${comercio.arcaModo}`);
-    console.log('NOTA: Forzando en memoria la ejecución hacia HOMOLOGACIÓN (sin modificar la BD)');
+    console.log(`NOTA: Usando entorno dinámico basado en BD (isProduction: ${isProduction})`);
 
     const certPath = path.resolve(__dirname, '../certs/arca.crt');
     const keyPath = path.resolve(__dirname, '../certs/arca.key');
@@ -39,7 +40,7 @@ async function runTests() {
             comercioId: comercio.id,
             certPath,
             keyPath,
-            isProduction: false,
+            isProduction: isProduction,
             service: 'wsfe'
         });
         console.log('\n[Respuesta WSAA Parseada]:');
@@ -49,7 +50,7 @@ async function runTests() {
 
         console.log('\n>>> PASO 3: FEDummy a través de WsfeClient');
         const WsfeClient = require('../src/services/arca/wsfe.client');
-        const wsfe = new WsfeClient(false); // FORZADO a homologacion
+        const wsfe = new WsfeClient(isProduction);
         const cuit = Number(comercio.arcaCuit.replace(/[^0-9]/g, ''));
         
         const dummyResult = await wsfe.FEDummy();
@@ -104,7 +105,7 @@ async function runTests() {
     
     await prisma.arcaToken.deleteMany({ where: { comercioId: comercio.id } }); // Forzamos q no use caché
     try {
-        await wsaaClient.getToken({ comercioId: comercio.id, certPath, keyPath, isProduction: false, service: 'wsfe' });
+        await wsaaClient.getToken({ comercioId: comercio.id, certPath, keyPath, isProduction: isProduction, service: 'wsfe' });
         console.log('FALLÓ: Pasó sin error incluso faltando el certificado.');
     } catch (e) {
         console.log('[Éxito] Error capturado correctamente:', e.message);

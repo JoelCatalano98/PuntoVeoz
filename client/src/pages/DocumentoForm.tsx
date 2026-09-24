@@ -336,7 +336,7 @@ const DocumentoForm = () => {
                   {items.map((item, idx) => (
                     <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
                       <td className="p-3">
-                        <div className="font-bold text-sm text-gray-800 dark:text-slate-200">{item.producto.nombre}</div>
+                        <div className="font-bold text-sm text-gray-800 dark:text-slate-200">{item.descripcion || item.producto.nombre}</div>
                         <div className="text-xs text-gray-500 dark:text-slate-400 font-mono">{item.producto.codigoBarras || 'S/N'}</div>
                       </td>
                       <td className="p-3 text-center">

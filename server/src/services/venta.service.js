@@ -57,21 +57,26 @@ async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, it
 
     // 1.a) y 1.b) Validar productos y stock
     for (const item of items) {
-      const producto = await tx.producto.findUnique({
-        where: { id: item.productoId }
-      });
+      let producto = null;
+      if (item.productoId) {
+        producto = await tx.producto.findUnique({
+          where: { id: item.productoId }
+        });
 
-      if (!producto || producto.comercioId !== comercioId) {
-        throw new Error(`El producto con ID ${item.productoId} no existe o no pertenece a este comercio`);
-      }
+        if (!producto || producto.comercioId !== comercioId) {
+          throw new Error(`El producto con ID ${item.productoId} no existe o no pertenece a este comercio`);
+        }
 
-      if (producto.stockActual < item.cantidad) {
-        throw new Error(`No hay stock suficiente para el producto: ${producto.nombre}`);
+        if (producto.stockActual < item.cantidad) {
+          throw new Error(`No hay stock suficiente para el producto: ${producto.nombre}`);
+        }
       }
 
       // 2. CÁLCULOS
       // 2.a) Subtotal del item usando dinero.js
-      let precioLista = dinero.toDecimal(producto.precioVenta);
+      let precioLista = item.precioUnitario !== undefined && item.precioUnitario !== null 
+        ? dinero.toDecimal(item.precioUnitario) 
+        : (producto ? dinero.toDecimal(producto.precioVenta) : dinero.toDecimal(0));
       if (listaPrecio) {
         const valorLista = dinero.toDecimal(listaPrecio.valor);
         if (listaPrecio.tipoModificador === 'PORCENTAJE') {
@@ -93,8 +98,9 @@ async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, it
       subtotales.push(subtotal);
 
       productosValidados.push({
-        productoId: item.productoId,
+        productoId: item.productoId || null,
         cantidad: item.cantidad,
+        descripcion: item.descripcion || (producto ? producto.nombre : 'Ítem Manual'),
         producto,
         precioUnitarioFinal,
         descuentoLinea: bonifPorcentaje.toNumber(),
@@ -145,6 +151,7 @@ async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, it
           create: productosValidados.map(item => ({
             productoId: item.productoId,
             cantidad: item.cantidad,
+            descripcion: item.descripcion,
             precioUnitario: item.precioUnitarioFinal.toNumber(),
             descuentoLinea: item.descuentoLinea,
             subtotal: item.subtotal.toNumber()
@@ -163,6 +170,7 @@ async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, it
     if (estado === 'COMPLETADA' || estado === 'FACTURADA') {
       // 3.c) Actualizar stock y crear MovimientoStock para cada item
       for (const item of productosValidados) {
+        if (!item.productoId) continue;
         const resultado = await tx.producto.updateMany({
           where: { 
             id: item.productoId, 
@@ -235,6 +243,7 @@ async function anularVenta(comercioId, usuarioId, ventaId) {
     if (venta.estado === 'COMPLETADA' || venta.estado === 'FACTURADA' || venta.estado === 'REMITO_APROBADO') {
       // 2. Devolver Stock y registrar movimientos
       for (const item of venta.items) {
+        if (!item.productoId) continue;
         await tx.producto.update({
           where: { id: item.productoId },
           data: { stockActual: { increment: item.cantidad } }
@@ -288,6 +297,7 @@ async function aprobarRemito({ comercioId, usuarioId, ventaId }) {
 
     // Actualizar stock
     for (const item of venta.items) {
+      if (!item.productoId) continue;
       const resultado = await tx.producto.updateMany({
         where: { id: item.productoId, stockActual: { gte: item.cantidad } },
         data: { stockActual: { decrement: item.cantidad } }
@@ -388,6 +398,7 @@ async function aprobarYFacturarRemito({ comercioId, usuarioId, ventaId, apertura
 
     // 1. Descontar Stock
     for (const item of venta.items) {
+      if (!item.productoId) continue;
       const resultado = await tx.producto.updateMany({
         where: { id: item.productoId, stockActual: { gte: item.cantidad } },
         data: { stockActual: { decrement: item.cantidad } }
@@ -453,6 +464,7 @@ async function facturarPresupuesto({ comercioId, usuarioId, ventaId, aperturaCaj
     const vuelto = dinero.calcularVuelto(venta.total, montoFinal.toNumber());
 
     for (const item of venta.items) {
+      if (!item.productoId) continue;
       const resultado = await tx.producto.updateMany({
         where: { id: item.productoId, stockActual: { gte: item.cantidad } },
         data: { stockActual: { decrement: item.cantidad } }
@@ -529,22 +541,29 @@ async function actualizarPresupuesto({ comercioId, usuarioId, ventaId, clienteId
     const itemsData = [];
 
     for (const item of items) {
-      const producto = await tx.producto.findUnique({
-        where: { id: item.productoId }
-      });
+      let producto = null;
+      let precioUnitario = 0;
+      if (item.productoId) {
+        producto = await tx.producto.findUnique({
+          where: { id: item.productoId }
+        });
 
-      if (!producto || producto.comercioId !== comercioId) {
-        throw new Error(`El producto con ID ${item.productoId} no existe`);
+        if (!producto || producto.comercioId !== comercioId) {
+          throw new Error(`El producto con ID ${item.productoId} no existe`);
+        }
+        precioUnitario = producto.precioVenta;
+      } else {
+        precioUnitario = item.precioUnitario || 0;
       }
 
-      const precioUnitario = producto.precioVenta;
       const subtotal = dinero.multiplicar(precioUnitario, item.cantidad);
       total = dinero.sumar(total, subtotal);
 
       itemsData.push({
-        productoId: producto.id,
+        productoId: producto ? producto.id : null,
         cantidad: item.cantidad,
         precioUnitario,
+        descripcion: item.descripcion || (producto ? producto.nombre : 'Ítem Manual'),
         descuentoLinea: 0,
         subtotal
       });
@@ -638,6 +657,14 @@ async function facturarAfip({ comercioId, ventaId, clienteId, concepto = 1 }) {
         afipResponse.vencimientoCae.substring(6,8)
       ) : null,
       estadoFiscal: 'TIMBRADA'
+    },
+    include: {
+      items: {
+        include: { producto: true }
+      },
+      cliente: true,
+      puntoVenta: true,
+      usuario: true
     }
   });
 

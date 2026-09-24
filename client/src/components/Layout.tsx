@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { ShoppingCart, Wallet, Package, Users, LogOut, Bell, BarChart3, Moon, Sun, ShieldAlert } from 'lucide-react';
 import api from '../services/api';
 
-const NavDropdown = ({ title, items }: { title: string, items: {label: string, disabled?: boolean, to?: string}[] }) => {
+const NavDropdown = ({ title, items }: { title: string, items: { label: string, disabled?: boolean, to?: string }[] }) => {
   if (!items || items.length === 0) return null;
   return (
     <div className="relative group h-full flex items-center">
@@ -48,7 +48,7 @@ const NotificationBell = () => {
 
   return (
     <div className="relative">
-      <button 
+      <button
         onClick={() => setShowDropdown(!showDropdown)}
         className="relative p-2 rounded-full hover:bg-black/10 transition-colors outline-none"
       >
@@ -102,35 +102,35 @@ const Layout = () => {
       <header className="flex-none h-[52px] bg-brand-light dark:bg-slate-800 text-brand-dark dark:text-slate-100 flex items-center justify-between px-4 z-40 border-b border-black/10 dark:border-slate-700 print:hidden transition-colors duration-200">
         <div className="flex items-center h-full gap-6">
           <div className="font-bold text-lg mr-4">Punto Veloz</div>
-          
+
           <nav className="flex items-center h-full gap-1">
-            <NavDropdown 
-              title="Ventas" 
+            <NavDropdown
+              title="Ventas"
               items={[
                 { label: 'Pantalla de ventas', to: '/ventas' },
                 { label: 'Historial de ventas', to: '/ventas-historial' },
                 { label: 'Órdenes de retiro/remitos', to: '/ventas-historial?tab=REMITOS' },
                 { label: 'Presupuestos', to: '/ventas-historial?tab=PRESUPUESTO' },
-                { label: 'Facturación (AFIP)', to: '/facturacion' }
-              ]} 
+                { label: 'Facturación (ARCA)', to: '/facturacion' }
+              ]}
             />
-            
-            <NavDropdown 
-              title="Compras" 
+
+            <NavDropdown
+              title="Compras"
               items={[
                 { label: 'Cargar Compra', to: '/compras-carga' },
                 { label: 'Historial de Compras', to: '/compras-historial' },
                 { label: 'Proveedores', to: '/proveedores' },
                 { label: 'Órdenes de entrega', disabled: true }
-              ]} 
+              ]}
             />
-            
+
             <Link to="/clientes" className="px-3 py-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors h-full font-medium flex items-center text-brand-dark dark:text-slate-100">
               Clientes
             </Link>
-            
-            <NavDropdown 
-              title="Producto" 
+
+            <NavDropdown
+              title="Producto"
               items={[
                 { label: 'Productos', to: '/productos' },
                 { label: 'Crear Producto', to: '/productos?nuevo=true' },
@@ -138,42 +138,42 @@ const Layout = () => {
                 { label: 'Listas de Precios', to: '/listas-precio' },
                 { label: 'Unidades de Medida', to: '/unidades' },
                 { label: 'Impresión de Etiquetas', to: '/etiquetas' }
-              ]} 
+              ]}
             />
 
-            <NavDropdown 
-              title="Stock e Inventario" 
+            <NavDropdown
+              title="Stock e Inventario"
               items={[
                 { label: 'Stock Valorizado', to: '/stock-valorizado' },
                 { label: 'Ajuste Manual de Stock', to: '/ajuste-stock' },
                 { label: 'Historial de Movimientos', to: '/historial-stock' }
-              ]} 
+              ]}
             />
 
-            <NavDropdown 
-              title="Utilidades" 
+            <NavDropdown
+              title="Utilidades"
               items={[
                 { label: 'Caja', to: '/caja' },
                 { label: 'Movimientos de Caja', to: '/caja-movimientos' },
                 { label: 'Historial de Arqueos', to: '/caja-cierres' }
-              ]} 
+              ]}
             />
-            
-            <NavDropdown 
-              title="Configuraciones" 
+
+            <NavDropdown
+              title="Configuraciones"
               items={[
                 (usuario?.rol === 'SUPERADMIN' || usuario?.rol === 'ADMIN') ? { label: 'Puntos de venta', to: '/puntos-venta' } : null,
                 (usuario?.rol === 'SUPERADMIN' || usuario?.rol === 'ADMIN') ? { label: 'Usuarios', to: '/usuarios' } : null,
                 usuario?.rol === 'SUPERADMIN' ? { label: 'Parámetros', to: '/parametros' } : null,
                 usuario?.rol === 'SUPERADMIN' ? { label: 'Configuración ARCA', to: '/admin/configuraciones' } : null
-              ].filter(Boolean) as any} 
+              ].filter(Boolean) as any}
             />
           </nav>
         </div>
 
         <div className="flex items-center gap-4">
           <NotificationBell />
-          <button 
+          <button
             onClick={toggleTheme}
             className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors outline-none"
             title="Alternar Modo Oscuro"
@@ -183,7 +183,7 @@ const Layout = () => {
           <span className="font-medium text-brand-dark/80 dark:text-slate-300 border-l border-brand-dark/20 dark:border-slate-600 pl-4">
             {usuario?.nombre || 'Usuario'}
           </span>
-          <button 
+          <button
             onClick={handleLogout}
             className="flex items-center gap-2 px-3 py-1.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors font-medium"
             title="Cerrar sesión"
@@ -206,22 +206,22 @@ const Layout = () => {
               <BarChart3 size={24} />
               <span className="font-medium">Dashboard</span>
             </Link>
-            
+
             <Link to="/ventas" className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-gray-200 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 hover:border-blue-100 transition-colors gap-2 text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">
               <ShoppingCart size={24} />
               <span className="font-medium">Ventas</span>
             </Link>
-            
+
             <Link to="/caja" className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-gray-200 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 hover:border-blue-100 transition-colors gap-2 text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">
               <Wallet size={24} />
               <span className="font-medium">Caja</span>
             </Link>
-            
+
             <Link to="/productos" className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-gray-200 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 hover:border-blue-100 transition-colors gap-2 text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">
               <Package size={24} />
               <span className="font-medium">Productos</span>
             </Link>
-            
+
             <Link to="/clientes" className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-gray-200 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 hover:border-blue-100 transition-colors gap-2 text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">
               <Users size={24} />
               <span className="font-medium">Clientes</span>
@@ -230,7 +230,7 @@ const Layout = () => {
             {(usuario?.rol === 'ADMIN' || usuario?.rol === 'SUPERADMIN') && (
               <Link to="/facturacion" className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-gray-200 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 hover:border-blue-100 transition-colors gap-2 text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">
                 <Package size={24} />
-                <span className="font-medium text-center">Facturación AFIP</span>
+                <span className="font-medium text-center">Facturación ARCA</span>
               </Link>
             )}
 

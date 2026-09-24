@@ -34,16 +34,15 @@ export const FacturaA4: React.FC<FacturaA4Props> = ({ venta }) => {
 
   const generarQrUrl = () => {
     if (!venta.cae) return '';
-    const ptoVta = 1;
-    let ptoVtaNum = 1;
+    let ptoVtaNum = venta.puntoVenta?.numero || 1;
     let nroCmp = venta.id;
     if (venta.nroFactura) {
-      const parts = venta.nroFactura.split('-');
-      if (parts.length === 2) {
-        ptoVtaNum = Number(parts[0]);
-        nroCmp = Number(parts[1]);
-      }
+      nroCmp = Number(venta.nroFactura);
     }
+
+    const ptoVtaStr = String(ptoVtaNum).padStart(4, '0');
+    const nroStr = String(nroCmp).padStart(8, '0');
+    const facturaFormateada = `${ptoVtaStr}-${nroStr}`;
 
     const datosQR = {
       ver: 1,
@@ -107,7 +106,7 @@ export const FacturaA4: React.FC<FacturaA4Props> = ({ venta }) => {
           <div>
             <h1 className="text-2xl font-black uppercase tracking-tight">FACTURA</h1>
             <div className="text-lg font-bold mt-1 mb-3">
-              N° {venta.nroFactura || `0001-${venta.id.toString().padStart(8, '0')}`}
+              N° {venta.nroFactura ? `${String(venta.puntoVenta?.numero || 1).padStart(4, '0')}-${String(venta.nroFactura).padStart(8, '0')}` : `0001-${venta.id.toString().padStart(8, '0')}`}
             </div>
             <p className="text-sm font-bold mb-3">Fecha de Emisión: {new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(venta.createdAt))}</p>
           </div>
@@ -152,10 +151,10 @@ export const FacturaA4: React.FC<FacturaA4Props> = ({ venta }) => {
             </tr>
           </thead>
           <tbody className="align-top">
-            {venta.items.map((item: any, idx: number) => (
+            {(venta.items || []).map((item: any, idx: number) => (
               <tr key={idx}>
                 <td className="py-1.5 px-2 font-mono text-[11px] border-r border-black">{item.producto?.codigoBarras || '-'}</td>
-                <td className="py-1.5 px-2 text-[11px] font-medium border-r border-black uppercase">{item.producto?.nombre}</td>
+                <td className="py-1.5 px-2 text-[11px] font-medium border-r border-black uppercase">{item.descripcion || item.producto?.nombre}</td>
                 <td className="py-1.5 px-2 text-center text-[11px] border-r border-black">{item.cantidad}</td>
                 <td className="py-1.5 px-2 text-right text-[11px] border-r border-black">{Number(item.precioUnitario).toFixed(2)}</td>
                 <td className="py-1.5 px-2 text-right text-[11px] border-r border-black">0.00</td>

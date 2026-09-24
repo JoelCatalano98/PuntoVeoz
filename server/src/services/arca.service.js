@@ -73,7 +73,16 @@ class ArcaService {
             });
             const nroFactura = lastVoucher + 1;
 
-            const date = new Date(Date.now() - ((new Date()).getTimezoneOffset() * 60000)).toISOString().split('T')[0].replace(/-/g, '');
+            const formatFechaAfip = (dateInput) => {
+                // Remove hyphens just in case they are present (e.g. from YYYY-MM-DD)
+                if (typeof dateInput === 'string' && dateInput.includes('-')) {
+                    dateInput = dateInput.replace(/-/g, '');
+                }
+                const d = dateInput && String(dateInput).length === 8 ? dateInput : new Date().toISOString().split('T')[0].replace(/-/g, '');
+                return d;
+            };
+
+            const dateStr = formatFechaAfip();
 
             const payload = {
                 CantReg: 1,
@@ -84,7 +93,7 @@ class ArcaService {
                 DocNro: docNro,
                 CbteDesde: nroFactura,
                 CbteHasta: nroFactura,
-                CbteFch: parseInt(date),
+                CbteFch: parseInt(dateStr),
                 ImpTotal: total,
                 ImpTotConc: 0,
                 ImpNeto: total,
@@ -97,10 +106,9 @@ class ArcaService {
 
             // Campos OBLIGATORIOS si es un Servicio (2) o Producto+Servicio (3)
             if (concepto === 2 || concepto === 3) {
-                const dateNum = parseInt(date);
-                payload.FchServDesde = datosVenta.fechaServicioDesde ? parseInt(datosVenta.fechaServicioDesde) : dateNum;
-                payload.FchServHasta = datosVenta.fechaServicioHasta ? parseInt(datosVenta.fechaServicioHasta) : dateNum;
-                payload.FchVtoPago = datosVenta.vtoPago ? parseInt(datosVenta.vtoPago) : dateNum;
+                payload.FchServDesde = formatFechaAfip(datosVenta.fechaServicioDesde);
+                payload.FchServHasta = formatFechaAfip(datosVenta.fechaServicioHasta);
+                payload.FchVtoPago = formatFechaAfip(datosVenta.vtoPago || datosVenta.vtoCae);
             }
 
             const res = await wsfe.FECAESolicitar({
@@ -114,6 +122,74 @@ class ArcaService {
             };
         } catch (error) {
             console.error('Error al emitir factura en ARCA:', error);
+            throw error;
+        }
+    }
+
+    async emitirNotaCredito(comercioId, datosOriginales) {
+        try {
+            const { wsfe, token, sign, cuit } = await this.getAuthTokens(comercioId);
+            
+            // Determinar Tipo de Comprobante (si original era Factura C=11, NC C=13)
+            let tipoCbte = 13; // Por defecto NC C
+            if (datosOriginales.tipoCbte === 6) tipoCbte = 8; // NC B
+            else if (datosOriginales.tipoCbte === 1) tipoCbte = 3; // NC A
+
+            const lastCmp = await wsfe.FECompUltimoAutorizado({
+                token, sign, cuit,
+                ptoVta: datosOriginales.puntoVenta,
+                cbteTipo: tipoCbte
+            });
+
+            const nroNC = lastCmp + 1;
+            const dateStr = new Date(Date.now() - ((new Date()).getTimezoneOffset() * 60000)).toISOString().split('T')[0].replace(/-/g, '');
+
+            const payload = {
+                CantReg: 1,
+                PtoVta: datosOriginales.puntoVenta,
+                CbteTipo: tipoCbte,
+                Concepto: datosOriginales.concepto || 1,
+                DocTipo: datosOriginales.clienteDocTipo,
+                DocNro: datosOriginales.clienteDocNro,
+                CbteDesde: nroNC,
+                CbteHasta: nroNC,
+                CbteFch: parseInt(dateStr),
+                ImpTotal: datosOriginales.total,
+                ImpTotConc: 0,
+                ImpNeto: datosOriginales.total,
+                ImpOpEx: 0,
+                ImpIVA: 0,
+                ImpTrib: 0,
+                MonId: 'PES',
+                MonCotiz: 1,
+                CbtesAsoc: {
+                    CbteAsoc: [
+                        {
+                            Tipo: datosOriginales.tipoCbte,
+                            PtoVta: datosOriginales.puntoVenta,
+                            Nro: datosOriginales.nroFactura
+                        }
+                    ]
+                }
+            };
+
+            if (payload.Concepto === 2 || payload.Concepto === 3) {
+                payload.FchServDesde = dateStr;
+                payload.FchServHasta = dateStr;
+                payload.FchVtoPago = dateStr;
+            }
+
+            const res = await wsfe.FECAESolicitar({
+                token, sign, cuit, payload
+            });
+            
+            return {
+                nroComprobante: nroNC,
+                cae: res.cae,
+                vencimientoCae: res.vencimientoCae
+            };
+        } catch (error) {
+            console.error('Error al emitir Nota de Crédito en ARCA:', error);
             throw error;
         }
     }

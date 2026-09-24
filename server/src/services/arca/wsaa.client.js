@@ -60,9 +60,10 @@ class WsaaClient {
         const tra = this.generarTRA(service);
         const cms = this.firmarTRA(tra, certContent, keyContent);
 
-        const WSDL_URL = isProduction 
-            ? 'https://wsaa.afip.gov.ar/ws/services/LoginCms?WSDL' 
-            : 'https://wsaahomo.afip.gov.ar/ws/services/LoginCms?WSDL';
+        const ENDPOINT_URL = isProduction 
+            ? 'https://wsaa.afip.gov.ar/ws/services/LoginCms' 
+            : 'https://wsaahomo.afip.gov.ar/ws/services/LoginCms';
+        const WSDL_URL = ENDPOINT_URL + '?WSDL';
         
         try {
             const soapOptions = {
@@ -70,7 +71,9 @@ class WsaaClient {
                 request: axiosInstance
             };
             const client = await soap.createClientAsync(WSDL_URL, soapOptions);
-            client.setEndpoint(WSDL_URL);
+            client.setEndpoint(ENDPOINT_URL);
+            
+            console.log(`[WSAA] Obteniendo Token contra URL EXACTA: ${ENDPOINT_URL} (isProduction: ${isProduction})`);
             const args = { in0: cms };
             const [result] = await client.loginCmsAsync(args);
 

@@ -4,6 +4,7 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import { RefreshCcw, XCircle, Search, AlertCircle, Printer, CheckCircle, FileText, PackageCheck, Send, Download, Edit2 } from 'lucide-react';
 import { Pagination } from '../components/Pagination';
+import { FacturaA4 } from '../components/FacturaA4';
 
 interface VentaItem {
   id: number;
@@ -534,7 +535,9 @@ const VentasHistorial = () => {
       )}
 
       {/* Documento A4 de Impresión (Estilo AFIP / ARCA) */}
-      {documentoImprimir && (
+      {documentoImprimir && documentoImprimir.venta.cae ? (
+        <FacturaA4 venta={documentoImprimir.venta} />
+      ) : documentoImprimir ? (
         <div className="hidden print:block absolute inset-0 bg-white" style={{ width: '210mm', minHeight: '297mm', padding: '15mm', margin: '0 auto', fontSize: '10pt', color: '#000', fontFamily: 'Arial, sans-serif' }}>
           <style>{`
             @page { size: A4; margin: 0; }
@@ -632,7 +635,7 @@ const VentasHistorial = () => {
                 {documentoImprimir.venta.items.map((item, idx) => (
                   <tr key={idx}>
                     <td className="py-1.5 px-2 font-mono text-[11px] border-r border-black">{item.producto?.codigoBarras || '-'}</td>
-                    <td className="py-1.5 px-2 text-[11px] font-medium border-r border-black uppercase">{item.producto?.nombre}</td>
+                    <td className="py-1.5 px-2 text-[11px] font-medium border-r border-black uppercase">{item.descripcion || item.producto?.nombre}</td>
                     <td className={`py-1.5 px-2 text-center text-[11px] ${(documentoImprimir.tipo === 'PRESUPUESTO' || documentoImprimir.tipo === 'FACTURA') ? 'border-r border-black' : ''}`}>{item.cantidad}</td>
                     {(documentoImprimir.tipo === 'PRESUPUESTO' || documentoImprimir.tipo === 'FACTURA') && (
                       <>
@@ -682,7 +685,7 @@ const VentasHistorial = () => {
             DOCUMENTO NO VÁLIDO COMO FACTURA - Generado por PuntoVeloz
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

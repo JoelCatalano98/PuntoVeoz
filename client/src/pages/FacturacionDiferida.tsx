@@ -271,7 +271,7 @@ export default function FacturacionDiferida() {
                 <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
                   {selectedVenta.items?.map((item: any) => (
                     <tr key={item.id}>
-                      <td className="p-2 font-medium text-gray-800 dark:text-slate-200">{item.producto?.nombre}</td>
+                      <td className="p-2 font-medium text-gray-800 dark:text-slate-200">{item.descripcion || item.producto?.nombre}</td>
                       <td className="p-2 text-center">{item.cantidad}</td>
                       <td className="p-2 text-right">${Number(item.precioUnitario).toFixed(2)}</td>
                       <td className="p-2 text-right font-bold">${Number(item.subtotal).toFixed(2)}</td>

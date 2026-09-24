@@ -44,7 +44,7 @@ export const TicketVenta: React.FC<TicketVentaProps> = ({ venta }) => {
 
       <div className="mb-2">
         <p><strong>Fecha:</strong> {new Date(venta.createdAt).toLocaleString()}</p>
-        <p><strong>Ticket N°:</strong> {venta.nroFactura || `0001-${venta.id.toString().padStart(8, '0')}`}</p>
+        <p><strong>Ticket N°:</strong> {venta.nroFactura ? `${String(venta.puntoVenta?.numero || 1).padStart(4, '0')}-${String(venta.nroFactura).padStart(8, '0')}` : `0001-${venta.id.toString().padStart(8, '0')}`}</p>
         <p><strong>Cajero:</strong> {venta.usuario?.nombre || 'Cajero'}</p>
         {venta.cliente && (
           <p><strong>Cliente:</strong> {venta.cliente.nombre || venta.cliente.razonSocial} ({venta.cliente.numeroDoc})</p>
@@ -61,10 +61,10 @@ export const TicketVenta: React.FC<TicketVentaProps> = ({ venta }) => {
             </tr>
           </thead>
           <tbody>
-            {venta.items.map((item: any, idx: number) => (
+            {(venta.items || []).map((item: any, idx: number) => (
               <tr key={idx}>
                 <td className="py-[2px]">
-                  {item.cantidad} x {item.producto?.nombre?.substring(0, 20)}
+                  {item.cantidad} x {(item.descripcion || item.producto?.nombre)?.substring(0, 20)}
                 </td>
                 <td className="text-right py-[2px]">${Number(item.subtotal).toFixed(2)}</td>
               </tr>

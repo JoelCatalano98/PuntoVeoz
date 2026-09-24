@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Server, Key, Save, CheckCircle, AlertTriangle, Plus, Trash2, Edit2, ShieldAlert } from 'lucide-react';
+import { Server, Key, Save, CheckCircle, AlertTriangle, Plus, Trash2, Edit2, ShieldAlert, Search } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -17,6 +17,9 @@ export default function ConfiguracionesAdmin() {
   // Certificados & Diagnóstico
   const [certStatus, setCertStatus] = useState({ certExists: false, keyExists: false });
   const [testeando, setTesteando] = useState(false);
+  const [diagPtoVta, setDiagPtoVta] = useState('1');
+  const [diagCbteTipo, setDiagCbteTipo] = useState('11');
+  const [consultandoUltimo, setConsultandoUltimo] = useState(false);
 
   // Puntos de Venta
   const [puntosVenta, setPuntosVenta] = useState<any[]>([]);
@@ -158,6 +161,24 @@ export default function ConfiguracionesAdmin() {
     }
   };
 
+  const consultarUltimoComprobante = async () => {
+    setConsultandoUltimo(true);
+    try {
+      const res = await api.get('/ventas/test-arca', {
+        params: { ptoVta: diagPtoVta, cbteTipo: diagCbteTipo }
+      });
+      if (res.data.isZero) {
+        toast.success(`✅ Conexión exitosa con ARCA. Último comprobante: 0 (Sin emisiones)`, { duration: 6000 });
+      } else {
+        toast.success(`✅ Último comprobante en AFIP: ${res.data.ultimoComprobante}`, { duration: 6000 });
+      }
+    } catch (e: any) {
+      toast.error(`❌ Error al consultar: ${e.response?.data?.error || e.message}`);
+    } finally {
+      setConsultandoUltimo(false);
+    }
+  };
+
   if (cargando) {
     return <div className="h-full flex items-center justify-center text-gray-500">Cargando configuraciones ARCA...</div>;
   }
@@ -237,27 +258,64 @@ export default function ConfiguracionesAdmin() {
         </form>
 
         {/* SECCIÓN MEDIA: CERTIFICADOS Y DIAGNÓSTICO */}
-        <div className="p-4 border-b border-gray-300 dark:border-slate-700 flex justify-between items-center bg-gray-100 dark:bg-slate-800">
-          <div className="flex items-center gap-6">
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-gray-600 dark:text-slate-400 uppercase tracking-wide mb-1">Certificados Instalados</span>
-              <div className="flex gap-4">
-                <span className={`text-xs font-bold flex items-center gap-1 ${certStatus.certExists ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {certStatus.certExists ? <CheckCircle size={14}/> : <AlertTriangle size={14}/>} arca.crt
-                </span>
-                <span className={`text-xs font-bold flex items-center gap-1 ${certStatus.keyExists ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {certStatus.keyExists ? <CheckCircle size={14}/> : <AlertTriangle size={14}/>} arca.key
-                </span>
+        <div className="p-4 border-b border-gray-300 dark:border-slate-700 flex flex-col gap-4 bg-gray-100 dark:bg-slate-800">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-6">
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-gray-600 dark:text-slate-400 uppercase tracking-wide mb-1">Certificados Instalados</span>
+                <div className="flex gap-4">
+                  <span className={`text-xs font-bold flex items-center gap-1 ${certStatus.certExists ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {certStatus.certExists ? <CheckCircle size={14}/> : <AlertTriangle size={14}/>} arca.crt
+                  </span>
+                  <span className={`text-xs font-bold flex items-center gap-1 ${certStatus.keyExists ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {certStatus.keyExists ? <CheckCircle size={14}/> : <AlertTriangle size={14}/>} arca.key
+                  </span>
+                </div>
               </div>
             </div>
+            <div className="flex items-center gap-2">
+              <button onClick={testConexion} disabled={testeando} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-bold flex items-center gap-2 border border-blue-800 rounded-sm disabled:opacity-50">
+                <Server size={14} /> Probar Conexión (Ping)
+              </button>
+              <button onClick={purgarCache} className="bg-gray-800 hover:bg-black text-white px-4 py-2 text-sm font-bold flex items-center gap-2 border border-gray-900 rounded-sm">
+                <Key size={14} /> Purgar Caché WSAA
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={testConexion} disabled={testeando} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-bold flex items-center gap-2 border border-blue-800 rounded-sm disabled:opacity-50">
-              <Server size={14} /> Probar Conexión (Ping)
-            </button>
-            <button onClick={purgarCache} className="bg-gray-800 hover:bg-black text-white px-4 py-2 text-sm font-bold flex items-center gap-2 border border-gray-900 rounded-sm">
-              <Key size={14} /> Purgar Caché WSAA
-            </button>
+
+          <div className="flex flex-col pt-3 border-t border-gray-300 dark:border-slate-700">
+            <span className="text-xs font-bold text-gray-600 dark:text-slate-400 uppercase tracking-wide mb-2">Diagnóstico: Último Comprobante Autorizado</span>
+            <div className="flex items-end gap-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1">Punto de Venta</label>
+                <input 
+                  type="number" 
+                  value={diagPtoVta} 
+                  onChange={e => setDiagPtoVta(e.target.value)} 
+                  className="w-24 p-2 text-sm border border-gray-400 dark:border-slate-600 rounded-sm bg-white dark:bg-slate-900 focus:outline-none" 
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1">Tipo de Comprobante</label>
+                <select 
+                  value={diagCbteTipo} 
+                  onChange={e => setDiagCbteTipo(e.target.value)} 
+                  className="w-48 p-2 text-sm border border-gray-400 dark:border-slate-600 rounded-sm bg-white dark:bg-slate-900 focus:outline-none"
+                >
+                  <option value="11">Factura C (11)</option>
+                  <option value="6">Factura B (6)</option>
+                  <option value="1">Factura A (1)</option>
+                </select>
+              </div>
+              <button 
+                onClick={consultarUltimoComprobante} 
+                disabled={consultandoUltimo} 
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-sm font-bold flex items-center gap-2 border border-indigo-800 rounded-sm disabled:opacity-50"
+              >
+                <Search size={14} /> Consultar Último
+              </button>
+            </div>
+
           </div>
         </div>
 

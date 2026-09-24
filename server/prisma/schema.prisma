@@ -240,9 +240,10 @@ model VentaItem {
   id             Int      @id @default(autoincrement())
   ventaId        Int
   venta          Venta    @relation(fields: [ventaId], references: [id])
-  productoId     Int
-  producto       Producto @relation(fields: [productoId], references: [id])
+  productoId     Int?
+  producto       Producto? @relation(fields: [productoId], references: [id])
   cantidad       Int
+  descripcion    String?
   precioUnitario Decimal  @db.Decimal(10, 2) // precio al momento de la venta
   descuentoLinea Decimal  @default(0) @db.Decimal(10, 2)
   subtotal       Decimal  @db.Decimal(10, 2)

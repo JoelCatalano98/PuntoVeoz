@@ -26,12 +26,16 @@ export default function Facturacion() {
   const [items, setItems] = useState<any[]>([]);
   const [ventaBaseId, setVentaBaseId] = useState<number | null>(null);
 
+  // Caja
+  const [aperturaCajaId, setAperturaCajaId] = useState<number | null>(null);
+
   // Modal Tickets Previos
   const [showTicketsModal, setShowTicketsModal] = useState(false);
   const [tickets, setTickets] = useState<any[]>([]);
 
   useEffect(() => {
     cargarPuntosVenta();
+    cargarCaja();
     
     // Set default dates to today (YYYYMMDD format for ARCA)
     const today = new Date(Date.now() - ((new Date()).getTimezoneOffset() * 60000)).toISOString().split('T')[0].replace(/-/g, '');
@@ -39,11 +43,23 @@ export default function Facturacion() {
     setFechaHasta(today);
   }, []);
 
+  const cargarCaja = async () => {
+    try {
+      const res = await api.get('/caja/estado');
+      if (res.data && res.data.abierta) {
+        setAperturaCajaId(res.data.apertura.id);
+      }
+    } catch (err) {
+      console.error('Error al cargar estado de caja', err);
+    }
+  };
+
   const cargarPuntosVenta = async () => {
     try {
       const res = await api.get('/arca/puntos-venta');
-      setPuntosVenta(res.data);
-      if (res.data.length > 0) setPuntoVentaId(res.data[0].id.toString());
+      const validPuntos = res.data.filter((pv: any) => pv.tipo === 'WEBSERVICE');
+      setPuntosVenta(validPuntos);
+      if (validPuntos.length > 0) setPuntoVentaId(validPuntos[0].id.toString());
     } catch (err) {
       toast.error('Error al cargar puntos de venta. Revise sus permisos o conexión.');
     }
@@ -67,7 +83,7 @@ export default function Facturacion() {
     if (ticket.cliente) setCliente(ticket.cliente);
     setItems(ticket.items.map((i: any) => ({
       productoId: i.productoId,
-      descripcion: i.producto.nombre,
+      descripcion: i.descripcion || i.producto?.nombre,
       cantidad: i.cantidad,
       precio: i.precioUnitario,
       subtotal: i.subtotal
@@ -80,7 +96,7 @@ export default function Facturacion() {
       toast.error('No se pueden agregar ítems si estás facturando un ticket previo.');
       return;
     }
-    setItems([...items, { productoId: 1, descripcion: 'Honorarios / Servicio', cantidad: 1, precio: 0, subtotal: 0 }]);
+    setItems([...items, { productoId: null, descripcion: 'Honorarios / Servicio', cantidad: 1, precio: 0, subtotal: 0 }]);
   };
 
   const actualizarItem = (idx: number, campo: string, valor: any) => {
@@ -114,28 +130,37 @@ export default function Facturacion() {
       toast.error('La factura debe tener al menos un ítem.');
       return;
     }
+    if (!ventaBaseId && !aperturaCajaId) {
+      toast.error('No hay una caja abierta para registrar la venta.');
+      return;
+    }
 
     setFacturando(true);
     try {
       let vId = ventaBaseId;
+      let esVentaNueva = false;
 
       // 1. Si no hay venta base, crearla como presupuesto/completada para que el backend la registre
       if (!vId) {
         const payloadVenta = {
           items: items.map(i => ({ 
-            productoId: i.productoId || 1, // Asumimos 1 como producto genérico si no hay
+            productoId: i.productoId || null,
             cantidad: Number(i.cantidad),
+            precioUnitario: Number(i.precio),
+            descripcion: i.descripcion,
             descuentoLinea: 0
           })),
           montoRecibido: items.reduce((acc, i) => acc + i.subtotal, 0),
           medioPago: 'OTRO',
           clienteId: cliente.id,
-          aperturaCajaId: -1, // Placeholder
+          aperturaCajaId: aperturaCajaId,
           descuentoGlobal: 0,
           estado: 'COMPLETADA'
         };
+        console.log("Payload a enviar:", payloadVenta);
         const resVenta = await api.post('/ventas', payloadVenta);
         vId = resVenta.data.id;
+        esVentaNueva = true;
       }
 
       // 2. Llamar a AFIP
@@ -144,14 +169,18 @@ export default function Facturacion() {
         concepto: concepto,
         fechaServicioDesde: concepto > 1 ? fechaDesde : undefined,
         fechaServicioHasta: concepto > 1 ? fechaHasta : undefined,
-        vtoPago: concepto > 1 ? fechaHasta : undefined
+        vtoPago: concepto > 1 ? fechaHasta : undefined,
+        esVentaNueva: esVentaNueva
       };
 
-      const resAfip = await api.post(`/ventas/${vId}/facturar-afip`, payloadAfip);
-      
-      toast.success('¡Factura emitida correctamente en ARCA!');
-      setDataFactura({ ...resAfip.data, cliente });
-      setFacturaEmitida(true);
+      try {
+        const resAfip = await api.post(`/ventas/${vId}/facturar-afip`, payloadAfip);
+        toast.success('¡Factura emitida correctamente en ARCA!');
+        setDataFactura({ ...resAfip.data, cliente });
+        setFacturaEmitida(true);
+      } catch (err: any) {
+        throw err;
+      }
 
     } catch (err: any) {
       toast.error(err.response?.data?.error || err.response?.data?.message || 'Error al emitir la factura');
@@ -163,10 +192,10 @@ export default function Facturacion() {
   const total = items.reduce((acc, i) => acc + Number(i.subtotal), 0);
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-slate-900 transition-colors duration-200">
+    <div className="h-full flex flex-col bg-white dark:bg-slate-900 transition-colors duration-200 print:h-auto print:block">
       
       {/* HEADER PRINCIPAL */}
-      <div className="p-3 border-b border-gray-300 dark:border-slate-700 bg-gray-100 dark:bg-slate-800 flex items-center justify-between gap-3">
+      <div className="p-3 border-b border-gray-300 dark:border-slate-700 bg-gray-100 dark:bg-slate-800 flex items-center justify-between gap-3 print:hidden">
         <div className="flex items-center gap-2">
           <FileText size={20} className="text-brand-dark dark:text-brand-light" />
           <h1 className="text-lg font-bold text-gray-800 dark:text-slate-100 uppercase tracking-wide">Facturación AFIP</h1>
@@ -186,7 +215,7 @@ export default function Facturacion() {
       </div>
 
       {/* PANEL DE CONFIGURACIÓN COMPACTO */}
-      <div className="p-4 border-b border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50">
+      <div className="p-4 border-b border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 print:hidden">
         <div className="grid grid-cols-12 gap-6">
           
           {/* CLIENTE */}
@@ -224,9 +253,10 @@ export default function Facturacion() {
                   onChange={e => setPuntoVentaId(e.target.value)}
                   className="w-full p-2 text-sm border border-gray-400 dark:border-slate-600 rounded-sm bg-white dark:bg-slate-900 focus:outline-none focus:border-blue-500 disabled:opacity-50"
                 >
-                  {puntosVenta.map(pv => (
-                    <option key={pv.id} value={pv.id}>{pv.numero} - {pv.descripcion}</option>
-                  ))}
+                  {puntosVenta.filter(pv => pv.tipo === 'WEBSERVICE').map(pv => {
+                    const labelStr = pv.numero ? `${pv.numero} - ${pv.descripcion || pv.nombre || ''}` : (pv.nombre || pv.descripcion || `PV #${pv.id}`);
+                    return <option key={pv.id} value={pv.id}>{labelStr}</option>;
+                  })}
                 </select>
               </div>
               <div>
@@ -276,7 +306,7 @@ export default function Facturacion() {
       </div>
 
       {/* TABLA DE DETALLES */}
-      <div className="flex-1 overflow-y-auto w-full flex flex-col bg-gray-50 dark:bg-slate-900">
+      <div className="flex-1 overflow-y-auto w-full flex flex-col bg-gray-50 dark:bg-slate-900 print:hidden">
         <div className="flex justify-between items-center p-3 border-b border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800">
           <h2 className="text-sm font-bold text-gray-700 dark:text-slate-200 uppercase">Líneas de Factura</h2>
           {!facturaEmitida && !ventaBaseId && (
@@ -358,7 +388,7 @@ export default function Facturacion() {
       </div>
 
       {/* FOOTER TOTAL Y ACCIÓN */}
-      <div className="p-4 border-t border-gray-300 dark:border-slate-700 bg-gray-200 dark:bg-slate-800 flex justify-between items-center h-20">
+      <div className="p-4 border-t border-gray-300 dark:border-slate-700 bg-gray-200 dark:bg-slate-800 flex justify-between items-center h-20 print:hidden">
         <div className="text-2xl font-black text-gray-900 dark:text-white">
           TOTAL: ${total.toFixed(2)}
         </div>

@@ -38,9 +38,10 @@ class PadronClient {
             service
         });
 
-        const WSDL_URL = isProduction 
-            ? 'https://aws.afip.gov.ar/sr-padron/webservices/personaServiceA5?WSDL'
-            : 'https://awshomo.afip.gov.ar/sr-padron/webservices/personaServiceA5?WSDL';
+        const ENDPOINT_URL = isProduction 
+            ? 'https://aws.afip.gov.ar/sr-padron/webservices/personaServiceA5'
+            : 'https://awshomo.afip.gov.ar/sr-padron/webservices/personaServiceA5';
+        const WSDL_URL = ENDPOINT_URL + '?WSDL';
 
         try {
             const soapOptions = {
@@ -49,7 +50,9 @@ class PadronClient {
             };
 
             const client = await soap.createClientAsync(WSDL_URL, soapOptions);
-            client.setEndpoint(WSDL_URL);
+            client.setEndpoint(ENDPOINT_URL);
+            
+            console.log(`[PADRON A5] Consultando contra URL EXACTA: ${ENDPOINT_URL} (isProduction: ${isProduction})`);
 
             const args = {
                 token: auth.token,
