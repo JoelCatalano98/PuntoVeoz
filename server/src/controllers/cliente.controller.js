@@ -1,5 +1,5 @@
 const prisma = require('../config/prisma');
-
+const axios = require('axios');
 async function listar(req, res) {
   const { search, busqueda, page = 1, limit = 50 } = req.query;
   const q = search || busqueda;
@@ -75,4 +75,35 @@ async function actualizar(req, res) {
   res.json(actualizado);
 }
 
-module.exports = { listar, crear, actualizar };
+const padronClient = require('../services/arca/padron.client');
+
+async function consultarPadron(req, res) {
+  try {
+    const { cuit } = req.params;
+    console.log(`Llegó petición al backend para consultar padrón de CUIT: ${cuit}`);
+    if (!cuit || cuit.length !== 11) {
+      return res.status(400).json({ error: 'CUIT inválido. Debe tener 11 dígitos.' });
+    }
+    
+    // Obtener el comercio para sacar el CUIT representada y el modo (isProduction)
+    const comercio = await prisma.comercio.findUnique({ where: { id: req.comercioId } });
+    if (!comercio || !comercio.arcaCuit) {
+        return res.status(200).json({ success: false, error: 'El comercio no tiene CUIT configurado para ARCA.' });
+    }
+
+    const cuitRepresentada = comercio.arcaCuit;
+    const isProduction = comercio.arcaModo === 'produccion';
+
+    console.log('Llamando al WS oficial de ARCA (PersonaServiceA5)...');
+    
+    const result = await padronClient.consultarCUIT(req.comercioId, cuit, cuitRepresentada, isProduction);
+    
+    // Devolvemos 200 siempre para que el frontend ataje el success: false amigablemente
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error al consultar padrón', error.message);
+    res.status(200).json({ success: false, error: 'Error interno al consultar AFIP.', details: error.message });
+  }
+}
+
+module.exports = { listar, crear, actualizar, consultarPadron };

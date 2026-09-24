@@ -10,6 +10,7 @@ interface Cliente {
   numeroDoc: string | null;
   razonSocial: string | null;
   direccion: string | null;
+  condicionIva: string | null;
 }
 
 const Clientes = () => {
@@ -28,7 +29,32 @@ const Clientes = () => {
   const [numeroDoc, setNumeroDoc] = useState('');
   const [razonSocial, setRazonSocial] = useState('');
   const [direccion, setDireccion] = useState('');
+  const [condicionIva, setCondicionIva] = useState('Consumidor Final');
   const [guardando, setGuardando] = useState(false);
+  const [buscandoAfip, setBuscandoAfip] = useState(false);
+
+  const buscarEnAFIP = async () => {
+    if (!numeroDoc || numeroDoc.length !== 11) {
+      toast.error('Ingrese un CUIT válido de 11 dígitos para consultar en AFIP');
+      return;
+    }
+    setBuscandoAfip(true);
+    try {
+      const res = await api.get(`/clientes/padron/${numeroDoc}`);
+      if (res.data && res.data.success) {
+        if (res.data.nombre) setRazonSocial(res.data.nombre);
+        if (res.data.direccion) setDireccion(res.data.direccion);
+        if (res.data.condicionIva) setCondicionIva(res.data.condicionIva);
+        toast.success('Datos obtenidos del padrón AFIP');
+      } else {
+        toast.error(res.data?.error || 'Error al consultar AFIP');
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Error al consultar AFIP');
+    } finally {
+      setBuscandoAfip(false);
+    }
+  };
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -60,6 +86,7 @@ const Clientes = () => {
     setRazonSocial('');
     setNumeroDoc('');
     setDireccion('');
+    setCondicionIva('Consumidor Final');
     setShowModal(true);
   };
 
@@ -69,6 +96,7 @@ const Clientes = () => {
     setRazonSocial(cliente.razonSocial || '');
     setNumeroDoc(cliente.numeroDoc || '');
     setDireccion(cliente.direccion || '');
+    setCondicionIva(cliente.condicionIva || 'Consumidor Final');
     setShowModal(true);
   };
 
@@ -95,7 +123,8 @@ const Clientes = () => {
         nombre,
         razonSocial: razonSocial.trim() === '' ? null : razonSocial,
         numeroDoc: numeroDoc.trim() === '' ? null : numeroDoc,
-        direccion: direccion.trim() === '' ? null : direccion
+        direccion: direccion.trim() === '' ? null : direccion,
+        condicionIva
       };
 
       if (clienteActual) {
@@ -250,13 +279,26 @@ const Clientes = () => {
 
               <div>
                 <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Documento (CUIT/DNI)</label>
-                <input
-                  type="text"
-                  className="w-full p-3 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 transition-colors"
-                  value={numeroDoc}
-                  onChange={e => setNumeroDoc(e.target.value)}
-                  placeholder="Ej: 20-12345678-9"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    className="flex-1 p-3 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 transition-colors"
+                    value={numeroDoc}
+                    onChange={e => setNumeroDoc(e.target.value)}
+                    placeholder="Ej: 20-12345678-9"
+                  />
+                  {!clienteActual && (
+                    <button 
+                      type="button" 
+                      onClick={buscarEnAFIP}
+                      disabled={buscandoAfip}
+                      className="px-4 py-3 bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-300 rounded-lg font-bold flex items-center gap-1 disabled:opacity-50 transition-colors"
+                      title="Consultar Padrón AFIP"
+                    >
+                      {buscandoAfip ? '...' : <Search size={18} />} Datos padrón
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -268,6 +310,21 @@ const Clientes = () => {
                   onChange={e => setDireccion(e.target.value)}
                   placeholder="Ej: San Martín 123"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Condición IVA</label>
+                <select
+                  className="w-full p-3 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 transition-colors"
+                  value={condicionIva}
+                  onChange={e => setCondicionIva(e.target.value)}
+                >
+                  <option value="Consumidor Final">Consumidor Final</option>
+                  <option value="IVA Responsable Inscripto">IVA Responsable Inscripto</option>
+                  <option value="Responsable Monotributo">Responsable Monotributo</option>
+                  <option value="IVA Exento">IVA Exento</option>
+                  <option value="IVA No Alcanzado">IVA No Alcanzado</option>
+                </select>
               </div>
 
               <div className="mt-4 flex gap-3">

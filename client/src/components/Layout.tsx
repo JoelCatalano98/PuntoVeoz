@@ -234,12 +234,6 @@ const Layout = () => {
               </Link>
             )}
 
-            {usuario?.rol === 'SUPERADMIN' && (
-              <Link to="/admin/configuraciones" className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-gray-200 dark:bg-slate-700 hover:bg-red-50 dark:hover:bg-red-900/30 hover:border-red-100 transition-colors gap-2 text-gray-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400">
-                <ShieldAlert size={24} />
-                <span className="font-medium text-center">Conf. ARCA</span>
-              </Link>
-            )}
           </div>
         </aside>
 

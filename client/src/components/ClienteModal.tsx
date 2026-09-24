@@ -32,6 +32,30 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect, clienteA
   const [nuevaDireccion, setNuevaDireccion] = useState(clienteAEditar?.direccion || '');
   const [nuevaCondicionIva, setNuevaCondicionIva] = useState(clienteAEditar?.condicionIva || (requiereDatosFiscales ? '' : 'Consumidor Final'));
   const [guardando, setGuardando] = useState(false);
+  const [buscandoAfip, setBuscandoAfip] = useState(false);
+
+  const buscarEnAFIP = async () => {
+    if (!nuevoDoc || nuevoDoc.length !== 11) {
+      toast.error('Ingrese un CUIT válido de 11 dígitos para consultar en AFIP');
+      return;
+    }
+    setBuscandoAfip(true);
+    try {
+      const res = await api.get(`/clientes/padron/${nuevoDoc}`);
+      if (res.data && res.data.success) {
+        if (res.data.nombre) setNuevaRazonSocial(res.data.nombre);
+        if (res.data.direccion) setNuevaDireccion(res.data.direccion);
+        if (res.data.condicionIva) setNuevaCondicionIva(res.data.condicionIva);
+        toast.success('Datos obtenidos del padrón AFIP');
+      } else {
+        toast.error(res.data?.error || 'Error al consultar AFIP');
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Error al consultar AFIP');
+    } finally {
+      setBuscandoAfip(false);
+    }
+  };
 
   useEffect(() => {
     cargarClientes();
@@ -110,7 +134,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect, clienteA
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md flex flex-col max-h-[90vh] transition-colors duration-200">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh] transition-colors duration-200">
         
         <div className="flex justify-between items-center p-4 border-b dark:border-slate-700">
           <h2 className="text-lg font-bold text-brand-dark dark:text-brand-light">
@@ -192,13 +216,26 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect, clienteA
                 <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-slate-300">
                   Documento (CUIT/DNI) {requiereDatosFiscales && '*'}
                 </label>
-                <input
-                  type="text"
-                  required={requiereDatosFiscales}
-                  className="w-full p-2 border dark:border-slate-600 rounded focus:outline-none focus:border-brand-light bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200"
-                  value={nuevoDoc}
-                  onChange={e => setNuevoDoc(e.target.value)}
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required={requiereDatosFiscales}
+                    className="flex-1 p-2 border dark:border-slate-600 rounded focus:outline-none focus:border-brand-light bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200"
+                    value={nuevoDoc}
+                    onChange={e => setNuevoDoc(e.target.value)}
+                  />
+                  {!clienteAEditar && (
+                    <button 
+                      type="button" 
+                      onClick={buscarEnAFIP}
+                      disabled={buscandoAfip}
+                      className="px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-300 rounded font-bold flex items-center gap-1 disabled:opacity-50 transition-colors"
+                      title="Consultar Padrón AFIP"
+                    >
+                      {buscandoAfip ? '...' : <Search size={18} />} Datos padrón
+                    </button>
+                  )}
+                </div>
               </div>
               
               <div>
@@ -226,9 +263,10 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect, clienteA
                 >
                   {requiereDatosFiscales && <option value="" disabled>-- Seleccione --</option>}
                   <option value="Consumidor Final">Consumidor Final</option>
-                  <option value="Responsable Inscripto">Responsable Inscripto</option>
-                  <option value="Monotributo">Monotributo</option>
-                  <option value="Exento">Exento</option>
+                  <option value="IVA Responsable Inscripto">IVA Responsable Inscripto</option>
+                  <option value="Responsable Monotributo">Responsable Monotributo</option>
+                  <option value="IVA Exento">IVA Exento</option>
+                  <option value="IVA No Alcanzado">IVA No Alcanzado</option>
                 </select>
               </div>
               
