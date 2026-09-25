@@ -167,6 +167,21 @@ async function emitirNotaCredito(req, res, next) {
       return res.status(400).json({ error: 'id de venta es obligatorio y debe ser válido' });
     }
 
+    const prisma = require('../config/prisma');
+    const ventaOriginal = await prisma.venta.findFirst({
+      where: { id: Number(id), comercioId }
+    });
+
+    if (!ventaOriginal) {
+      return res.status(404).json({ error: 'Venta original no encontrada' });
+    }
+
+    const diffTime = Math.abs(new Date() - new Date(ventaOriginal.createdAt));
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays > 15) {
+      return res.status(400).json({ error: 'No se puede emitir NC para facturas con más de 15 días' });
+    }
+
     const nc = await ventaService.emitirNotaCreditoTotal(comercioId, usuarioId, Number(id));
 
     res.json(nc);
@@ -178,12 +193,40 @@ async function emitirNotaCredito(req, res, next) {
   }
 }
 
+async function ventasElegiblesNC(req, res, next) {
+  try {
+    const comercioId = req.comercioId;
+    const prisma = require('../config/prisma');
+
+    const ventas = await prisma.venta.findMany({
+      where: {
+        comercioId,
+        cae: { not: null },
+        tipoComprobante: { in: ['FACTURA_A', 'FACTURA_B', 'FACTURA_C'] },
+        notasCredito: { none: {} }
+      },
+      include: {
+        cliente: true,
+        puntoVenta: true,
+        items: {
+          include: { producto: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(ventas);
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function historialVentas(req, res, next) {
   try {
     const comercioId = req.comercioId;
     const prisma = require('../config/prisma');
 
-    const { search, page = 1, limit = 50, tab, sinCae } = req.query;
+    const { search, page = 1, limit = 50, tab, filtroCae, fechaDesde, fechaHasta } = req.query;
     const pageNum = Math.max(1, Number(page));
     const limitNum = Math.max(1, Number(limit));
     const skip = (pageNum - 1) * limitNum;
@@ -197,9 +240,17 @@ async function historialVentas(req, res, next) {
       whereClause.estado = { in: ['COMPLETADA', 'FACTURADA', 'ANULADA'] };
     }
 
-    if (sinCae === 'true') {
+    if (filtroCae === 'SIN_CAE') {
       whereClause.cae = null;
-      whereClause.estado = { in: ['COMPLETADA', 'FACTURADA'] };
+    } else if (filtroCae === 'CON_CAE') {
+      whereClause.cae = { not: null };
+    }
+
+    if (fechaDesde && fechaHasta) {
+      whereClause.createdAt = {
+        gte: new Date(fechaDesde),
+        lte: new Date(fechaHasta)
+      };
     }
 
     if (search) {
@@ -247,7 +298,7 @@ async function listarNotasCredito(req, res, next) {
     const comercioId = req.comercioId;
     const prisma = require('../config/prisma');
 
-    const { page = 1, limit = 50, fechaDesde, fechaHasta, puntoVentaId } = req.query;
+    const { page = 1, limit = 50, fechaDesde, fechaHasta, puntoVentaId, search } = req.query;
     const pageNum = Math.max(1, Number(page));
     const limitNum = Math.max(1, Number(limit));
     const skip = (pageNum - 1) * limitNum;
@@ -266,6 +317,17 @@ async function listarNotasCredito(req, res, next) {
 
     if (puntoVentaId) {
       whereClause.puntoVentaId = Number(puntoVentaId);
+    }
+
+    if (search) {
+      const isNumber = !isNaN(Number(search));
+      whereClause.OR = [
+        { cliente: { nombre: { contains: search } } },
+        { cliente: { razonSocial: { contains: search } } }
+      ];
+      if (isNumber) {
+        whereClause.OR.push({ id: Number(search) });
+      }
     }
 
     const [totalCount, notasCredito] = await prisma.$transaction([
@@ -541,5 +603,6 @@ module.exports = {
   convertirPresupuestoEnRemito,
   actualizarPresupuesto,
   facturarAfip,
-  testArcaConnection
+  testArcaConnection,
+  ventasElegiblesNC
 };

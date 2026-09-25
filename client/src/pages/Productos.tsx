@@ -55,6 +55,7 @@ const Productos = () => {
   const [filtroPrecioOp, setFiltroPrecioOp] = useState('>');
   const [filtroPrecio, setFiltroPrecio] = useState('');
   const [filtroFecha, setFiltroFecha] = useState('');
+  const [filtroProveedor, setFiltroProveedor] = useState('');
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -78,6 +79,7 @@ const Productos = () => {
     categoriaId: '',
     subcategoriaId: '',
     unidadMedidaId: '',
+    proveedorId: '',
   });
 
   const [imagenArchivo, setImagenArchivo] = useState<File | null>(null);
@@ -85,6 +87,7 @@ const Productos = () => {
 
   const [categoriasLista, setCategoriasLista] = useState<Categoria[]>([]);
   const [unidadesLista, setUnidadesLista] = useState<any[]>([]);
+  const [proveedoresLista, setProveedoresLista] = useState<any[]>([]);
 
   const puedeEditar = usuario?.rol === 'ADMIN' || usuario?.rol === 'SUPERADMIN';
 
@@ -97,7 +100,7 @@ const Productos = () => {
       cargarProductos(1);
     }, 500);
     return () => clearTimeout(timeoutId);
-  }, [filtroCategoria, filtroPrecioOp, filtroPrecio, filtroFecha, filtro]);
+  }, [filtroCategoria, filtroProveedor, filtroPrecioOp, filtroPrecio, filtroFecha, filtro]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -137,12 +140,14 @@ const Productos = () => {
 
   const cargarCatalogos = async () => {
     try {
-      const [catRes, uniRes] = await Promise.all([
+      const [catRes, uniRes, provRes] = await Promise.all([
         api.get('/categorias'),
-        api.get('/unidades-medida')
+        api.get('/unidades-medida'),
+        api.get('/proveedores')
       ]);
       setCategoriasLista(catRes.data);
       setUnidadesLista(uniRes.data);
+      setProveedoresLista(provRes.data);
     } catch (err) {
       toast.error('Error al cargar datos anexos');
     }
@@ -156,6 +161,7 @@ const Productos = () => {
       params.append('limit', limit.toString());
       if (filtro) params.append('search', filtro);
       if (filtroCategoria) params.append('categoriaId', filtroCategoria);
+      if (filtroProveedor) params.append('proveedorId', filtroProveedor);
       if (filtroPrecio) {
         if (filtroPrecioOp === '=') params.append('precioExacto', filtroPrecio);
         else if (filtroPrecioOp === '>') params.append('precioMin', filtroPrecio);
@@ -195,6 +201,7 @@ const Productos = () => {
       categoriaId: '',
       subcategoriaId: '',
       unidadMedidaId: '',
+      proveedorId: '',
     });
     setMostrarModal(true);
   };
@@ -230,6 +237,7 @@ const Productos = () => {
       categoriaId: catId,
       subcategoriaId: subCatId,
       unidadMedidaId: prod.unidadMedidaId?.toString() || '',
+      proveedorId: (prod as any).proveedorId?.toString() || '',
     });
     setMostrarModal(true);
   };
@@ -296,6 +304,7 @@ const Productos = () => {
     const catFinal = formData.subcategoriaId || formData.categoriaId;
     if (catFinal) formDataPayload.append('categoriaId', catFinal);
     if (formData.unidadMedidaId) formDataPayload.append('unidadMedidaId', formData.unidadMedidaId);
+    if (formData.proveedorId) formDataPayload.append('proveedorId', formData.proveedorId);
     formDataPayload.append('activo', 'true');
 
     if (imagenArchivo) {
@@ -488,9 +497,17 @@ const Productos = () => {
                         <td className="p-4 text-sm text-gray-600 dark:text-slate-400 font-mono">{prod.codigoBarras || '-'}</td>
                         <td className="p-4 text-sm font-medium text-gray-800 dark:text-slate-200">
                           {prod.nombre}
-                          {prod.categoria && (
-                            <div className="text-xs text-gray-500 dark:text-slate-500 mt-1">{prod.categoria.nombre}</div>
-                          )}
+                          <div className="flex gap-2">
+                            {prod.categoria && (
+                              <div className="text-xs text-gray-500 dark:text-slate-500 mt-1">{prod.categoria.nombre}</div>
+                            )}
+                            {(prod as any).proveedor && (
+                              <div className="text-xs text-indigo-500 dark:text-indigo-400 mt-1 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                                {(prod as any).proveedor.razonSocial}
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="p-4 text-sm text-right text-gray-600 dark:text-slate-400">${Number(prod.precioCosto).toFixed(2)}</td>
                         <td className="p-4 text-sm text-right font-bold text-brand-dark dark:text-brand-light">${Number(prod.precioVenta).toFixed(2)}</td>
@@ -578,6 +595,20 @@ const Productos = () => {
                     <option key={sub.id} value={sub.id}>↳ {sub.nombre}</option>
                   ))}
                 </optgroup>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">Proveedor</label>
+            <select 
+              className="w-full p-2 text-sm border dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light text-gray-600 dark:text-slate-200 bg-white dark:bg-slate-900"
+              value={filtroProveedor}
+              onChange={e => setFiltroProveedor(e.target.value)}
+            >
+              <option value="">Todos los proveedores</option>
+              {proveedoresLista.map(prov => (
+                <option key={prov.id} value={prov.id}>{prov.razonSocial}</option>
               ))}
             </select>
           </div>
@@ -714,7 +745,7 @@ const Productos = () => {
                 </div>
 
                 {/* SECCIÓN CATEGORIZACIÓN */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-slate-900/50 rounded-lg border border-gray-100 dark:border-slate-700">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-gray-50 dark:bg-slate-900/50 rounded-lg border border-gray-100 dark:border-slate-700">
                   <div>
                     <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Categoría Padre *</label>
                     <select
@@ -754,6 +785,19 @@ const Productos = () => {
                       <option value="">(Seleccione)</option>
                       {unidadesLista.map(uni => (
                         <option key={uni.id} value={uni.id}>{uni.nombre} {uni.abreviatura ? `(${uni.abreviatura})` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1">Proveedor (Opcional)</label>
+                    <select
+                      className="w-full p-2 border dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200"
+                      value={formData.proveedorId}
+                      onChange={e => setFormData({...formData, proveedorId: e.target.value})}
+                    >
+                      <option value="">(Sin proveedor)</option>
+                      {proveedoresLista.map(prov => (
+                        <option key={prov.id} value={prov.id}>{prov.razonSocial}</option>
                       ))}
                     </select>
                   </div>

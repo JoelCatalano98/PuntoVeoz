@@ -18,6 +18,7 @@ router.post('/:id/facturar-presupuesto', ventaController.facturarPresupuesto);
 router.post('/:id/facturar-afip', ventaController.facturarAfip);
 router.get('/test-arca', ventaController.testArcaConnection);
 router.post('/:id/presupuesto-a-remito', ventaController.convertirPresupuestoEnRemito);
+router.get('/elegibles-nc', requireRole('ADMIN', 'SUPERADMIN'), ventaController.ventasElegiblesNC);
 router.get('/historial', ventaController.historialVentas);
 router.get('/notas-credito', requireRole('ADMIN', 'SUPERADMIN'), ventaController.listarNotasCredito);
 router.get('/:id', ventaController.obtenerPorId);

@@ -40,6 +40,20 @@ class ArcaService {
         };
     }
 
+    async obtenerPuntosVenta(comercioId) {
+        try {
+            const { wsfe, token, sign, cuit } = await this.getAuthTokens(comercioId);
+            return await wsfe.FEParamGetPtosVenta({
+                token,
+                sign,
+                cuit
+            });
+        } catch (error) {
+            console.error('Error al obtener puntos de venta de ARCA:', error);
+            throw error;
+        }
+    }
+
     async obtenerUltimoComprobante(comercioId, ptoVta, tipoCbte) {
         try {
             const { wsfe, token, sign, cuit } = await this.getAuthTokens(comercioId);
@@ -60,7 +74,8 @@ class ArcaService {
         try {
             const { wsfe, token, sign, cuit, comercio } = await this.getAuthTokens(comercioId);
             
-            const ptoVta = comercio?.arcaPtoVta || datosVenta.puntoVenta || 1;
+            const ptoVta = Number(datosVenta.puntoVenta);
+            if (!ptoVta) throw new Error("Punto de venta no válido");
             const cbteTipo = datosVenta.tipoCbte || 11;
             const concepto = datosVenta.concepto || 1;
             const docTipo = datosVenta.clienteDocTipo || 99;
@@ -111,6 +126,7 @@ class ArcaService {
                 payload.FchVtoPago = formatFechaAfip(datosVenta.vtoPago || datosVenta.vtoCae);
             }
 
+            console.log("PtoVta ENVIADO A AFIP EN FACTURA:", payload.PtoVta);
             const res = await wsfe.FECAESolicitar({
                 token, sign, cuit, payload
             });
@@ -128,6 +144,9 @@ class ArcaService {
 
     async emitirNotaCredito(comercioId, datosOriginales) {
         try {
+            console.log("==> ENTRANDO A emitirNotaCredito");
+            console.log("==> datosOriginales.puntoVenta:", datosOriginales.puntoVenta);
+            console.log("==> tipo:", typeof datosOriginales.puntoVenta);
             const { wsfe, token, sign, cuit } = await this.getAuthTokens(comercioId);
             
             // Determinar Tipo de Comprobante (si original era Factura C=11, NC C=13)
@@ -135,9 +154,12 @@ class ArcaService {
             if (datosOriginales.tipoCbte === 6) tipoCbte = 8; // NC B
             else if (datosOriginales.tipoCbte === 1) tipoCbte = 3; // NC A
 
+            const ptoVtaOriginal = Number(datosOriginales.puntoVenta);
+            if (!ptoVtaOriginal) throw new Error("Punto de venta original no válido");
+
             const lastCmp = await wsfe.FECompUltimoAutorizado({
                 token, sign, cuit,
-                ptoVta: datosOriginales.puntoVenta,
+                ptoVta: ptoVtaOriginal,
                 cbteTipo: tipoCbte
             });
 
@@ -146,7 +168,7 @@ class ArcaService {
 
             const payload = {
                 CantReg: 1,
-                PtoVta: datosOriginales.puntoVenta,
+                PtoVta: ptoVtaOriginal,
                 CbteTipo: tipoCbte,
                 Concepto: datosOriginales.concepto || 1,
                 DocTipo: datosOriginales.clienteDocTipo,
@@ -179,6 +201,7 @@ class ArcaService {
                 payload.FchVtoPago = dateStr;
             }
 
+            console.log("PtoVta ENVIADO A AFIP EN NC:", payload.PtoVta);
             const res = await wsfe.FECAESolicitar({
                 token, sign, cuit, payload
             });

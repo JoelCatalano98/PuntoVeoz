@@ -125,7 +125,8 @@ const EtiquetasImpresion = () => {
       if (filtroFechaHasta) params.append('fechaHasta', filtroFechaHasta);
 
       const res = await api.get('/productos', { params });
-      setProductos(res.data.filter((p: any) => p.codigoBarras));
+      const arrayDatos = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+      setProductos(arrayDatos.filter((p: any) => p.codigoBarras));
     } catch (err) {
       toast.error('Error al cargar productos');
     }

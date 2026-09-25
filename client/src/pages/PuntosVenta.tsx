@@ -144,7 +144,7 @@ const PuntosVenta = () => {
               ) : (
                 puntosVenta.map(pv => (
                   <tr key={pv.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/50 transition-colors">
-                    <td className="p-4 text-sm font-black text-gray-800 dark:text-slate-200">{pv.nombre.padStart(4, '0')}</td>
+                    <td className="p-4 text-sm font-black text-gray-800 dark:text-slate-200">{(pv.nombre || pv.numero?.toString() || pv.id.toString()).padStart(4, '0')}</td>
                     <td className="p-4 text-sm">
                       <span className={`px-2 py-1 text-xs font-bold rounded-full ${
                         pv.tipo === 'WEBSERVICE' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'

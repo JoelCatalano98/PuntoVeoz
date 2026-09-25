@@ -1,7 +1,7 @@
 const prisma = require('../config/prisma');
 
 async function listar(req, res) {
-  const { busqueda, search, categoriaId, precioMin, precioMax, precioExacto, fechaDesde, fechaHasta, page = 1, limit = 50 } = req.query;
+  const { busqueda, search, categoriaId, proveedorId, precioMin, precioMax, precioExacto, fechaDesde, fechaHasta, page = 1, limit = 50 } = req.query;
   const q = busqueda || search;
 
   const pageNum = Math.max(1, Number(page));
@@ -15,6 +15,10 @@ async function listar(req, res) {
 
   if (categoriaId) {
     whereClause.categoriaId = Number(categoriaId);
+  }
+
+  if (proveedorId) {
+    whereClause.proveedorId = Number(proveedorId);
   }
 
   if (q) {
@@ -45,7 +49,8 @@ async function listar(req, res) {
       orderBy: { nombre: 'asc' },
       include: {
         categoria: { select: { id: true, nombre: true, color: true } },
-        unidadMedida: { select: { id: true, nombre: true, abreviatura: true } }
+        unidadMedida: { select: { id: true, nombre: true, abreviatura: true } },
+        proveedor: { select: { id: true, razonSocial: true } }
       },
       skip,
       take: limitNum
@@ -68,7 +73,7 @@ async function buscarPorCodigoBarras(req, res) {
 }
 
 async function crear(req, res) {
-  const { nombre, descripcion, codigoBarras, precioCosto, precioVenta, stockActual, stockMinimo, categoriaId, unidadMedidaId, ivaIncluido, rentabilidad, stockIdeal } = req.body;
+  const { nombre, descripcion, codigoBarras, precioCosto, precioVenta, stockActual, stockMinimo, categoriaId, unidadMedidaId, proveedorId, ivaIncluido, rentabilidad, stockIdeal } = req.body;
   const imagenUrl = req.file ? `/public/uploads/productos/${req.file.filename}` : null;
 
   if (!nombre || precioVenta == null) {
@@ -91,6 +96,7 @@ async function crear(req, res) {
         stockMinimo: stockMinimo ? Number(stockMinimo) : 0,
         categoriaId: categoriaId ? Number(categoriaId) : null,
         unidadMedidaId: unidadMedidaId ? Number(unidadMedidaId) : null,
+        proveedorId: proveedorId ? Number(proveedorId) : null,
         imagenUrl
       },
     });
@@ -122,7 +128,7 @@ async function actualizar(req, res) {
   if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
 
   // Omitimos stockActual para prevenir Mass Assignment
-  const { nombre, descripcion, codigoBarras, precioCosto, precioVenta, stockMinimo, activo, categoriaId, unidadMedidaId, ivaIncluido, rentabilidad, stockIdeal } = req.body;
+  const { nombre, descripcion, codigoBarras, precioCosto, precioVenta, stockMinimo, activo, categoriaId, unidadMedidaId, proveedorId, ivaIncluido, rentabilidad, stockIdeal } = req.body;
   
   const dataToUpdate = {
     nombre, 
@@ -137,6 +143,7 @@ async function actualizar(req, res) {
     activo: activo !== undefined ? (activo === 'true' || activo === true) : undefined,
     categoriaId: categoriaId ? Number(categoriaId) : null,
     unidadMedidaId: unidadMedidaId ? Number(unidadMedidaId) : null,
+    proveedorId: proveedorId ? Number(proveedorId) : null,
   };
 
   if (req.file) {

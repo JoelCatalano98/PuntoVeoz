@@ -71,6 +71,20 @@ class WsfeClient {
         }
     }
 
+    async FEParamGetPtosVenta({ token, sign, cuit }) {
+        await this.init();
+        const args = this.getAuth(token, sign, cuit);
+
+        try {
+            console.log(`[WSFE] Ejecutando FEParamGetPtosVenta contra URL EXACTA: ${this.ENDPOINT_URL} (isProduction: ${this.isProduction})`);
+            const [result] = await this.client.FEParamGetPtosVentaAsync(args);
+            const res = this.handleResponseError(result, 'FEParamGetPtosVenta');
+            return res.ResultGet;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     async FECompUltimoAutorizado({ token, sign, cuit, ptoVta, cbteTipo }) {
         await this.init();
         const args = {

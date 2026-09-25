@@ -8,6 +8,7 @@ import { Pagination } from '../components/Pagination';
 import { TicketVenta } from '../components/TicketVenta';
 import { FacturaA4 } from '../components/FacturaA4';
 import { Link } from 'react-router-dom';
+import { NuevaNotaCreditoModal } from '../components/NuevaNotaCreditoModal';
 
 interface VentaOriginal {
   id: number;
@@ -37,6 +38,7 @@ const NotasCredito: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
+  const [filtroTexto, setFiltroTexto] = useState('');
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   
@@ -45,14 +47,18 @@ const NotasCredito: React.FC = () => {
   // Parámetros de impresión y empresa para el documento
   const [fmtNC, setFmtNC] = useState('TICKET');
   const [empresaDatos, setEmpresaDatos] = useState({ razonSocial: '', cuit: '', direccion: '', condicionIva: '' });
+  const [modalOpen, setModalOpen] = useState(false);
 
-  const cargarNotas = async (pagina = page) => {
+  const cargarNotas = async (pagina = page, searchTxt = filtroTexto) => {
     setCargando(true);
     try {
       const params: any = { page: pagina, limit: 50 };
       if (fechaDesde && fechaHasta) {
         params.fechaDesde = fechaDesde;
         params.fechaHasta = fechaHasta;
+      }
+      if (searchTxt.trim()) {
+        params.search = searchTxt.trim();
       }
 
       const [resNotas, resRS, resCuit, resDir, resIva, resNCParam] = await Promise.all([
@@ -89,6 +95,13 @@ const NotasCredito: React.FC = () => {
     cargarNotas(1);
   }, [fechaDesde, fechaHasta]);
 
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      cargarNotas(1, filtroTexto);
+    }, 500);
+    return () => clearTimeout(delay);
+  }, [filtroTexto]);
+
   const imprimirDocumento = (venta: NotaCredito, esPdf = false) => {
     setDocumentoImprimir({ venta, tipo: 'NOTA_CREDITO' });
     if (esPdf) {
@@ -109,6 +122,12 @@ const NotasCredito: React.FC = () => {
         </div>
         <div className="flex gap-2">
           <button
+            onClick={() => setModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+          >
+            Nueva Nota de Crédito
+          </button>
+          <button
             onClick={() => cargarNotas()}
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
           >
@@ -119,8 +138,19 @@ const NotasCredito: React.FC = () => {
 
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col flex-1 overflow-hidden transition-colors duration-200 print:hidden">
         {/* Barra de Filtros */}
-        <div className="p-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/50 flex flex-col sm:flex-row gap-4 justify-between items-center transition-colors">
-          <div className="flex gap-4 items-center w-full sm:w-auto">
+        <div className="p-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/50 flex flex-col xl:flex-row gap-4 justify-between items-center transition-colors">
+          <div className="flex flex-col sm:flex-row gap-4 items-center w-full xl:w-auto">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input
+                type="text"
+                placeholder="Buscar por cliente o ID..."
+                value={filtroTexto}
+                onChange={e => setFiltroTexto(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg text-sm text-gray-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-light"
+              />
+            </div>
+            
             <div className="flex gap-2 items-center">
               <label className="text-sm font-bold text-gray-600 dark:text-slate-400">Desde:</label>
               <input
@@ -139,12 +169,12 @@ const NotasCredito: React.FC = () => {
                 className="px-3 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg text-sm text-gray-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-light"
               />
             </div>
-            {(fechaDesde || fechaHasta) && (
+            {(fechaDesde || fechaHasta || filtroTexto) && (
               <button
-                onClick={() => { setFechaDesde(''); setFechaHasta(''); }}
+                onClick={() => { setFechaDesde(''); setFechaHasta(''); setFiltroTexto(''); }}
                 className="text-sm text-brand-dark hover:text-brand-light font-medium transition-colors ml-2"
               >
-                Limpiar fechas
+                Limpiar filtros
               </button>
             )}
           </div>
@@ -259,6 +289,12 @@ const NotasCredito: React.FC = () => {
           return <FacturaA4 venta={v as any} />;
         }
       })()}
+      
+      <NuevaNotaCreditoModal 
+        isOpen={modalOpen} 
+        onClose={() => setModalOpen(false)} 
+        onSuccess={() => cargarNotas(1)} 
+      />
     </div>
   );
 };

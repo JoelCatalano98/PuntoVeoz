@@ -42,6 +42,9 @@ const VentasHistorial = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
+  const [filtroCae, setFiltroCae] = useState('TODAS'); // TODAS | CON_CAE | SIN_CAE
   const limit = 20;
 
   const [ventaAAnular, setVentaAAnular] = useState<Venta | null>(null);
@@ -69,7 +72,7 @@ const VentasHistorial = () => {
 
   useEffect(() => {
     cargarVentas(1);
-  }, []);
+  }, [fechaDesde, fechaHasta, filtroCae]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -90,9 +93,16 @@ const VentasHistorial = () => {
   const cargarVentas = async (pageToLoad = page, searchTxt = filtroTexto, estadoTxt = filtroEstado) => {
     try {
       setCargando(true);
-      const res = await api.get('/ventas/historial', {
-        params: { page: pageToLoad, limit, search: searchTxt, tab: estadoTxt !== 'TODAS' ? estadoTxt : undefined }
-      });
+      const params: any = { page: pageToLoad, limit, search: searchTxt, tab: estadoTxt !== 'TODAS' ? estadoTxt : undefined };
+      if (fechaDesde && fechaHasta) {
+        params.fechaDesde = fechaDesde;
+        params.fechaHasta = fechaHasta;
+      }
+      if (filtroCae !== 'TODAS' && (estadoTxt === 'FACTURADA' || estadoTxt === 'TODAS')) {
+        params.filtroCae = filtroCae;
+      }
+
+      const res = await api.get('/ventas/historial', { params });
       setVentas(res.data.data);
       setTotalPages(res.data.totalPages);
       setTotalCount(res.data.totalCount);
@@ -255,32 +265,79 @@ const VentasHistorial = () => {
       </div>
 
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 flex flex-col flex-1 overflow-hidden print:hidden transition-colors duration-200">
-        <div className="p-4 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 flex gap-4 items-center overflow-x-auto">
-          <div className="flex gap-2 bg-white dark:bg-slate-900 p-1 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm mr-4 shrink-0">
-            {['TODAS', 'FACTURADA', 'PRESUPUESTO', 'REMITOS', 'ANULADA'].map(est => (
-              <button
-                key={est}
-                onClick={() => {
-                  setFiltroEstado(est);
-                  setSearchParams(est === 'TODAS' ? {} : { tab: est });
-                  cargarVentas(1, filtroTexto, est);
-                }}
-                className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all whitespace-nowrap ${filtroEstado === est ? 'bg-brand-light text-brand-dark shadow-sm' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800'}`}
-              >
-                {est}
-              </button>
-            ))}
-          </div>
+        <div className="p-4 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 flex flex-col gap-4 overflow-x-auto transition-colors">
+          <div className="flex flex-wrap gap-4 items-center justify-between">
+            <div className="flex gap-2 bg-white dark:bg-slate-900 p-1 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm shrink-0">
+              {['TODAS', 'FACTURADA', 'PRESUPUESTO', 'REMITOS', 'ANULADA'].map(est => (
+                <button
+                  key={est}
+                  onClick={() => {
+                    setFiltroEstado(est);
+                    setSearchParams(est === 'TODAS' ? {} : { tab: est });
+                    cargarVentas(1, filtroTexto, est);
+                  }}
+                  className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all whitespace-nowrap ${filtroEstado === est ? 'bg-brand-light text-brand-dark shadow-sm' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800'}`}
+                >
+                  {est}
+                </button>
+              ))}
+            </div>
 
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" size={18} />
-            <input
-              type="text"
-              placeholder="Buscar por ID o Cliente..."
-              className="w-full pl-10 pr-4 py-2 border dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-light bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 placeholder-gray-400 dark:placeholder-slate-500"
-              value={filtroTexto}
-              onChange={e => setFiltroTexto(e.target.value)}
-            />
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" size={18} />
+              <input
+                type="text"
+                placeholder="Buscar por ID o Cliente..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 placeholder-gray-400 dark:placeholder-slate-500 text-sm"
+                value={filtroTexto}
+                onChange={e => setFiltroTexto(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex gap-2 items-center">
+              <label className="text-sm font-bold text-gray-600 dark:text-slate-400">Desde:</label>
+              <input
+                type="date"
+                value={fechaDesde}
+                onChange={e => setFechaDesde(e.target.value)}
+                className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg text-sm text-gray-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-light"
+              />
+            </div>
+            <div className="flex gap-2 items-center">
+              <label className="text-sm font-bold text-gray-600 dark:text-slate-400">Hasta:</label>
+              <input
+                type="date"
+                value={fechaHasta}
+                onChange={e => setFechaHasta(e.target.value)}
+                className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg text-sm text-gray-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-light"
+              />
+            </div>
+            
+            {(filtroEstado === 'FACTURADA' || filtroEstado === 'TODAS') && (
+              <div className="flex gap-2 items-center">
+                <label className="text-sm font-bold text-gray-600 dark:text-slate-400">Tipo:</label>
+                <select
+                  value={filtroCae}
+                  onChange={e => setFiltroCae(e.target.value)}
+                  className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg text-sm text-gray-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-light"
+                >
+                  <option value="TODAS">Todas</option>
+                  <option value="CON_CAE">Solo Electrónicas</option>
+                  <option value="SIN_CAE">Solo Manuales</option>
+                </select>
+              </div>
+            )}
+
+            {(fechaDesde || fechaHasta || filtroTexto || filtroCae !== 'TODAS') && (
+              <button
+                onClick={() => { setFechaDesde(''); setFechaHasta(''); setFiltroTexto(''); setFiltroCae('TODAS'); }}
+                className="text-sm text-brand-dark hover:text-brand-light font-medium transition-colors ml-2"
+              >
+                Limpiar filtros
+              </button>
+            )}
           </div>
         </div>
 
@@ -427,9 +484,15 @@ const VentasHistorial = () => {
                               <button onClick={() => imprimirDocumento(venta, 'FACTURA', true)} className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-1.5 rounded" title="Guardar como PDF">
                                 <Download size={16} />
                               </button>
-                              <button onClick={() => setVentaAAnular(venta)} className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded" title="Anular (Devolver Stock y Dinero)">
-                                <XCircle size={16} />
-                              </button>
+                              {venta.cae ? (
+                                <button onClick={() => setVentaAAnular(venta)} className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 bg-red-50 dark:bg-red-900/30 p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-bold" title="Emitir Nota de Crédito Fiscal">
+                                  <RefreshCcw size={16} /> Emitir NC
+                                </button>
+                              ) : (
+                                <button onClick={() => setVentaAAnular(venta)} className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded" title="Anular Internamente (Devolver Stock y Dinero)">
+                                  <XCircle size={16} />
+                                </button>
+                              )}
                             </>
                           )}
                         </div>

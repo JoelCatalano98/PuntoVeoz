@@ -90,7 +90,8 @@ const ComprasCarga = () => {
       // Usamos el endpoint de productos que ya soporta búsqueda en memoria o backend
       // Si tenemos muchos productos, lo ideal es buscar por un query.
       const res = await api.get('/productos'); 
-      const filtrados = res.data.filter((p: any) => 
+      const arrayDatos = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+      const filtrados = arrayDatos.filter((p: any) => 
         p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || 
         (p.codigoBarras && p.codigoBarras.includes(busqueda))
       ).slice(0, 10);

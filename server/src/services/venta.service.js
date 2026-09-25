@@ -290,7 +290,8 @@ async function emitirNotaCreditoTotal(comercioId, usuarioId, ventaIdOriginal) {
       items: true,
       movimientoCaja: true,
       cliente: true,
-      puntoVenta: true
+      puntoVenta: true,
+      comercio: true
     }
   });
 
@@ -312,7 +313,7 @@ async function emitirNotaCreditoTotal(comercioId, usuarioId, ventaIdOriginal) {
   const tipoCbteOriginal = ventaOriginal.tipoComprobante === 'FACTURA_A' ? 1 : (ventaOriginal.tipoComprobante === 'FACTURA_B' ? 6 : 11);
 
   const datosAfipNC = {
-    puntoVenta: ventaOriginal.puntoVenta.numero,
+    puntoVenta: Number(ventaOriginal.puntoVenta.numero),
     tipoCbte: tipoCbteOriginal,
     clienteDocTipo: docTipo,
     clienteDocNro: ventaOriginal.cliente ? Number(ventaOriginal.cliente.numeroDoc.replace(/\D/g, '')) : 0,
@@ -752,7 +753,7 @@ async function facturarAfip({ comercioId, ventaId, clienteId, concepto = 1 }) {
   // 1. Validar venta y cliente fuera de la transacción si AFIP tarda
   const venta = await prisma.venta.findFirst({
     where: { id: ventaId, comercioId },
-    include: { cliente: true }
+    include: { cliente: true, comercio: true, puntoVenta: true }
   });
 
   if (!venta) {
@@ -784,7 +785,7 @@ async function facturarAfip({ comercioId, ventaId, clienteId, concepto = 1 }) {
   else if (cliente.numeroDoc.length >= 7 && cliente.numeroDoc.length <= 8) docTipo = 96; // DNI
 
   const datosVenta = {
-    puntoVenta: 1, // Podría venir de venta.puntoVenta.numeroArca
+    puntoVenta: Number(venta.puntoVenta.numero),
     tipoCbte: 11, // Factura C
     clienteDocTipo: docTipo,
     clienteDocNro: Number(cliente.numeroDoc.replace(/\D/g, '')),

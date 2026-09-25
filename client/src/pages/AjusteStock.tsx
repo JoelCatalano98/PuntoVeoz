@@ -59,7 +59,7 @@ const AjusteStock = () => {
       if (filtroCategoria) params.append('categoriaId', filtroCategoria);
 
       const res = await api.get('/productos', { params });
-      let filtrados = res.data;
+      let filtrados = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
 
       if (busqueda.trim()) {
         filtrados = filtrados.filter((p: any) => 
