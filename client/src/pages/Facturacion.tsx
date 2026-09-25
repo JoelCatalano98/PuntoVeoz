@@ -4,12 +4,16 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import ClienteModal from '../components/ClienteModal';
 import { FacturaA4 } from '../components/FacturaA4';
+import { TicketVenta } from '../components/TicketVenta';
+import ConfirmacionEmision from '../components/ConfirmacionEmision';
 
 export default function Facturacion() {
   const [loading, setLoading] = useState(false);
   const [facturando, setFacturando] = useState(false);
   const [facturaEmitida, setFacturaEmitida] = useState(false);
   const [dataFactura, setDataFactura] = useState<any>(null);
+  const [formatoFE, setFormatoFE] = useState('A4');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Cliente
   const [cliente, setCliente] = useState<any>(null);
@@ -41,6 +45,11 @@ export default function Facturacion() {
     const today = new Date(Date.now() - ((new Date()).getTimezoneOffset() * 60000)).toISOString().split('T')[0].replace(/-/g, '');
     setFechaDesde(today);
     setFechaHasta(today);
+    
+    // Cargar config impresión
+    api.get('/parametros/impresionFacturaElectronica').then(res => {
+      if (res.data?.valor) setFormatoFE(res.data.valor);
+    }).catch(err => console.error('Error al cargar config impresion', err));
   }, []);
 
   const cargarCaja = async () => {
@@ -135,6 +144,11 @@ export default function Facturacion() {
       return;
     }
 
+    setShowConfirmModal(true);
+  };
+
+  const ejecutarEmision = async () => {
+    setShowConfirmModal(false);
     setFacturando(true);
     try {
       let vId = ventaBaseId;
@@ -468,8 +482,31 @@ export default function Facturacion() {
 
       {/* Render invisible for printing */}
       <div className="hidden">
-        {dataFactura && <FacturaA4 venta={dataFactura} />}
+        {dataFactura && (formatoFE === 'A4' ? <FacturaA4 venta={dataFactura} /> : <TicketVenta venta={dataFactura} />)}
       </div>
+
+      <ConfirmacionEmision
+        isOpen={showConfirmModal}
+        onCancel={() => setShowConfirmModal(false)}
+        onConfirm={ejecutarEmision}
+        title="Confirmar Emisión de Factura"
+      >
+        <div className="space-y-4">
+          <p>Vas a emitir una <strong>Factura {cliente?.condicionIva === 'RESPONSABLE_INSCRIPTO' ? 'A' : 'C'}</strong> por <strong>${total.toFixed(2)}</strong> para <strong>{cliente?.razonSocial || cliente?.nombre || 'Consumidor Final'}</strong>.</p>
+          <div className="bg-gray-50 dark:bg-slate-900/50 p-4 rounded-lg border border-gray-100 dark:border-slate-700">
+            <ul className="text-sm space-y-2">
+              <li className="flex justify-between"><span>Cliente:</span> <span className="font-semibold">{cliente?.razonSocial || cliente?.nombre}</span></li>
+              <li className="flex justify-between"><span>DNI/CUIT:</span> <span className="font-semibold">{cliente?.numeroDoc}</span></li>
+              <li className="flex justify-between"><span>Ítems:</span> <span className="font-semibold">{items.reduce((acc, i) => acc + Number(i.cantidad), 0)}</span></li>
+              <li className="flex justify-between text-lg pt-2 border-t border-gray-200 dark:border-slate-700"><span>Total a Facturar:</span> <span className="font-bold text-brand-dark dark:text-brand-light">${total.toFixed(2)}</span></li>
+            </ul>
+          </div>
+          <p className="text-sm text-red-500 dark:text-red-400 mt-2 flex items-center gap-2">
+            <AlertTriangle size={16} />
+            Esta acción no se puede deshacer sin emitir una Nota de Crédito. ¿Confirmar?
+          </p>
+        </div>
+      </ConfirmacionEmision>
     </div>
   );
 }

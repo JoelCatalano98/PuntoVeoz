@@ -5,6 +5,9 @@ import toast from 'react-hot-toast';
 import { RefreshCcw, XCircle, Search, AlertCircle, Printer, CheckCircle, FileText, PackageCheck, Send, Download, Edit2 } from 'lucide-react';
 import { Pagination } from '../components/Pagination';
 import { FacturaA4 } from '../components/FacturaA4';
+import { TicketVenta } from '../components/TicketVenta';
+import { DocumentoA4 } from '../components/DocumentoA4';
+import ConfirmacionEmision from '../components/ConfirmacionEmision';
 
 interface VentaItem {
   id: number;
@@ -42,7 +45,6 @@ const VentasHistorial = () => {
   const limit = 20;
 
   const [ventaAAnular, setVentaAAnular] = useState<Venta | null>(null);
-  const [confirmarAnulacion, setConfirmarAnulacion] = useState(false);
   const [anulando, setAnulando] = useState(false);
 
   // Modal Facturar (Aplica a PRESUPUESTO y REMITO_APROBADO)
@@ -56,8 +58,14 @@ const VentasHistorial = () => {
   const [empresaDatos, setEmpresaDatos] = useState({ razonSocial: 'Empresa / Comercio', cuit: '', direccion: '', condicionIva: '' });
   const [logoError, setLogoError] = useState(false);
 
-  // Impresion A4
+  // Impresion A4 / TICKET
   const [documentoImprimir, setDocumentoImprimir] = useState<{ venta: Venta, tipo: 'REMITO' | 'PRESUPUESTO' | 'FACTURA' } | null>(null);
+  
+  // Formatos
+  const [fmtFE, setFmtFE] = useState('A4');
+  const [fmtPresupuesto, setFmtPresupuesto] = useState('A4');
+  const [fmtRemito, setFmtRemito] = useState('A4');
+  const [fmtNC, setFmtNC] = useState('A4');
 
   useEffect(() => {
     cargarVentas(1);
@@ -90,12 +98,16 @@ const VentasHistorial = () => {
       setTotalCount(res.data.totalCount);
       setPage(pageToLoad);
 
-      const [resCaja, resRS, resCuit, resDir, resIva] = await Promise.all([
+      const [resCaja, resRS, resCuit, resDir, resIva, resFE, resPresup, resRemito, resNC] = await Promise.all([
         api.get('/caja/estado'),
         api.get('/parametros/empresaRazonSocial'),
         api.get('/parametros/empresaCuit'),
         api.get('/parametros/empresaDireccion'),
-        api.get('/parametros/empresaCondicionIva')
+        api.get('/parametros/empresaCondicionIva'),
+        api.get('/parametros/impresionFacturaElectronica'),
+        api.get('/parametros/impresionPresupuesto'),
+        api.get('/parametros/impresionRemito'),
+        api.get('/parametros/impresionNotaCredito')
       ]);
 
       if (resCaja.data.abierta) setAperturaCajaId(resCaja.data.apertura.id);
@@ -106,6 +118,11 @@ const VentasHistorial = () => {
         direccion: resDir.data?.valor || '',
         condicionIva: resIva.data?.valor || ''
       });
+
+      if (resFE.data?.valor) setFmtFE(resFE.data.valor);
+      if (resPresup.data?.valor) setFmtPresupuesto(resPresup.data.valor);
+      if (resRemito.data?.valor) setFmtRemito(resRemito.data.valor);
+      if (resNC.data?.valor) setFmtNC(resNC.data.valor);
 
     } catch (error) {
       toast.error('Error al cargar historial de ventas');
@@ -118,15 +135,19 @@ const VentasHistorial = () => {
     if (!ventaAAnular) return;
     setAnulando(true);
     try {
-      await api.post(`/ventas/${ventaAAnular.id}/anular`);
-      toast.success('Documento anulado correctamente');
+      if (ventaAAnular.cae) {
+        await api.post(`/ventas/${ventaAAnular.id}/nota-credito`);
+        toast.success('Nota de Crédito emitida correctamente');
+      } else {
+        await api.post(`/ventas/${ventaAAnular.id}/anular`);
+        toast.success('Documento anulado correctamente');
+      }
       cargarVentas();
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Error al anular');
     } finally {
       setAnulando(false);
       setVentaAAnular(null);
-      setConfirmarAnulacion(false);
     }
   };
 
@@ -428,50 +449,53 @@ const VentasHistorial = () => {
         />
       </div>
 
-      {/* Modal Confirmar Anulación */}
-      {ventaAAnular && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full overflow-hidden transition-colors duration-200">
-            <div className="bg-red-500 p-6 flex flex-col items-center justify-center text-white">
-              <AlertCircle size={48} className="mb-2" />
-              <h2 className="text-xl font-bold">¿Anular Documento #{ventaAAnular.id}?</h2>
-            </div>
-
-            <div className="p-6">
-              <p className="text-gray-600 dark:text-slate-300 text-center mb-6">
-                Esta acción cancelará el documento.
+      <ConfirmacionEmision
+        isOpen={!!ventaAAnular}
+        onCancel={() => { setVentaAAnular(null); }}
+        onConfirm={handleAnular}
+        title={ventaAAnular?.cae ? "Confirmar Emisión de Nota de Crédito" : "Confirmar Anulación Interna"}
+        isDestructive={true}
+      >
+        {ventaAAnular && (
+          <div className="space-y-4">
+            {ventaAAnular.cae ? (() => {
+              const letraOrig = ventaAAnular.tipoComprobante?.replace('FACTURA_', '') || 'C';
+              const letraNC = letraOrig;
+              const nroOrigStr = `${String(ventaAAnular.puntoVenta?.numero || 1).padStart(4, '0')}-${String(ventaAAnular.nroFactura || ventaAAnular.id).padStart(8, '0')}`;
+              
+              return (
+                <>
+                  <p>
+                    Vas a emitir una <strong>Nota de Crédito {letraNC}</strong> por <strong>${Number(ventaAAnular.total).toFixed(2)}</strong>, anulando la <strong>Factura {letraOrig} N° {nroOrigStr}</strong> de <strong>{ventaAAnular.cliente?.razonSocial || ventaAAnular.cliente?.nombre || 'Consumidor Final'}</strong>.
+                  </p>
+                  <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-100 dark:border-red-900/50">
+                    <ul className="text-sm space-y-2">
+                      <li className="flex justify-between"><span>Factura a anular:</span> <span className="font-bold text-red-700 dark:text-red-400">N° {nroOrigStr}</span></li>
+                      <li className="flex justify-between"><span>Cliente:</span> <span className="font-semibold">{ventaAAnular.cliente?.razonSocial || ventaAAnular.cliente?.nombre}</span></li>
+                      <li className="flex justify-between text-lg pt-2 border-t border-red-200 dark:border-red-800/50 mt-2">
+                        <span>Total a Devolver:</span> 
+                        <span className="font-bold text-red-700 dark:text-red-400">
+                          ${Number(ventaAAnular.total).toFixed(2)}
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
+                  <p className="text-sm text-red-600 dark:text-red-400 font-semibold flex items-center gap-2">
+                    <AlertCircle size={16} /> Esta acción es irreversible y se informará a AFIP. ¿Confirmar?
+                  </p>
+                </>
+              );
+            })() : (
+              <p>
+                Vas a anular el documento interno <strong>#{ventaAAnular.id}</strong>.
                 {ventaAAnular.estado === 'REMITO_APROBADO' && " Se devolverá el stock."}
                 {(ventaAAnular.estado === 'FACTURADA' || ventaAAnular.estado === 'COMPLETADA') && " Se devolverá el stock y se registrará el egreso de dinero en la caja."}
+                <br/><br/>¿Confirmar anulación?
               </p>
-
-              {!confirmarAnulacion ? (
-                <div className="flex gap-3">
-                  <button onClick={() => setVentaAAnular(null)} className="flex-1 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 font-bold rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
-                    Cancelar
-                  </button>
-                  <button onClick={() => setConfirmarAnulacion(true)} className="flex-1 py-3 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 transition-colors shadow-sm">
-                    Sí, Anular
-                  </button>
-                </div>
-              ) : (
-                <div className="flex gap-3 flex-col">
-                  <div className="bg-red-50 dark:bg-red-900/30 p-3 rounded text-red-800 dark:text-red-300 text-sm font-semibold mb-2 border border-red-100 dark:border-red-800/50 text-center">
-                    ¿Estás absolutamente seguro? Esta acción no se puede deshacer.
-                  </div>
-                  <div className="flex gap-3">
-                    <button onClick={() => setConfirmarAnulacion(false)} disabled={anulando} className="flex-1 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 font-bold rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50">
-                      Atrás
-                    </button>
-                    <button onClick={handleAnular} disabled={anulando} className="flex-1 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors shadow-sm disabled:opacity-50">
-                      {anulando ? 'Anulando...' : 'Confirmar Anulación'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </ConfirmacionEmision>
 
       {/* Modal Facturar (Cobrar) */}
       {ventaAFacturar && (
@@ -534,158 +558,31 @@ const VentasHistorial = () => {
         </div>
       )}
 
-      {/* Documento A4 de Impresión (Estilo AFIP / ARCA) */}
-      {documentoImprimir && documentoImprimir.venta.cae ? (
-        <FacturaA4 venta={documentoImprimir.venta} />
-      ) : documentoImprimir ? (
-        <div className="hidden print:block absolute inset-0 bg-white" style={{ width: '210mm', minHeight: '297mm', padding: '15mm', margin: '0 auto', fontSize: '10pt', color: '#000', fontFamily: 'Arial, sans-serif' }}>
-          <style>{`
-            @page { size: A4; margin: 0; }
-            body { margin: 0; padding: 0; background: white; }
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          `}</style>
+      {/* Documento de Impresión Dinámico */}
+      {documentoImprimir && (() => {
+        const v = documentoImprimir.venta;
+        const tipoDoc = documentoImprimir.tipo;
+        let modo = 'TICKET';
+        if (v.cae) modo = fmtFE;
+        else if (tipoDoc === 'PRESUPUESTO') modo = fmtPresupuesto;
+        else if (tipoDoc === 'REMITO') modo = fmtRemito;
+        else if (v.estado === 'ANULADA') modo = fmtNC;
 
-          {/* CABECERA (Header) */}
-          <div className="border-2 border-black mb-2 flex relative rounded">
-            {/* Letra Central */}
-            <div className="absolute left-1/2 -translate-x-1/2 top-0 flex flex-col items-center justify-start bg-white w-12 border-x-2 border-black border-b-2 h-16 rounded-b-md">
-              <div className="text-3xl font-extrabold leading-none mt-2">
-                {documentoImprimir.tipo === 'REMITO' ? 'R' : 'X'}
-              </div>
-              <div className="text-[8px] font-bold mt-1 text-center">
-                CÓD. 000
-              </div>
-            </div>
+        if (modo === 'TICKET') {
+          return <TicketVenta venta={v} />;
+        }
 
-            {/* Caja Izquierda: Empresa */}
-            <div className="flex-1 p-3 pr-8 flex flex-col justify-between">
-              {!logoError ? (
-                <img
-                  src="/Logoempresa.png"
-                  alt={empresaDatos.razonSocial}
-                  className="h-20 object-contain mb-4"
-                  onError={() => setLogoError(true)}
-                />
-              ) : (
-                <h2 className="text-2xl font-black uppercase tracking-tight mb-4">{empresaDatos.razonSocial || 'EMPRESA GENÉRICA'}</h2>
-              )}
-              <div>
-                <p className="text-xs mb-1"><strong>Razón Social:</strong> {empresaDatos.razonSocial}</p>
-                <p className="text-xs mb-1"><strong>Domicilio Comercial:</strong> {empresaDatos.direccion}</p>
-                <p className="text-xs"><strong>Condición frente al IVA:</strong> {empresaDatos.condicionIva}</p>
-              </div>
-            </div>
+        if (v.cae) {
+          return <FacturaA4 venta={v} />;
+        }
 
-            {/* Caja Derecha: Datos Comprobante */}
-            <div className="flex-1 p-3 pl-10 border-l-2 border-transparent border-t-0 flex flex-col justify-between">
-              <div>
-                <h1 className="text-2xl font-black uppercase tracking-tight">
-                  {documentoImprimir.tipo === 'REMITO' ? 'REMITO' : documentoImprimir.tipo === 'PRESUPUESTO' ? 'PRESUPUESTO' : 'COMPROBANTE NO FISCAL'}
-                </h1>
-                <div className="text-lg font-bold mt-1 mb-3">
-                  N° 0001-{documentoImprimir.venta.id.toString().padStart(8, '0')}
-                </div>
-                <p className="text-sm font-bold mb-3">Fecha de Emisión: {new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(documentoImprimir.venta.createdAt))}</p>
-              </div>
-              <div>
-                <p className="text-xs mb-1"><strong>CUIT:</strong> {empresaDatos.cuit || '00-00000000-0'}</p>
-                <p className="text-xs mb-1"><strong>Ingresos Brutos:</strong> {empresaDatos.cuit || '00-00000000-0'}</p>
-                <p className="text-xs"><strong>Fecha de Inicio de Actividades:</strong> -</p>
-              </div>
-            </div>
-          </div>
+        let tipoD: 'REMITO' | 'PRESUPUESTO' | 'FACTURA' | 'NOTA_CREDITO' | 'TICKET_NO_FISCAL' = 'TICKET_NO_FISCAL';
+        if (tipoDoc === 'REMITO') tipoD = 'REMITO';
+        else if (tipoDoc === 'PRESUPUESTO') tipoD = 'PRESUPUESTO';
+        else if (v.estado === 'ANULADA') tipoD = 'NOTA_CREDITO';
 
-          {/* DATOS DEL CLIENTE */}
-          <div className="border-2 border-black rounded mb-2 p-3 flex justify-between text-xs">
-            <div className="flex flex-col gap-1 w-1/2">
-              <p><strong>CUIT / DNI:</strong> {documentoImprimir.venta.cliente?.numeroDoc || 'Consumidor Final'}</p>
-              <p><strong>Condición frente al IVA:</strong> {documentoImprimir.venta.cliente?.condicionIva || 'Consumidor Final'}</p>
-              <p><strong>Condición de venta:</strong> {documentoImprimir.venta.medioPago === 'EFECTIVO' ? 'Efectivo' : 'Otra'}</p>
-            </div>
-            <div className="flex flex-col gap-1 w-1/2 pl-4">
-              {documentoImprimir.venta.cliente ? (
-                <>
-                  <p><strong>Señor/es:</strong> {documentoImprimir.venta.cliente.razonSocial || documentoImprimir.venta.cliente.nombre}</p>
-                  <p><strong>Domicilio:</strong> {documentoImprimir.venta.cliente.direccion || '-'}</p>
-                </>
-              ) : (
-                <p className="text-lg font-bold">CONSUMIDOR FINAL</p>
-              )}
-            </div>
-          </div>
-
-          {/* GRILLA DE ITEMS */}
-          <div className="border-2 border-black rounded flex-1 min-h-[150mm] relative flex flex-col">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-gray-200 border-b-2 border-black text-xs">
-                  <th className="py-2 px-2 text-left font-bold border-r border-black w-24">Código</th>
-                  <th className="py-2 px-2 text-left font-bold border-r border-black">Producto / Servicio</th>
-                  <th className={`py-2 px-2 text-center font-bold w-20 ${(documentoImprimir.tipo === 'PRESUPUESTO' || documentoImprimir.tipo === 'FACTURA') ? 'border-r border-black' : ''}`}>Cantidad</th>
-                  {(documentoImprimir.tipo === 'PRESUPUESTO' || documentoImprimir.tipo === 'FACTURA') && (
-                    <>
-                      <th className="py-2 px-2 text-right font-bold border-r border-black w-24">Precio Unit.</th>
-                      <th className="py-2 px-2 text-right font-bold border-r border-black w-16">% Bonif.</th>
-                      <th className="py-2 px-2 text-right font-bold w-28">Subtotal</th>
-                    </>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="align-top">
-                {documentoImprimir.venta.items.map((item, idx) => (
-                  <tr key={idx}>
-                    <td className="py-1.5 px-2 font-mono text-[11px] border-r border-black">{item.producto?.codigoBarras || '-'}</td>
-                    <td className="py-1.5 px-2 text-[11px] font-medium border-r border-black uppercase">{item.descripcion || item.producto?.nombre}</td>
-                    <td className={`py-1.5 px-2 text-center text-[11px] ${(documentoImprimir.tipo === 'PRESUPUESTO' || documentoImprimir.tipo === 'FACTURA') ? 'border-r border-black' : ''}`}>{item.cantidad}</td>
-                    {(documentoImprimir.tipo === 'PRESUPUESTO' || documentoImprimir.tipo === 'FACTURA') && (
-                      <>
-                        <td className="py-1.5 px-2 text-right text-[11px] border-r border-black">{Number(item.precioUnitario).toFixed(2)}</td>
-                        <td className="py-1.5 px-2 text-right text-[11px] border-r border-black">0.00</td>
-                        <td className="py-1.5 px-2 text-right text-[11px]">{Number(item.subtotal).toFixed(2)}</td>
-                      </>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* FOOTER TOTALES */}
-          {(documentoImprimir.tipo === 'PRESUPUESTO' || documentoImprimir.tipo === 'FACTURA') && (
-            <div className="mt-2 border-2 border-black rounded p-3 flex justify-end">
-              <div className="flex justify-between w-64 items-center">
-                <span className="font-bold text-sm uppercase">Importe Total:</span>
-                <span className="font-extrabold text-xl pr-2">${Number(documentoImprimir.venta.total).toFixed(2)}</span>
-              </div>
-            </div>
-          )}
-
-          {/* ESPACIO FIRMA PARA REMITO */}
-          {documentoImprimir.tipo === 'REMITO' && (
-            <div className="mt-8 border-2 border-black rounded p-4 grid grid-cols-2 gap-8">
-              <div>
-                <p className="text-xs font-bold uppercase mb-8">Firma de Conformidad (Cliente)</p>
-                <div className="border-b border-black w-full mb-1"></div>
-                <div className="flex justify-between text-[10px]">
-                  <span>Firma y Aclaración</span>
-                  <span>DNI / CUIT</span>
-                </div>
-              </div>
-              <div>
-                <p className="text-xs font-bold uppercase mb-8">Entregado Por (Local)</p>
-                <div className="border-b border-black w-full mb-1"></div>
-                <div className="flex justify-between text-[10px]">
-                  <span>Firma y Aclaración</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="fixed bottom-8 left-0 right-0 text-center font-bold text-[10px]">
-            DOCUMENTO NO VÁLIDO COMO FACTURA - Generado por PuntoVeloz
-          </div>
-        </div>
-      ) : null}
+        return <DocumentoA4 venta={v} tipo={tipoD} />;
+      })()}
     </div>
   );
 };

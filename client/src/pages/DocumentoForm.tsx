@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Search, Save, X, Plus, Trash2, User as UserIcon, AlertCircle, ShoppingCart } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import ConfirmacionEmision from '../components/ConfirmacionEmision';
 
 interface Producto {
   id: number;
@@ -38,6 +39,9 @@ const DocumentoForm = () => {
 
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [fmtImpresion, setFmtImpresion] = useState('TICKET');
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null);
@@ -140,7 +144,34 @@ const DocumentoForm = () => {
     setItems(items.filter((_, i) => i !== index));
   };
 
+  useEffect(() => {
+    // Buscar configuración de impresión según el tipo de documento actual
+    const fetchConfig = async () => {
+      try {
+        const paramName = tipoDoc === 'PRESUPUESTO' ? 'impresionPresupuesto' : 'impresionRemito';
+        const res = await api.get(`/parametros/${paramName}`);
+        if (res.data?.valor) setFmtImpresion(res.data.valor);
+      } catch (e) {
+        console.error("Error obteniendo parámetro de impresión", e);
+      }
+    };
+    fetchConfig();
+  }, [tipoDoc]);
+
+  const handleGuardarClick = () => {
+    if (!clienteSeleccionado) {
+      toast.error('Debe seleccionar un cliente.');
+      return;
+    }
+    if (items.length === 0) {
+      toast.error('Debe agregar al menos un producto.');
+      return;
+    }
+    setShowConfirmModal(true);
+  };
+
   const handleGuardar = async () => {
+    setShowConfirmModal(false);
     if (!clienteSeleccionado) {
       toast.error('Debe seleccionar un cliente.');
       return;
@@ -214,7 +245,7 @@ const DocumentoForm = () => {
           <button onClick={() => navigate(-1)} className="px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 font-bold transition-colors">
             Cancelar
           </button>
-          <button onClick={handleGuardar} disabled={guardando} className="px-4 py-2 bg-brand-light dark:bg-blue-500 text-brand-dark dark:text-white rounded-lg hover:bg-blue-400 dark:hover:bg-blue-600 font-bold flex items-center gap-2 shadow-sm disabled:opacity-50 transition-colors">
+          <button onClick={handleGuardarClick} disabled={guardando} className="px-4 py-2 bg-brand-light dark:bg-blue-500 text-brand-dark dark:text-white rounded-lg hover:bg-blue-400 dark:hover:bg-blue-600 font-bold flex items-center gap-2 shadow-sm disabled:opacity-50 transition-colors">
             <Save size={18} /> {guardando ? 'Guardando...' : 'Guardar Documento'}
           </button>
         </div>
@@ -374,8 +405,33 @@ const DocumentoForm = () => {
             )}
           </div>
         </div>
-
       </div>
+
+      <ConfirmacionEmision
+        isOpen={showConfirmModal}
+        onCancel={() => setShowConfirmModal(false)}
+        onConfirm={handleGuardar}
+        title={`Confirmar ${tipoDoc === 'PRESUPUESTO' ? 'Presupuesto' : 'Remito'}`}
+      >
+        <div className="space-y-4">
+          <p>
+            Vas a generar un <strong>{tipoDoc === 'PRESUPUESTO' ? 'Presupuesto' : 'Remito'}</strong> por <strong>${totalGral.toFixed(2)}</strong> para el cliente <strong>{clienteSeleccionado?.razonSocial || clienteSeleccionado?.nombre}</strong>.
+          </p>
+          <div className="bg-gray-50 dark:bg-slate-900/50 p-4 rounded-lg border border-gray-100 dark:border-slate-700">
+            <ul className="text-sm space-y-2">
+              <li className="flex justify-between"><span>Cliente:</span> <span className="font-semibold">{clienteSeleccionado?.razonSocial || clienteSeleccionado?.nombre}</span></li>
+              <li className="flex justify-between"><span>Cantidad de ítems:</span> <span className="font-semibold">{items.reduce((acc, i) => acc + Number(i.cantidad), 0)}</span></li>
+              <li className="flex justify-between"><span>Modo de impresión:</span> <span className="font-semibold">{fmtImpresion === 'A4' ? 'Hoja A4' : 'Ticket (Termal)'}</span></li>
+              <li className="flex justify-between text-lg pt-2 border-t border-gray-200 dark:border-slate-700"><span>Total:</span> <span className="font-bold text-brand-dark dark:text-brand-light">${totalGral.toFixed(2)}</span></li>
+            </ul>
+          </div>
+          {tipoDoc === 'REMITO_PENDIENTE' && (
+            <p className="text-sm text-yellow-600 dark:text-yellow-500 font-semibold flex items-center gap-2 mt-2">
+              <AlertCircle size={16} /> Nota: Esta acción guardará el remito en estado pendiente. NO se descontará el stock hasta que sea "Aprobado" desde el Historial.
+            </p>
+          )}
+        </div>
+      </ConfirmacionEmision>
     </div>
   );
 };

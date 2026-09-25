@@ -215,6 +215,10 @@ model Venta {
   movimientosStock MovimientoStock[]
   movimientoCaja   MovimientoCaja?
 
+  ventaOriginalId  Int?
+  ventaOriginal    Venta? @relation("VentaOriginal", fields: [ventaOriginalId], references: [id])
+  notasCredito     Venta[] @relation("VentaOriginal")
+
   @@index([comercioId])
   @@index([comercioId, createdAt])
   @@map("ventas")

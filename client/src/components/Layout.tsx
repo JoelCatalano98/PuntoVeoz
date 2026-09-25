@@ -111,8 +111,9 @@ const Layout = () => {
                 { label: 'Historial de ventas', to: '/ventas-historial' },
                 { label: 'Órdenes de retiro/remitos', to: '/ventas-historial?tab=REMITOS' },
                 { label: 'Presupuestos', to: '/ventas-historial?tab=PRESUPUESTO' },
-                { label: 'Facturación (ARCA)', to: '/facturacion' }
-              ]}
+                { label: 'Facturación (ARCA)', to: '/facturacion' },
+                (usuario?.rol === 'SUPERADMIN' || usuario?.rol === 'ADMIN') ? { label: 'Notas de Crédito', to: '/notas-credito' } : null
+              ].filter(Boolean) as any}
             />
 
             <NavDropdown

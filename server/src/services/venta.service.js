@@ -147,6 +147,7 @@ async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, it
         vuelto,
         medioPago,
         estado,
+        tipoComprobante: estado === 'PRESUPUESTO' ? 'PRESUPUESTO' : (estado === 'REMITO_PENDIENTE' ? 'REMITO' : 'TICKET_NO_FISCAL'),
         items: {
           create: productosValidados.map(item => ({
             productoId: item.productoId,
@@ -279,6 +280,157 @@ async function anularVenta(comercioId, usuarioId, ventaId) {
 
     return venta;
   });
+}
+
+async function emitirNotaCreditoTotal(comercioId, usuarioId, ventaIdOriginal) {
+  // PASO 1: Validar y armar datos (Solo DB local, sin lockeos)
+  const ventaOriginal = await prisma.venta.findFirst({
+    where: { id: ventaIdOriginal, comercioId },
+    include: {
+      items: true,
+      movimientoCaja: true,
+      cliente: true,
+      puntoVenta: true
+    }
+  });
+
+  if (!ventaOriginal) throw new Error('Venta original no encontrada');
+  if (ventaOriginal.anulada || ventaOriginal.estado === 'ANULADA') throw new Error('La venta ya se encuentra anulada');
+  if (!ventaOriginal.cae || !ventaOriginal.nroFactura) throw new Error('Solo se pueden emitir Notas de Crédito fiscales para ventas con CAE y Nro. de Factura');
+
+  let tipoNC = 'NOTA_CREDITO_C';
+  let tipoCmpAFIP = 13;
+  if (ventaOriginal.tipoComprobante === 'FACTURA_A') { tipoNC = 'NOTA_CREDITO_A'; tipoCmpAFIP = 3; }
+  else if (ventaOriginal.tipoComprobante === 'FACTURA_B') { tipoNC = 'NOTA_CREDITO_B'; tipoCmpAFIP = 8; }
+
+  let docTipo = 99;
+  if (ventaOriginal.cliente && ventaOriginal.cliente.numeroDoc) {
+    if (ventaOriginal.cliente.numeroDoc.length === 11) docTipo = 80;
+    else if (ventaOriginal.cliente.numeroDoc.length >= 7 && ventaOriginal.cliente.numeroDoc.length <= 8) docTipo = 96;
+  }
+
+  const tipoCbteOriginal = ventaOriginal.tipoComprobante === 'FACTURA_A' ? 1 : (ventaOriginal.tipoComprobante === 'FACTURA_B' ? 6 : 11);
+
+  const datosAfipNC = {
+    puntoVenta: ventaOriginal.puntoVenta.numero,
+    tipoCbte: tipoCbteOriginal,
+    clienteDocTipo: docTipo,
+    clienteDocNro: ventaOriginal.cliente ? Number(ventaOriginal.cliente.numeroDoc.replace(/\D/g, '')) : 0,
+    total: ventaOriginal.total.toNumber(),
+    concepto: ventaOriginal.concepto || 1,
+    nroFactura: ventaOriginal.nroFactura
+  };
+
+  // PASO 1.5: Bloqueo atómico (Lock) para evitar concurrencia
+  const lock = await prisma.venta.updateMany({
+    where: { 
+      id: ventaOriginal.id, 
+      anulada: false, 
+      estado: { not: 'PROCESANDO_NC' } 
+    },
+    data: { estado: 'PROCESANDO_NC' }
+  });
+
+  if (lock.count === 0) {
+    throw new Error('Esta venta ya está siendo procesada o fue anulada');
+  }
+
+  // PASO 2: Llamada a AFIP fuera de toda transacción
+  let afipResponse;
+  try {
+    afipResponse = await arcaService.emitirNotaCredito(comercioId, datosAfipNC);
+  } catch (error) {
+    // Si AFIP falla (por red o rechazo), liberamos el lock restaurando el estado original
+    await prisma.venta.update({
+      where: { id: ventaOriginal.id },
+      data: { estado: ventaOriginal.estado }
+    });
+    throw error;
+  }
+
+  // PASO 3: Guardado Inmediato del comprobante emitido
+  const nc = await prisma.venta.create({
+    data: {
+      comercioId,
+      usuarioId,
+      puntoVentaId: ventaOriginal.puntoVentaId,
+      clienteId: ventaOriginal.clienteId,
+      listaPrecioId: ventaOriginal.listaPrecioId,
+      total: ventaOriginal.total,
+      montoRecibido: ventaOriginal.total,
+      vuelto: 0,
+      medioPago: ventaOriginal.medioPago,
+      estado: 'COMPLETADA',
+      estadoFiscal: 'TIMBRADA',
+      anulada: false,
+      tipoComprobante: tipoNC,
+      ventaOriginalId: ventaOriginal.id,
+      nroFactura: afipResponse.nroComprobante,
+      cae: afipResponse.cae,
+      vencimientoCae: afipResponse.vencimientoCae ? new Date(
+        afipResponse.vencimientoCae.substring(0,4) + '-' +
+        afipResponse.vencimientoCae.substring(4,6) + '-' +
+        afipResponse.vencimientoCae.substring(6,8)
+      ) : null,
+      items: {
+        create: ventaOriginal.items.map(item => ({
+          productoId: item.productoId,
+          cantidad: item.cantidad,
+          descripcion: item.descripcion,
+          precioUnitario: item.precioUnitario,
+          descuentoLinea: item.descuentoLinea,
+          subtotal: item.subtotal
+        }))
+      }
+    },
+    include: { items: { include: { producto: true } }, cliente: true, puntoVenta: true }
+  });
+
+  // PASO 4: Con la NC ya segura, procesamos stock, caja y anulación de la original
+  await prisma.$transaction(async (tx) => {
+    // Anular original
+    await tx.venta.update({
+      where: { id: ventaOriginal.id },
+      data: { anulada: true, estado: 'ANULADA' }
+    });
+
+    // Devolver stock
+    for (const item of ventaOriginal.items) {
+      if (!item.productoId) continue;
+      await tx.producto.update({
+        where: { id: item.productoId },
+        data: { stockActual: { increment: item.cantidad } }
+      });
+      await tx.movimientoStock.create({
+        data: {
+          comercioId,
+          productoId: item.productoId,
+          usuarioId,
+          tipo: 'ENTRADA',
+          cantidad: item.cantidad,
+          motivo: `Nota de Crédito por Venta #${ventaOriginal.id}`,
+          ventaId: nc.id
+        }
+      });
+    }
+
+    // Contra-movimiento caja
+    if (ventaOriginal.movimientoCaja) {
+      await tx.movimientoCaja.create({
+        data: {
+          aperturaCajaId: ventaOriginal.movimientoCaja.aperturaCajaId,
+          cajaId: ventaOriginal.movimientoCaja.cajaId,
+          tipo: 'EGRESO_MANUAL',
+          monto: ventaOriginal.movimientoCaja.monto,
+          medioPago: ventaOriginal.movimientoCaja.medioPago,
+          descripcion: `Nota de Crédito por Venta #${ventaOriginal.id}`,
+          ventaId: nc.id
+        }
+      });
+    }
+  });
+
+  return nc;
 }
 
 // Transición: REMITO_PENDIENTE -> REMITO_APROBADO
@@ -674,6 +826,7 @@ async function facturarAfip({ comercioId, ventaId, clienteId, concepto = 1 }) {
 module.exports = {
   crearVenta,
   anularVenta,
+  emitirNotaCreditoTotal,
   aprobarRemito,
   facturarRemito,
   aprobarYFacturarRemito,

@@ -8,6 +8,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { TicketVenta } from '../components/TicketVenta';
 import { FacturaA4 } from '../components/FacturaA4';
+import { DocumentoA4 } from '../components/DocumentoA4';
+import ConfirmacionEmision from '../components/ConfirmacionEmision';
 
 interface ListaPrecio {
   id: number;
@@ -54,6 +56,8 @@ const Ventas = () => {
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [showClienteModal, setShowClienteModal] = useState(false);
   const [showGuardarComoModal, setShowGuardarComoModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingEstadoVenta, setPendingEstadoVenta] = useState<'COMPLETADA' | 'PRESUPUESTO' | 'REMITO_PENDIENTE'>('COMPLETADA');
 
   // Estado de Caja
   const [aperturaCajaId, setAperturaCajaId] = useState<number | null>(null);
@@ -73,6 +77,9 @@ const Ventas = () => {
 
   // Configuración
   const [configImpresion, setConfigImpresion] = useState('PREGUNTAR');
+  const [formatoFE, setFormatoFE] = useState('A4');
+  const [formatoPresupuesto, setFormatoPresupuesto] = useState('A4');
+  const [formatoRemito, setFormatoRemito] = useState('A4');
 
   const scanInputRef = useRef<HTMLInputElement>(null);
   const montoInputRef = useRef<HTMLInputElement>(null);
@@ -117,11 +124,14 @@ const Ventas = () => {
   useEffect(() => {
     const initData = async () => {
       try {
-        const [resCaja, resConfig, resListas, resCat] = await Promise.all([
+        const [resCaja, resConfig, resConfigFE, resListas, resCat, resConfigPres, resConfigRemito] = await Promise.all([
           api.get('/caja/estado'),
           api.get('/parametros/impresionTicket'),
+          api.get('/parametros/impresionFacturaElectronica'),
           api.get('/listas-precio'),
-          api.get('/categorias')
+          api.get('/categorias'),
+          api.get('/parametros/impresionPresupuesto'),
+          api.get('/parametros/impresionRemito')
         ]);
 
         if (resCaja.data.abierta) {
@@ -132,6 +142,15 @@ const Ventas = () => {
 
         if (resConfig.data?.valor) {
           setConfigImpresion(resConfig.data.valor);
+        }
+        if (resConfigFE.data?.valor) {
+          setFormatoFE(resConfigFE.data.valor);
+        }
+        if (resConfigPres.data?.valor) {
+          setFormatoPresupuesto(resConfigPres.data.valor);
+        }
+        if (resConfigRemito.data?.valor) {
+          setFormatoRemito(resConfigRemito.data.valor);
         }
 
         const listas = resListas.data;
@@ -372,6 +391,17 @@ const Ventas = () => {
       return;
     }
 
+    if (estadoVenta !== 'COMPLETADA') {
+      setPendingEstadoVenta(estadoVenta);
+      setShowConfirmModal(true);
+      return;
+    }
+
+    await ejecutarCobro(estadoVenta);
+  };
+
+  const ejecutarCobro = async (estadoVenta: 'COMPLETADA' | 'PRESUPUESTO' | 'REMITO_PENDIENTE') => {
+    setShowConfirmModal(false);
     setCobrando(true);
     try {
       const payload = {
@@ -961,13 +991,57 @@ const Ventas = () => {
         </div>
       )}
 
-      {ticketAImprimir && (
-        ticketAImprimir.cae ? (
-          <FacturaA4 venta={ticketAImprimir} />
-        ) : (
-          <TicketVenta venta={ticketAImprimir} />
-        )
-      )}
+      {ticketAImprimir && (() => {
+        let modo = 'TICKET';
+        let tipo: 'REMITO' | 'PRESUPUESTO' | 'FACTURA' | 'NOTA_CREDITO' | 'TICKET_NO_FISCAL' = 'TICKET_NO_FISCAL';
+        
+        if (ticketAImprimir.cae) {
+          modo = formatoFE;
+          tipo = 'FACTURA';
+        } else if (ticketAImprimir.estado === 'PRESUPUESTO') {
+          modo = formatoPresupuesto;
+          tipo = 'PRESUPUESTO';
+        } else if (ticketAImprimir.estado === 'REMITO_PENDIENTE' || ticketAImprimir.estado === 'REMITO') {
+          modo = formatoRemito;
+          tipo = 'REMITO';
+        }
+
+        if (modo === 'TICKET') {
+          return <TicketVenta venta={ticketAImprimir} />;
+        }
+
+        if (ticketAImprimir.cae) {
+          return <FacturaA4 venta={ticketAImprimir} />;
+        }
+
+        return <DocumentoA4 venta={ticketAImprimir} tipo={tipo} />;
+      })()}
+
+      <ConfirmacionEmision
+        isOpen={showConfirmModal}
+        onCancel={() => setShowConfirmModal(false)}
+        onConfirm={() => ejecutarCobro(pendingEstadoVenta)}
+        title={`Confirmar ${pendingEstadoVenta === 'PRESUPUESTO' ? 'Presupuesto' : 'Remito'}`}
+      >
+        <div className="space-y-4">
+          <p>
+            Vas a generar un <strong>{pendingEstadoVenta === 'PRESUPUESTO' ? 'Presupuesto' : 'Remito'}</strong> por <strong>${total.toFixed(2)}</strong> para el cliente <strong>{cliente?.razonSocial || cliente?.nombre}</strong>.
+          </p>
+          <div className="bg-gray-50 dark:bg-slate-900/50 p-4 rounded-lg border border-gray-100 dark:border-slate-700">
+            <ul className="text-sm space-y-2">
+              <li className="flex justify-between"><span>Cliente:</span> <span className="font-semibold">{cliente?.razonSocial || cliente?.nombre}</span></li>
+              <li className="flex justify-between"><span>Cantidad de ítems:</span> <span className="font-semibold">{items.reduce((acc, i) => acc + Number(i.cantidad), 0)}</span></li>
+              <li className="flex justify-between"><span>Modo de impresión:</span> <span className="font-semibold">{(pendingEstadoVenta === 'PRESUPUESTO' ? formatoPresupuesto : formatoRemito) === 'A4' ? 'Hoja A4' : 'Ticket (Termal)'}</span></li>
+              <li className="flex justify-between text-lg pt-2 border-t border-gray-200 dark:border-slate-700"><span>Total:</span> <span className="font-bold text-brand-dark dark:text-brand-light">${total.toFixed(2)}</span></li>
+            </ul>
+          </div>
+          {pendingEstadoVenta === 'REMITO_PENDIENTE' && (
+            <p className="text-sm text-yellow-600 dark:text-yellow-500 font-semibold flex items-center gap-2 mt-2">
+              <AlertTriangle size={16} /> Nota: Esta acción guardará el remito en estado pendiente. NO se descontará el stock hasta que sea "Aprobado" desde el Historial.
+            </p>
+          )}
+        </div>
+      </ConfirmacionEmision>
     </div>
   );
 };

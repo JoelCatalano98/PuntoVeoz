@@ -10,6 +10,7 @@ router.use(requireAuth, attachTenant);
 
 router.post('/', ventaController.crearVenta);
 router.post('/:id/anular', ventaController.anularVenta);
+router.post('/:id/nota-credito', requireRole('ADMIN', 'SUPERADMIN'), ventaController.emitirNotaCredito);
 router.post('/:id/aprobar-remito', ventaController.aprobarRemito);
 router.post('/:id/facturar-remito', ventaController.facturarRemito);
 router.post('/:id/aprobar-facturar', ventaController.aprobarYFacturarRemito);
@@ -18,6 +19,7 @@ router.post('/:id/facturar-afip', ventaController.facturarAfip);
 router.get('/test-arca', ventaController.testArcaConnection);
 router.post('/:id/presupuesto-a-remito', ventaController.convertirPresupuestoEnRemito);
 router.get('/historial', ventaController.historialVentas);
+router.get('/notas-credito', requireRole('ADMIN', 'SUPERADMIN'), ventaController.listarNotasCredito);
 router.get('/:id', ventaController.obtenerPorId);
 router.put('/:id', ventaController.actualizarPresupuesto);
 router.get('/', requireRole('ADMIN', 'SUPERADMIN'), ventaController.reporteVentas);

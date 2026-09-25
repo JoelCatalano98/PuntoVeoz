@@ -29,6 +29,7 @@ import HistorialStock from './pages/HistorialStock';
 import StockValorizado from './pages/StockValorizado';
 import DocumentoForm from './pages/DocumentoForm';
 import Facturacion from './pages/Facturacion';
+import NotasCredito from './pages/NotasCredito';
 import ConfiguracionesAdmin from './pages/ConfiguracionesAdmin';
 
 function App() {
@@ -69,6 +70,7 @@ function App() {
                 <Route path="/historial-stock" element={<HistorialStock />} />
                 <Route path="/stock-valorizado" element={<StockValorizado />} />
                 <Route path="/facturacion" element={<Facturacion />} />
+                <Route path="/notas-credito" element={<NotasCredito />} />
               </Route>
 
               {/* Rutas solo para SUPERADMIN */}

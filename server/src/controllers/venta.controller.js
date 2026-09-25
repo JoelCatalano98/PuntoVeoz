@@ -157,6 +157,27 @@ async function anularVenta(req, res, next) {
   }
 }
 
+async function emitirNotaCredito(req, res, next) {
+  try {
+    const { id } = req.params;
+    const comercioId = req.comercioId;
+    const usuarioId = req.user.userId;
+
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'id de venta es obligatorio y debe ser válido' });
+    }
+
+    const nc = await ventaService.emitirNotaCreditoTotal(comercioId, usuarioId, Number(id));
+
+    res.json(nc);
+  } catch (error) {
+    if (error.message.includes('encontrada') || error.message.includes('anulada') || error.message.includes('Solo se pueden emitir')) {
+      return res.status(400).json({ error: error.message });
+    }
+    next(error);
+  }
+}
+
 async function historialVentas(req, res, next) {
   try {
     const comercioId = req.comercioId;
@@ -213,6 +234,70 @@ async function historialVentas(req, res, next) {
 
     res.json({
       data: ventas,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limitNum)
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function listarNotasCredito(req, res, next) {
+  try {
+    const comercioId = req.comercioId;
+    const prisma = require('../config/prisma');
+
+    const { page = 1, limit = 50, fechaDesde, fechaHasta, puntoVentaId } = req.query;
+    const pageNum = Math.max(1, Number(page));
+    const limitNum = Math.max(1, Number(limit));
+    const skip = (pageNum - 1) * limitNum;
+
+    const whereClause = { 
+      comercioId,
+      tipoComprobante: { startsWith: 'NOTA_CREDITO_' }
+    };
+
+    if (fechaDesde && fechaHasta) {
+      whereClause.createdAt = {
+        gte: new Date(fechaDesde),
+        lte: new Date(fechaHasta)
+      };
+    }
+
+    if (puntoVentaId) {
+      whereClause.puntoVentaId = Number(puntoVentaId);
+    }
+
+    const [totalCount, notasCredito] = await prisma.$transaction([
+      prisma.venta.count({ where: whereClause }),
+      prisma.venta.findMany({
+        where: whereClause,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limitNum,
+        include: {
+          cliente: true,
+          usuario: { select: { id: true, nombre: true } },
+          puntoVenta: true,
+          ventaOriginal: {
+            select: {
+              id: true,
+              nroFactura: true,
+              puntoVentaId: true,
+              tipoComprobante: true
+            }
+          },
+          items: {
+            include: {
+              producto: true
+            }
+          }
+        }
+      })
+    ]);
+
+    res.json({
+      data: notasCredito,
       totalCount,
       totalPages: Math.ceil(totalCount / limitNum)
     });
@@ -446,6 +531,8 @@ module.exports = {
   reporteVentas,
   obtenerPorId,
   anularVenta,
+  emitirNotaCredito,
+  listarNotasCredito,
   historialVentas,
   aprobarRemito,
   facturarRemito,
