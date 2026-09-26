@@ -325,7 +325,7 @@ const DocumentoForm = () => {
               />
               
               {showProdDrop && productosResult.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
+                <div className="absolute top-full left-0 w-[600px] mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
                   {productosResult.map((p) => (
                     <div 
                       key={p.id} 

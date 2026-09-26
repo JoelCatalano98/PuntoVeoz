@@ -23,6 +23,7 @@ export default function Facturacion() {
   const [puntosVenta, setPuntosVenta] = useState<any[]>([]);
   const [puntoVentaId, setPuntoVentaId] = useState<string>('');
   const [concepto, setConcepto] = useState<number>(1);
+  const [medioPago, setMedioPago] = useState('EFECTIVO');
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
 
@@ -165,7 +166,7 @@ export default function Facturacion() {
             descuentoLinea: 0
           })),
           montoRecibido: items.reduce((acc, i) => acc + i.subtotal, 0),
-          medioPago: 'OTRO',
+          medioPago: medioPago,
           clienteId: cliente.id,
           aperturaCajaId: aperturaCajaId,
           descuentoGlobal: 0,
@@ -284,6 +285,23 @@ export default function Facturacion() {
                   <option value={1}>Bienes (1)</option>
                   <option value={2}>Servicios (2)</option>
                   <option value={3}>Bienes y Servicios (3)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1">Medio de Pago</label>
+                <select 
+                  disabled={facturaEmitida}
+                  value={medioPago}
+                  onChange={e => setMedioPago(e.target.value)}
+                  className="w-full p-2 text-sm border border-gray-400 dark:border-slate-600 rounded-sm bg-white dark:bg-slate-900 focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                >
+                  <option value="EFECTIVO">Efectivo</option>
+                  <option value="TARJETA_DEBITO">Tarjeta Débito</option>
+                  <option value="TARJETA_CREDITO">Tarjeta Crédito</option>
+                  <option value="TRANSFERENCIA">Transferencia</option>
+                  <option value="QR">Mercado Pago / QR</option>
+                  <option value="CUENTA_CORRIENTE">Cuenta Corriente</option>
+                  <option value="OTRO">Otro</option>
                 </select>
               </div>
               

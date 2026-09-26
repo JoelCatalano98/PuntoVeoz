@@ -35,6 +35,11 @@ async function actualizar(req, res) {
   if (!puntoVenta) return res.status(404).json({ error: 'Punto de venta no encontrado' });
 
   const { nombre, tipo, activo } = req.body;
+
+  if (nombre !== undefined && (!nombre || nombre.trim() === '')) {
+    return res.status(400).json({ error: 'El nombre es obligatorio y no puede estar vacío' });
+  }
+
   const actualizado = await prisma.puntoVenta.update({
     where: { id: puntoVenta.id },
     data: { nombre, tipo, activo },

@@ -66,21 +66,26 @@ const EtiquetasImpresion = () => {
     return () => clearTimeout(timeoutId);
   }, [filtroCategoria, filtroFechaDesde, filtroFechaHasta]);
 
+  const generarVistaPrevia = () => {
+    const svgNode = document.getElementById('barcode-preview');
+    if (svgNode) {
+      try {
+        svgNode.innerHTML = '';
+        JsBarcode(svgNode, "2000000000015", {
+          format: "CODE128",
+          width: 1.5,
+          height: formato.altoMm > 15 ? formato.altoMm : 15,
+          displayValue: true,
+          fontSize: 14,
+          margin: 0
+        });
+      } catch(e) {}
+    }
+  };
+
   useEffect(() => {
     if (showConfig) {
-      setTimeout(() => {
-        const svgNode = document.getElementById('barcode-preview');
-        if (svgNode) {
-          JsBarcode(svgNode, "2000000000015", {
-            format: "EAN13",
-            width: 1.5,
-            height: 40,
-            displayValue: true,
-            fontSize: 14,
-            margin: 0
-          });
-        }
-      }, 50); // pequeñísimo delay para que renderice el modal
+      setTimeout(() => generarVistaPrevia(), 50);
     }
   }, [showConfig]);
 
@@ -184,14 +189,18 @@ const EtiquetasImpresion = () => {
         aplanada.forEach((prod, index) => {
           const svgNode = document.getElementById(`barcode-print-${index}`);
           if (svgNode) {
-            JsBarcode(svgNode, prod.codigoBarras, {
-              format: "EAN13",
-              width: 1.5,
-              height: 40,
-              displayValue: true,
-              fontSize: 14,
-              margin: 0
-            });
+            try {
+              JsBarcode(svgNode, prod.codigoBarras, {
+                format: "CODE128",
+                width: 1.5,
+                height: 40,
+                displayValue: true,
+                fontSize: 14,
+                margin: 0
+              });
+            } catch (e) {
+              console.error(e);
+            }
           }
         });
         window.print();
@@ -210,7 +219,8 @@ const EtiquetasImpresion = () => {
     setGuardando(true);
     try {
       await api.put('/parametros/formatoEtiqueta', { valor: JSON.stringify(formato) });
-      toast.success('Formato de etiquetas guardado');
+      await api.put('/parametros/etiquetaMostrarPrecio', { valor: mostrarPrecio ? 'true' : 'false' });
+      toast.success('Configuración guardada');
       setShowConfig(false);
     } catch (err) {
       toast.error('Error al guardar formato');
@@ -499,8 +509,28 @@ const EtiquetasImpresion = () => {
                     <input type="number" required min="0" className="w-full p-2 border dark:border-slate-600 rounded bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200 focus:ring-1 focus:ring-brand-light focus:outline-none" value={formato.espacioVerticalMm} onChange={e => handleFormatoChange('espacioVerticalMm', e.target.value)} />
                   </div>
                 </div>
+                
+                <div className="col-span-2 border-t border-gray-100 dark:border-slate-700 my-2 pt-4 flex items-center gap-2">
+                  <input 
+                    type="checkbox" 
+                    id="chkPrecio" 
+                    checked={mostrarPrecio} 
+                    onChange={e => setMostrarPrecio(e.target.checked)} 
+                    className="w-4 h-4 text-brand-light focus:ring-brand-light border-gray-300 rounded"
+                  />
+                  <label htmlFor="chkPrecio" className="text-sm font-bold text-gray-700 dark:text-slate-300">
+                    Imprimir Precio en la Etiqueta
+                  </label>
+                </div>
 
                 <div className="mt-6 pt-4 border-t border-gray-100 dark:border-slate-700 flex gap-3">
+                  <button 
+                    type="button" 
+                    onClick={generarVistaPrevia} 
+                    className="flex-1 py-3 bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-slate-200 font-bold rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors"
+                  >
+                    Generar Vista Previa
+                  </button>
                   <button type="submit" disabled={guardando} className="flex-1 py-3 bg-brand-light text-brand-dark font-bold rounded-lg hover:bg-blue-400 disabled:opacity-50">
                     {guardando ? 'Guardando...' : 'Guardar Configuración'}
                   </button>
@@ -520,11 +550,13 @@ const EtiquetasImpresion = () => {
                     height: `${formato.altoMm * 4}px`
                   }}
                 >
-                  <div className="text-[10px] font-bold truncate leading-tight text-center text-black">Producto de Ejemplo Largo</div>
+                  <div className="text-[10px] font-bold truncate leading-tight text-center text-black">Coca Cola 2.25L</div>
                   <div className="flex-1 flex items-center justify-center my-1 overflow-hidden">
                     <svg id="barcode-preview" className="w-full h-full object-contain"></svg>
                   </div>
-                  <div className="text-xs font-extrabold text-right mt-0.5 text-black">$1.500,00</div>
+                  {mostrarPrecio && (
+                    <div className="text-xs font-extrabold text-right mt-0.5 text-black">$1600.00</div>
+                  )}
                 </div>
                 
                 {/* Cotas informativas */}

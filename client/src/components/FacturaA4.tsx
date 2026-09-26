@@ -107,7 +107,7 @@ export const FacturaA4: React.FC<FacturaA4Props> = ({ venta }) => {
         <div className="flex flex-col gap-1 w-1/2">
           <p><strong>CUIT / DNI:</strong> {venta.cliente?.numeroDoc || 'Consumidor Final'}</p>
           <p><strong>Condición frente al IVA:</strong> {venta.cliente?.condicionIva || 'Consumidor Final'}</p>
-          <p><strong>Condición de venta:</strong> {venta.medioPago === 'EFECTIVO' ? 'Efectivo' : 'Otra'}</p>
+          <p><strong>Condición de venta:</strong> {venta.medioPago || 'Efectivo'}</p>
         </div>
         <div className="flex flex-col gap-1 w-1/2 pl-4">
           {venta.cliente ? (

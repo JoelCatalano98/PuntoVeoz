@@ -920,7 +920,7 @@ const Productos = () => {
       {/* MODAL AJUSTE DE STOCK */}
       {mostrarModalAjuste && productoAjuste && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md flex flex-col transition-colors duration-200">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-3xl flex flex-col transition-colors duration-200">
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 rounded-t-xl">
               <div>
                 <h2 className="text-lg font-bold text-brand-dark dark:text-brand-light flex items-center gap-2">

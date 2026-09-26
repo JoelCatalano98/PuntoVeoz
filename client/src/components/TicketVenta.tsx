@@ -112,7 +112,7 @@ export const TicketVenta: React.FC<TicketVentaProps> = ({ venta }) => {
 
       <div className="mb-4 text-right">
         <p className="font-bold text-base mt-1">TOTAL: ${Number(venta.total).toFixed(2)}</p>
-        <p className="text-xs mt-1">Medio: {venta.medioPago}</p>
+        <p className="text-xs mt-1">Medio: {venta.medioPago || 'Efectivo'}</p>
       </div>
 
       {venta.cae && (
@@ -127,7 +127,7 @@ export const TicketVenta: React.FC<TicketVentaProps> = ({ venta }) => {
       )}
 
       <div className="text-center mt-6 text-xs mb-8">
-        <p>¡Gracias por su compra!</p>
+        <p>{(venta.tipoComprobante?.startsWith('NOTA_CREDITO') || venta.tipoComprobante?.startsWith('NC_')) ? 'Comprobante de anulación' : '¡Gracias por su compra!'}</p>
       </div>
     </div>
   );
