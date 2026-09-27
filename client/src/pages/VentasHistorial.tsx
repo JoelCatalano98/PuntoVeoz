@@ -211,15 +211,28 @@ const VentasHistorial = () => {
   };
 
   const imprimirDocumento = (venta: Venta, tipo: 'REMITO' | 'PRESUPUESTO' | 'FACTURA', esPdf = false) => {
+    console.log('🖨️ CLICK IMPRIMIR (VentasHistorial) - Tipo:', tipo, 'ID:', venta.id);
     setDocumentoImprimir({ venta, tipo });
     if (esPdf) {
-      toast.success('En la siguiente ventana emergente, selecciona "Guardar como PDF" como Destino.', { duration: 4000 });
+      toast.success('En la ventana de impresión, selecciona "Guardar como PDF".', { duration: 4000 });
     }
+  };
+
+  const handleReadyPrint = React.useCallback(() => {
+    console.log('🖨️ handleReady DISPARADO (VentasHistorial) - Llamando a window.print()');
+    
+    const onAfterPrint = () => {
+      console.log('🖨️ afterprint disparado (VentasHistorial) - Limpiando documentoImprimir');
+      setDocumentoImprimir(null);
+      window.removeEventListener('afterprint', onAfterPrint);
+    };
+    
+    window.addEventListener('afterprint', onAfterPrint);
+
     setTimeout(() => {
       window.print();
-      setDocumentoImprimir(null);
-    }, 500);
-  };
+    }, 100);
+  }, []);
 
   const ventasFiltradas = ventas;
 
@@ -629,14 +642,12 @@ const VentasHistorial = () => {
         if (v.cae) modo = fmtFE;
         else if (tipoDoc === 'PRESUPUESTO') modo = fmtPresupuesto;
         else if (tipoDoc === 'REMITO') modo = fmtRemito;
-        else if (v.estado === 'ANULADA') modo = fmtNC;
-
         if (modo === 'TICKET') {
-          return <TicketVenta venta={v} />;
+          return <TicketVenta key={v.id} venta={v} onReadyToPrint={handleReadyPrint} />;
         }
 
         if (v.cae) {
-          return <FacturaA4 venta={v} />;
+          return <FacturaA4 key={v.id} venta={v} onReadyToPrint={handleReadyPrint} />;
         }
 
         let tipoD: 'REMITO' | 'PRESUPUESTO' | 'FACTURA' | 'NOTA_CREDITO' | 'TICKET_NO_FISCAL' = 'TICKET_NO_FISCAL';
@@ -644,7 +655,7 @@ const VentasHistorial = () => {
         else if (tipoDoc === 'PRESUPUESTO') tipoD = 'PRESUPUESTO';
         else if (v.estado === 'ANULADA') tipoD = 'NOTA_CREDITO';
 
-        return <DocumentoA4 venta={v} tipo={tipoD} />;
+        return <DocumentoA4 key={v.id} venta={v} tipo={tipoD} onReadyToPrint={handleReadyPrint} />;
       })()}
     </div>
   );

@@ -76,8 +76,10 @@ class ArcaService {
             
             const ptoVta = Number(datosVenta.puntoVenta);
             if (!ptoVta) throw new Error("Punto de venta no válido");
-            const cbteTipo = datosVenta.tipoCbte || 11;
-            const concepto = datosVenta.concepto || 1;
+            const cbteTipo = datosVenta.tipoCbte;
+            if (!cbteTipo) throw new Error("Tipo de comprobante no especificado");
+            const concepto = datosVenta.concepto;
+            if (!concepto) throw new Error("Concepto de facturación no especificado");
             const docTipo = datosVenta.clienteDocTipo || 99;
             const docNro = datosVenta.clienteDocNro || 0;
             const total = datosVenta.total;
@@ -170,7 +172,7 @@ class ArcaService {
                 CantReg: 1,
                 PtoVta: ptoVtaOriginal,
                 CbteTipo: tipoCbte,
-                Concepto: datosOriginales.concepto || 1,
+                Concepto: datosOriginales.concepto,
                 DocTipo: datosOriginales.clienteDocTipo,
                 DocNro: datosOriginales.clienteDocNro,
                 CbteDesde: nroNC,

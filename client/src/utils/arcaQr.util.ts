@@ -1,7 +1,10 @@
 export const generarQrUrl = (venta: any, cuitEmpresa: string): string => {
   if (!venta || !venta.cae) return '';
   
-  let ptoVtaNum = venta.puntoVenta?.numero || 1;
+  if (!venta.puntoVenta?.numero) {
+    return '';
+  }
+  let ptoVtaNum = venta.puntoVenta.numero;
   let nroCmp = venta.id;
   if (venta.nroFactura) {
     nroCmp = Number(venta.nroFactura);

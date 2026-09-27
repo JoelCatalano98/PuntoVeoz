@@ -1,14 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import api from '../services/api';
 import { QRCodeSVG } from 'qrcode.react';
 import { generarQrUrl } from '../utils/arcaQr.util';
+import toast from 'react-hot-toast';
 
 interface TicketVentaProps {
   venta: any;
+  onReadyToPrint?: () => void;
 }
 
-export const TicketVenta: React.FC<TicketVentaProps> = ({ venta }) => {
-  const [empresaDatos, setEmpresaDatos] = useState({ razonSocial: '', cuit: '', direccion: '', condicionIva: '' });
+export const TicketVenta: React.FC<TicketVentaProps> = ({ venta, onReadyToPrint }) => {
+  const [empresaDatos, setEmpresaDatos] = useState<any>(null);
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
   const [anchoTicket, setAnchoTicket] = useState('80mm');
   const [margenTicket, setMargenTicket] = useState('2');
 
@@ -23,22 +26,52 @@ export const TicketVenta: React.FC<TicketVentaProps> = ({ venta }) => {
           api.get('/parametros/impresoraTicketAncho'),
           api.get('/parametros/impresoraTicketMargen')
         ]);
+        if (!resRS.data?.valor || !resCuit.data?.valor) {
+          throw new Error('Faltan datos fiscales del comercio (Razón Social o CUIT)');
+        }
         setEmpresaDatos({
-          razonSocial: resRS.data?.valor || 'Punto Veloz S.A.',
-          cuit: resCuit.data?.valor || '00000000000',
+          razonSocial: resRS.data.valor,
+          cuit: resCuit.data.valor,
           direccion: resDir.data?.valor || '',
           condicionIva: resIva.data?.valor || ''
         });
         if (resAncho.data?.valor) setAnchoTicket(resAncho.data.valor);
         if (resMargen.data?.valor) setMargenTicket(resMargen.data.valor);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error al cargar datos empresa', err);
+        setErrorCarga(err.message || 'Error al cargar los datos del comercio');
       }
     };
     fetchEmpresa();
   }, []);
 
-  const qrUrl = generarQrUrl(venta, empresaDatos.cuit);
+  const qrUrl = generarQrUrl(venta, empresaDatos?.cuit || '');
+
+  const yaImprimioRef = useRef(false);
+
+  useEffect(() => {
+    console.log('🖨️ TicketVenta useEffect evalúa:', { empresaDatos: !!empresaDatos, qrUrl: !!qrUrl, errorCarga, ventaCae: venta.cae });
+    
+    if (errorCarga) {
+      toast.error(`Error de impresión: ${errorCarga}`);
+      return;
+    }
+    
+    if (venta.cae && !qrUrl) {
+      toast.error('Error de impresión: No se pudo generar el QR fiscal (Falta Punto de Venta).');
+      return;
+    }
+
+    if (empresaDatos && !yaImprimioRef.current) {
+      console.log('🖨️ TicketVenta listo, llamando a onReadyToPrint()');
+      yaImprimioRef.current = true;
+      if (onReadyToPrint) onReadyToPrint();
+    }
+  }, [empresaDatos, qrUrl, errorCarga, venta.cae, onReadyToPrint]);
+
+  if (!empresaDatos) {
+    return null;
+  }
 
   let tipoReal = venta.tipoComprobante;
   if (!tipoReal) {
@@ -81,7 +114,7 @@ export const TicketVenta: React.FC<TicketVentaProps> = ({ venta }) => {
       <div className="mb-2">
         <p><strong>Fecha:</strong> {new Date(venta.createdAt).toLocaleString()}</p>
         <p><strong>Ticket N°:</strong> {venta.nroFactura ? `${String(venta.puntoVenta?.numero || 1).padStart(4, '0')}-${String(venta.nroFactura).padStart(8, '0')}` : `0001-${venta.id.toString().padStart(8, '0')}`}</p>
-        <p><strong>Cajero:</strong> {venta.usuario?.nombre || 'Cajero'}</p>
+        <p><strong>Cajero:</strong> {venta.usuario?.nombre || 'Sin asignar'}</p>
         {venta.cliente && (
           <p><strong>Cliente:</strong> {venta.cliente.nombre || venta.cliente.razonSocial} ({venta.cliente.numeroDoc})</p>
         )}

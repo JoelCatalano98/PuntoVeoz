@@ -190,14 +190,12 @@ const DocumentoForm = () => {
       // 1. Obtener una cajaId (aunque no se cobra, la API crearVenta lo exige si está en la validación, aunque para presupuestos se podría usar 1 o modificar el backend)
       // Como crearVenta exige aperturaCajaId, vamos a obtener la caja abierta actual. Si no hay, fallará.
       const resCaja = await api.get('/caja/estado');
-      let aperturaCajaId = 1; // Default fallback if allowed
-      if (resCaja.data.abierta) {
-        aperturaCajaId = resCaja.data.apertura.id;
-      } else {
-        toast.error('Debe abrir la caja primero, incluso para crear documentos.');
+      if (!resCaja.data.abierta) {
+        toast.error('Debe abrir una caja antes de continuar');
         setGuardando(false);
         return;
       }
+      const aperturaCajaId = resCaja.data.apertura.id;
 
       const payload = {
         aperturaCajaId,

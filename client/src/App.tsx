@@ -36,7 +36,7 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <Toaster position="top-right" />
+        <Toaster position="top-right" containerClassName="print:hidden" />
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />

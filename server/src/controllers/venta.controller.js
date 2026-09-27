@@ -273,6 +273,7 @@ async function historialVentas(req, res, next) {
         take: limitNum,
         include: {
           cliente: true,
+          puntoVenta: true,
           usuario: { select: { id: true, nombre: true } },
           items: {
             include: {
@@ -566,8 +567,14 @@ async function testArcaConnection(req, res, next) {
 
     if (!ptoVta || !cbteTipo) {
       const comercio = await prisma.comercio.findUnique({ where: { id: comercioId } });
-      ptoVta = ptoVta || comercio?.arcaPtoVta || 1;
-      cbteTipo = cbteTipo || 11; // Factura C (11) por defecto
+      ptoVta = ptoVta || comercio?.arcaPtoVta;
+      
+      if (!ptoVta) {
+        return res.status(400).json({ error: 'No se pudo determinar el Punto de Venta' });
+      }
+      if (!cbteTipo) {
+        return res.status(400).json({ error: 'No se indicó el Tipo de Comprobante' });
+      }
     }
 
     const comercioActualizado = await prisma.comercio.findUnique({ where: { id: comercioId } });

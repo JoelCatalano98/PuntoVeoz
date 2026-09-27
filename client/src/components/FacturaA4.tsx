@@ -1,15 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import api from '../services/api';
 import { generarQrUrl } from '../utils/arcaQr.util';
+import toast from 'react-hot-toast';
 
 interface FacturaA4Props {
   venta: any;
+  onReadyToPrint?: () => void;
 }
 
-export const FacturaA4: React.FC<FacturaA4Props> = ({ venta }) => {
-  const [empresaDatos, setEmpresaDatos] = useState({ razonSocial: 'Punto Veloz S.A.', cuit: '00000000000', direccion: '', condicionIva: '' });
+export const FacturaA4: React.FC<FacturaA4Props> = ({ venta, onReadyToPrint }) => {
+  const [empresaDatos, setEmpresaDatos] = useState<any>(null);
   const [logoError, setLogoError] = useState(false);
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchEmpresa = async () => {
@@ -20,20 +23,50 @@ export const FacturaA4: React.FC<FacturaA4Props> = ({ venta }) => {
           api.get('/parametros/empresaDireccion'),
           api.get('/parametros/empresaCondicionIva')
         ]);
+        if (!resRS.data?.valor || !resCuit.data?.valor) {
+          throw new Error('Faltan datos fiscales del comercio (Razón Social o CUIT)');
+        }
         setEmpresaDatos({
-          razonSocial: resRS.data?.valor || 'Punto Veloz S.A.',
-          cuit: resCuit.data?.valor || '00000000000',
+          razonSocial: resRS.data.valor,
+          cuit: resCuit.data.valor,
           direccion: resDir.data?.valor || '',
           condicionIva: resIva.data?.valor || ''
         });
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error al cargar datos empresa', err);
+        setErrorCarga(err.message || 'Error al cargar los datos del comercio');
       }
     };
     fetchEmpresa();
   }, []);
 
-  const qrUrl = generarQrUrl(venta, empresaDatos.cuit);
+  const qrUrl = generarQrUrl(venta, empresaDatos?.cuit || '');
+
+  const yaImprimioRef = useRef(false);
+
+  useEffect(() => {
+    console.log('🖨️ FacturaA4 useEffect evalúa:', { empresaDatos: !!empresaDatos, qrUrl: !!qrUrl, errorCarga });
+    
+    if (errorCarga) {
+      toast.error(`Error de impresión: ${errorCarga}`);
+      return;
+    }
+    
+    if (!qrUrl) {
+      toast.error('Error de impresión: No se pudo generar el QR fiscal (Falta Número de Punto de Venta).');
+      return;
+    }
+
+    if (empresaDatos && !yaImprimioRef.current) {
+      console.log('🖨️ FacturaA4 listo, llamando a onReadyToPrint()');
+      yaImprimioRef.current = true;
+      if (onReadyToPrint) onReadyToPrint();
+    }
+  }, [empresaDatos, qrUrl, errorCarga, onReadyToPrint]);
+
+  if (!empresaDatos) {
+    return null;
+  }
 
   let tipoReal = venta.tipoComprobante || 'FACTURA_C';
   let letra = 'C';

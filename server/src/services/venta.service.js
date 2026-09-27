@@ -8,7 +8,7 @@ async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, it
     
     // 1.c) Buscar AperturaCaja abierta si el estado es COMPLETADA
     let apertura = null;
-    let puntoVentaId = 1; // Fallback temporal si es presupuesto y no requiere caja
+    let puntoVentaId = null;
 
     if (estado === 'COMPLETADA' || estado === 'FACTURADA') {
       apertura = await tx.aperturaCaja.findFirst({
@@ -31,6 +31,10 @@ async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, it
       // Para PRESUPUESTO o REMITO_PENDIENTE podemos agarrar el primer punto de venta activo del comercio
       const pv = await tx.puntoVenta.findFirst({ where: { comercioId, activo: true } });
       if (pv) puntoVentaId = pv.id;
+    }
+
+    if (!puntoVentaId) {
+      throw new Error('No se pudo determinar el punto de venta para esta venta');
     }
 
     if (clienteId) {
@@ -160,6 +164,8 @@ async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, it
         }
       },
       include: {
+        cliente: true,
+        usuario: { select: { id: true, nombre: true } },
         items: {
           include: {
             producto: true
@@ -298,6 +304,7 @@ async function emitirNotaCreditoTotal(comercioId, usuarioId, ventaIdOriginal) {
   if (!ventaOriginal) throw new Error('Venta original no encontrada');
   if (ventaOriginal.anulada || ventaOriginal.estado === 'ANULADA') throw new Error('La venta ya se encuentra anulada');
   if (!ventaOriginal.cae || !ventaOriginal.nroFactura) throw new Error('Solo se pueden emitir Notas de Crédito fiscales para ventas con CAE y Nro. de Factura');
+  if (!ventaOriginal.concepto) throw new Error('No se puede emitir la Nota de Crédito: falta el concepto de facturación en la venta original');
 
   let tipoNC = 'NOTA_CREDITO_C';
   let tipoCmpAFIP = 13;
@@ -318,7 +325,7 @@ async function emitirNotaCreditoTotal(comercioId, usuarioId, ventaIdOriginal) {
     clienteDocTipo: docTipo,
     clienteDocNro: ventaOriginal.cliente ? Number(ventaOriginal.cliente.numeroDoc.replace(/\D/g, '')) : 0,
     total: ventaOriginal.total.toNumber(),
-    concepto: ventaOriginal.concepto || 1,
+    concepto: ventaOriginal.concepto,
     nroFactura: ventaOriginal.nroFactura
   };
 

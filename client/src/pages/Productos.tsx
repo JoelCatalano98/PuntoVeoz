@@ -209,7 +209,8 @@ const Productos = () => {
   const abrirModalEditar = (prod: Producto) => {
     setProductoEditando(prod);
     setImagenArchivo(null);
-    setImagenPreview(prod.imagenUrl ? `http://localhost:4000${prod.imagenUrl}` : null);
+    const origin = (import.meta.env.VITE_API_URL || 'http://localhost:4000/api').replace(/\/api$/, '');
+    setImagenPreview(prod.imagenUrl ? `${origin}${prod.imagenUrl}` : null);
     
     // Determinar categoría y subcategoría
     let catId = '';
@@ -484,7 +485,7 @@ const Productos = () => {
                         <td className="p-4 text-center">
                           {prod.imagenUrl ? (
                             <img 
-                              src={`http://localhost:4000${prod.imagenUrl}`} 
+                              src={`${(import.meta.env.VITE_API_URL || 'http://localhost:4000/api').replace(/\/api$/, '')}${prod.imagenUrl}`} 
                               alt={prod.nombre}
                               className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-slate-600 mx-auto"
                             />

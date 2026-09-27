@@ -104,14 +104,27 @@ const NotasCredito: React.FC = () => {
 
   const imprimirDocumento = (venta: NotaCredito, esPdf = false) => {
     setDocumentoImprimir({ venta, tipo: 'NOTA_CREDITO' });
+    // Nota: El toast se quita si usamos kiosk-printing, pero dejamos la advertencia por si es manual.
     if (esPdf) {
-      toast.success('En la siguiente ventana emergente, selecciona "Guardar como PDF" como Destino.', { duration: 4000 });
+      toast.success('En la ventana de impresión, selecciona "Guardar como PDF".', { duration: 4000 });
     }
+  };
+
+  const handleReadyPrint = React.useCallback(() => {
+    console.log('🖨️ handleReady DISPARADO (NotasCredito) - Llamando a window.print()');
+    
+    const onAfterPrint = () => {
+      console.log('🖨️ afterprint disparado (NotasCredito) - Limpiando documentoImprimir');
+      setDocumentoImprimir(null);
+      window.removeEventListener('afterprint', onAfterPrint);
+    };
+    
+    window.addEventListener('afterprint', onAfterPrint);
+
     setTimeout(() => {
       window.print();
-      setDocumentoImprimir(null);
-    }, 500);
-  };
+    }, 100);
+  }, []);
 
   return (
     <div className="h-full flex flex-col p-6 bg-gray-50 dark:bg-slate-900 transition-colors duration-200 print:p-0 print:bg-white print:h-auto print:block">
@@ -219,7 +232,7 @@ const NotasCredito: React.FC = () => {
                       <td className="py-4 text-gray-900 dark:text-slate-200">
                         <span className="font-bold">NC "{letraNC}"</span>
                         <div className="text-xs text-gray-500 dark:text-slate-400 mt-1">
-                          Nº {String(nc.puntoVenta?.numero || 1).padStart(4, '0')}-{String(nc.nroFactura || nc.id).padStart(8, '0')}
+                          Nº {nc.puntoVenta?.numero ? String(nc.puntoVenta.numero).padStart(4, '0') : 'N/D'}-{String(nc.nroFactura || nc.id).padStart(8, '0')}
                         </div>
                       </td>
                       <td className="py-4 text-gray-600 dark:text-slate-300 font-mono">
@@ -232,7 +245,7 @@ const NotasCredito: React.FC = () => {
                               {nc.ventaOriginal.tipoComprobante.replace('_', ' ')}
                             </span>
                             <span className="font-bold">
-                              Nº {String(nc.ventaOriginal.puntoVentaId || 1).padStart(4, '0')}-{String(nc.ventaOriginal.nroFactura || nc.ventaOriginal.id).padStart(8, '0')}
+                              Nº {nc.ventaOriginal?.puntoVenta?.numero ? String(nc.ventaOriginal.puntoVenta.numero).padStart(4, '0') : 'N/D'}-{String(nc.ventaOriginal?.nroFactura || nc.ventaOriginal?.id || 0).padStart(8, '0')}
                             </span>
                           </div>
                         ) : (
@@ -279,14 +292,13 @@ const NotasCredito: React.FC = () => {
         />
       </div>
 
-      {/* Documento de Impresión Dinámico */}
       {documentoImprimir && (() => {
         const v = documentoImprimir.venta;
         
         if (fmtNC === 'TICKET') {
-          return <TicketVenta venta={v as any} />;
+          return <TicketVenta key={v.id} venta={v as any} onReadyToPrint={handleReadyPrint} />;
         } else {
-          return <FacturaA4 venta={v as any} />;
+          return <FacturaA4 key={v.id} venta={v as any} onReadyToPrint={handleReadyPrint} />;
         }
       })()}
       

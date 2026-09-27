@@ -1,6 +1,7 @@
 import toast from 'react-hot-toast';
+import api from './api';
 
-export const imprimirTicket = (venta: any) => {
+export const imprimirTicket = async (venta: any) => {
   // En el futuro, esto enviará comandos ESC/POS a una impresora térmica.
   // Por ahora, simulamos la impresión.
 
@@ -10,7 +11,16 @@ export const imprimirTicket = (venta: any) => {
   });
 
   const fecha = new Date(venta.createdAt).toLocaleString();
-  const nombreComercio = 'Punto Veloz S.A.'; // A futuro se puede traer del estado global
+  
+  let nombreComercio = 'Empresa / Comercio';
+  try {
+    const resRS = await api.get('/parametros/empresaRazonSocial');
+    if (resRS.data?.valor) {
+      nombreComercio = resRS.data.valor;
+    }
+  } catch (err) {
+    console.error('Error al obtener la razón social para el ticket');
+  }
   const cajero = venta.usuario?.nombre || 'Cajero';
 
   let lines = [];

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { Settings, Printer, X, Tag, Search, Plus, Trash2, AlertCircle, Filter } from 'lucide-react';
+import { Settings, Printer, X, Tag, Search, Plus, Trash2, AlertCircle, Filter, Download } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { useAuth } from '../context/AuthContext';
 import JsBarcode from 'jsbarcode';
 
@@ -34,6 +36,8 @@ const DEFAULT_FORMATO = {
   espacioVerticalMm: 2
 };
 
+const MOCK_BARCODE = "2000000000015";
+
 const EtiquetasImpresion = () => {
   const { usuario } = useAuth();
   const [formato, setFormato] = useState(DEFAULT_FORMATO);
@@ -51,7 +55,7 @@ const EtiquetasImpresion = () => {
   const [filtroProveedor, setFiltroProveedor] = useState(''); // Placeholder
 
   const [cola, setCola] = useState<ItemCola[]>([]);
-  const [imprimiendo, setImprimiendo] = useState(false);
+  const [modoImpresion, setModoImpresion] = useState<'NATIVO' | 'PDF' | null>(null);
 
   useEffect(() => {
     cargarFormato();
@@ -71,7 +75,7 @@ const EtiquetasImpresion = () => {
     if (svgNode) {
       try {
         svgNode.innerHTML = '';
-        JsBarcode(svgNode, "2000000000015", {
+        JsBarcode(svgNode, MOCK_BARCODE, {
           format: "CODE128",
           width: 1.5,
           height: formato.altoMm > 15 ? formato.altoMm : 15,
@@ -179,11 +183,16 @@ const EtiquetasImpresion = () => {
 
   const handleImprimir = () => {
     if (cola.length === 0) return;
-    setImprimiendo(true);
+    setModoImpresion('NATIVO');
+  };
+
+  const handleExportarPDF = () => {
+    if (cola.length === 0) return;
+    setModoImpresion('PDF');
   };
 
   useEffect(() => {
-    if (imprimiendo) {
+    if (modoImpresion) {
       setTimeout(() => {
         const aplanada = aplanarCola();
         aplanada.forEach((prod, index) => {
@@ -203,13 +212,62 @@ const EtiquetasImpresion = () => {
             }
           }
         });
-        window.print();
+        if (modoImpresion === 'NATIVO') {
+          window.print();
+          // El afterprint lo resetea
+        } else if (modoImpresion === 'PDF') {
+          setTimeout(async () => {
+            const capture = document.getElementById('area-impresion-etiquetas');
+            if (capture) {
+              const originalStyle = capture.getAttribute('style') || '';
+              const originalClass = capture.className;
+              capture.className = 'w-[210mm] bg-white text-black block absolute';
+              capture.style.left = '-9999px';
+              capture.style.top = '0';
+              
+              try {
+                const canvas = await html2canvas(capture, { scale: 2 });
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+                
+                let heightLeft = imgHeight;
+                let position = 0;
+                
+                // Primer página
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+                heightLeft -= pageHeight;
+                
+                // Siguientes páginas si el canvas es más alto que un A4
+                while (heightLeft > 1) { // margen de tolerancia de 1mm
+                  position = heightLeft - imgHeight;
+                  pdf.addPage();
+                  pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+                  heightLeft -= pageHeight;
+                }
+
+                pdf.save('etiquetas.pdf');
+                toast.success('PDF generado con éxito');
+              } catch (err) {
+                console.error(err);
+                toast.error('Error generando PDF');
+              } finally {
+                capture.className = originalClass;
+                capture.setAttribute('style', originalStyle);
+                setModoImpresion(null);
+              }
+            }
+          }, 300);
+        }
       }, 100);
     }
-  }, [imprimiendo, cola]);
+  }, [modoImpresion, cola]);
 
   useEffect(() => {
-    const onAfterPrint = () => setImprimiendo(false);
+    const onAfterPrint = () => setModoImpresion(null);
     window.addEventListener('afterprint', onAfterPrint);
     return () => window.removeEventListener('afterprint', onAfterPrint);
   }, []);
@@ -408,14 +466,22 @@ const EtiquetasImpresion = () => {
             )}
           </div>
 
-          <div className="p-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 transition-colors">
+          <div className="p-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 transition-colors flex gap-2">
             <button
               onClick={handleImprimir}
-              disabled={cola.length === 0 || imprimiendo}
-              className="w-full py-4 bg-brand-light text-brand-dark font-bold text-lg rounded-lg hover:bg-blue-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm uppercase tracking-wider"
+              disabled={cola.length === 0 || modoImpresion !== null}
+              className="w-1/2 py-4 bg-brand-light text-brand-dark font-bold rounded-lg hover:bg-blue-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm uppercase tracking-wider"
             >
-              <Printer size={24} />
-              {imprimiendo ? 'Generando vista previa...' : 'Imprimir Etiquetas'}
+              <Printer size={20} />
+              {modoImpresion === 'NATIVO' ? '...' : 'Imprimir'}
+            </button>
+            <button
+              onClick={handleExportarPDF}
+              disabled={cola.length === 0 || modoImpresion !== null}
+              className="w-1/2 py-4 bg-gray-800 text-white font-bold rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm uppercase tracking-wider"
+            >
+              <Download size={20} />
+              {modoImpresion === 'PDF' ? 'Generando...' : 'Exportar PDF'}
             </button>
           </div>
         </div>
@@ -423,6 +489,7 @@ const EtiquetasImpresion = () => {
 
       {/* ÁREA DE IMPRESIÓN - VISIBLE SOLO AL IMPRIMIR */}
       <div 
+        id="area-impresion-etiquetas"
         className="hidden print:block w-full bg-white text-black"
         style={{
           paddingTop: `${formato.margenSuperiorMm}mm`,
@@ -436,7 +503,7 @@ const EtiquetasImpresion = () => {
             gap: `${formato.espacioVerticalMm}mm ${formato.espacioHorizontalMm}mm`,
           }}
         >
-          {imprimiendo && aplanarCola().map((prod, idx) => (
+          {modoImpresion !== null && aplanarCola().map((prod, idx) => (
             <div 
               key={`${prod.id}-${idx}`}
               className="flex flex-col justify-between p-1 bg-white border border-gray-300"

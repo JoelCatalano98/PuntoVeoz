@@ -1,14 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import api from '../services/api';
+import toast from 'react-hot-toast';
 
 interface DocumentoA4Props {
   venta: any;
   tipo: 'REMITO' | 'PRESUPUESTO' | 'FACTURA' | 'NOTA_CREDITO' | 'TICKET_NO_FISCAL';
+  onReadyToPrint?: () => void;
 }
 
-export const DocumentoA4: React.FC<DocumentoA4Props> = ({ venta, tipo }) => {
-  const [empresaDatos, setEmpresaDatos] = useState({ razonSocial: 'Punto Veloz S.A.', cuit: '00000000000', direccion: '', condicionIva: '' });
+export const DocumentoA4: React.FC<DocumentoA4Props> = ({ venta, tipo, onReadyToPrint }) => {
+  const [empresaDatos, setEmpresaDatos] = useState<any>(null);
   const [logoError, setLogoError] = useState(false);
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchEmpresa = async () => {
@@ -19,18 +22,43 @@ export const DocumentoA4: React.FC<DocumentoA4Props> = ({ venta, tipo }) => {
           api.get('/parametros/empresaDireccion'),
           api.get('/parametros/empresaCondicionIva')
         ]);
+        if (!resRS.data?.valor || !resCuit.data?.valor) {
+          throw new Error('Faltan datos fiscales del comercio (Razón Social o CUIT)');
+        }
         setEmpresaDatos({
-          razonSocial: resRS.data?.valor || 'Empresa / Comercio',
-          cuit: resCuit.data?.valor || '',
+          razonSocial: resRS.data.valor,
+          cuit: resCuit.data.valor,
           direccion: resDir.data?.valor || '',
           condicionIva: resIva.data?.valor || ''
         });
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error al cargar datos empresa', err);
+        setErrorCarga(err.message || 'Error al cargar los datos del comercio');
       }
     };
     fetchEmpresa();
   }, []);
+
+  const yaImprimioRef = useRef(false);
+
+  useEffect(() => {
+    console.log('🖨️ DocumentoA4 useEffect evalúa:', { empresaDatos: !!empresaDatos, errorCarga });
+    
+    if (errorCarga) {
+      toast.error(`Error de impresión: ${errorCarga}`);
+      return;
+    }
+
+    if (empresaDatos && !yaImprimioRef.current) {
+      console.log('🖨️ DocumentoA4 listo, llamando a onReadyToPrint()');
+      yaImprimioRef.current = true;
+      if (onReadyToPrint) onReadyToPrint();
+    }
+  }, [empresaDatos, errorCarga, onReadyToPrint]);
+
+  if (!empresaDatos) {
+    return null;
+  }
 
   return (
     <div className="hidden print:block absolute inset-0 bg-white" style={{ width: '210mm', minHeight: '297mm', padding: '15mm', margin: '0 auto', fontSize: '10pt', color: '#000', fontFamily: 'Arial, sans-serif' }}>

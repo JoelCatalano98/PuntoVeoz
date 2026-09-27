@@ -441,10 +441,7 @@ const Ventas = () => {
         try {
           if (configImpresion === 'SIEMPRE') {
             setTicketAImprimir(ventaImpresion);
-            setTimeout(() => {
-              window.print();
-              setTimeout(() => setTicketAImprimir(null), 1000);
-            }, 500);
+            // La impresión se dispara vía onReadyToPrint en el componente TicketVenta
             limpiarPOS();
           } else if (configImpresion === 'PREGUNTAR') {
             setUltimaVenta(ventaImpresion);
@@ -468,15 +465,28 @@ const Ventas = () => {
   const handleDecisionTicket = (imprimir: boolean) => {
     if (imprimir && ultimaVenta) {
       setTicketAImprimir(ultimaVenta);
-      setTimeout(() => {
-        window.print();
-        setTimeout(() => setTicketAImprimir(null), 1000);
-      }, 500);
+      // La impresión se dispara vía onReadyToPrint
     }
     setShowModalTicket(false);
     setUltimaVenta(null);
     limpiarPOS();
   };
+
+  const handleReadyPrint = React.useCallback(() => {
+    console.log('🖨️ handleReady DISPARADO (Ventas) - Llamando a window.print()');
+    
+    const onAfterPrint = () => {
+      console.log('🖨️ afterprint disparado (Ventas) - Limpiando ticketAImprimir');
+      setTicketAImprimir(null);
+      window.removeEventListener('afterprint', onAfterPrint);
+    };
+    
+    window.addEventListener('afterprint', onAfterPrint);
+
+    setTimeout(() => {
+      window.print();
+    }, 100);
+  }, []);
 
   if (cargandoCaja) {
     return <div className="h-full flex items-center justify-center text-gray-500 font-medium">Verificando estado de caja...</div>;
@@ -512,9 +522,9 @@ const Ventas = () => {
   }
 
   return (
-    <div className="h-full flex flex-row relative bg-gray-50 dark:bg-slate-900 transition-colors duration-200">
+    <div className="h-full flex flex-row relative bg-gray-50 dark:bg-slate-900 transition-colors duration-200 print:block print:bg-white print:h-auto">
       {/* COLUMNA IZQ: Carrito */}
-      <div className="flex-1 flex flex-col relative border-r border-gray-200 dark:border-slate-700 min-w-0 z-10">
+      <div className="flex-1 flex flex-col relative border-r border-gray-200 dark:border-slate-700 min-w-0 z-10 print:hidden">
         <Watermark />
 
         {/* Header con Buscador y Select Lista de Precios */}
@@ -722,7 +732,7 @@ const Ventas = () => {
       </div>
 
       {/* COLUMNA DER: Cobro */}
-      <div className="w-[400px] lg:w-[450px] xl:w-[500px] bg-white dark:bg-slate-800 flex flex-col shadow-[rgba(0,0,0,0.05)_-4px_0_10px] z-20 shrink-0 transition-colors duration-200">
+      <div className="w-[400px] lg:w-[450px] xl:w-[500px] bg-white dark:bg-slate-800 flex flex-col shadow-[rgba(0,0,0,0.05)_-4px_0_10px] z-20 shrink-0 transition-colors duration-200 print:hidden">
         <div className="p-6 bg-brand-dark dark:bg-slate-900 text-white flex flex-col items-end border-b-4 border-brand-light dark:border-slate-700">
           <div className="text-brand-light/80 dark:text-brand-light text-sm font-semibold uppercase tracking-wider mb-1">Total a cobrar</div>
           <div className="text-5xl font-bold">${total.toFixed(2)}</div>
@@ -959,7 +969,7 @@ const Ventas = () => {
       )}
 
       {showModalTicket && (
-        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm print:hidden">
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden text-center transition-colors duration-200">
             <div className="p-6">
               <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 text-brand-light rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1007,14 +1017,14 @@ const Ventas = () => {
         }
 
         if (modo === 'TICKET') {
-          return <TicketVenta venta={ticketAImprimir} />;
+          return <TicketVenta key={ticketAImprimir.id} venta={ticketAImprimir} onReadyToPrint={handleReadyPrint} />;
         }
 
         if (ticketAImprimir.cae) {
-          return <FacturaA4 venta={ticketAImprimir} />;
+          return <FacturaA4 key={ticketAImprimir.id} venta={ticketAImprimir} onReadyToPrint={handleReadyPrint} />;
         }
 
-        return <DocumentoA4 venta={ticketAImprimir} tipo={tipo} />;
+        return <DocumentoA4 key={ticketAImprimir.id} venta={ticketAImprimir} tipo={tipo} onReadyToPrint={handleReadyPrint} />;
       })()}
 
       <ConfirmacionEmision
