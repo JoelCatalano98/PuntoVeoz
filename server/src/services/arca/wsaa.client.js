@@ -49,12 +49,7 @@ class WsaaClient {
             certContent = cryptoService.decryptAES(comercio.arcaCertEncrypted);
             keyContent = cryptoService.decryptAES(comercio.arcaKeyEncrypted);
         } else {
-            // Fallback a archivos locales
-            if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
-                throw new Error(`Faltan los archivos de certificado para WSAA en el servidor y tampoco están en la Base de Datos.`);
-            }
-            certContent = fs.readFileSync(certPath, 'utf8');
-            keyContent = fs.readFileSync(keyPath, 'utf8');
+            throw new Error("Certificados de AFIP no configurados. Por favor, súbalos al sistema.");
         }
 
         const tra = this.generarTRA(service);
