@@ -1,12 +1,12 @@
 const { Router } = require('express');
 const puntoventaController = require('../controllers/puntoventa.controller');
 const { requireAuth, requireRole } = require('../middlewares/auth.middleware');
-const { attachTenant } = require('../middlewares/tenant.middleware');
+
 
 const router = Router();
 
-// Todas las rutas protegidas y con attachTenant
-router.use(requireAuth, attachTenant);
+// Todas las rutas protegidas y con 
+router.use(requireAuth);
 
 // Cualquier usuario autenticado puede listar (para elegir al vender)
 router.get('/', puntoventaController.listar);

@@ -2,7 +2,7 @@ const prisma = require('../config/prisma');
 
 async function listarCajas(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const cajas = await prisma.caja.findMany({
       where: { comercioId, activo: true },
       include: { puntoVenta: true }
@@ -15,7 +15,7 @@ async function listarCajas(req, res, next) {
 
 async function crearCaja(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const { nombre, descripcion, prefijo, puntoVentaId } = req.body;
 
     if (!nombre || !prefijo || !puntoVentaId) {

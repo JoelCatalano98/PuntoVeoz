@@ -4,7 +4,7 @@ const forge = require('node-forge');
 
 async function getArcaConfig(req, res, next) {
     try {
-        const comercioId = req.comercioId;
+        const comercioId = req.user.comercioId;
         const comercio = await prisma.comercio.findUnique({ where: { id: comercioId } });
         if (!comercio) return res.status(404).json({ error: 'Comercio no encontrado' });
 
@@ -22,7 +22,7 @@ async function getArcaConfig(req, res, next) {
 
 async function postArcaConfig(req, res, next) {
     try {
-        const comercioId = req.comercioId;
+        const comercioId = req.user.comercioId;
         const { cert, key, cuit, modo, ptoVta } = req.body;
 
         let arcaCertEncrypted = undefined;
@@ -85,7 +85,7 @@ async function postArcaConfig(req, res, next) {
 
 async function deleteArcaTokens(req, res, next) {
     try {
-        const comercioId = req.comercioId;
+        const comercioId = req.user.comercioId;
         await prisma.arcaToken.deleteMany({
             where: { comercioId }
         });

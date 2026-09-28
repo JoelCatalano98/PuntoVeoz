@@ -1,12 +1,12 @@
 const { Router } = require('express');
 const ventaController = require('../controllers/venta.controller');
 const { requireAuth, requireRole } = require('../middlewares/auth.middleware');
-const { attachTenant } = require('../middlewares/tenant.middleware');
+
 
 const router = Router();
 
 // Todas las rutas protegidas y con el tenant adjunto
-router.use(requireAuth, attachTenant);
+router.use(requireAuth);
 
 router.post('/', ventaController.crearVenta);
 router.post('/:id/anular', ventaController.anularVenta);

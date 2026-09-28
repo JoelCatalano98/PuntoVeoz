@@ -4,7 +4,7 @@ const cajaService = require('../services/caja.service');
 async function crearVenta(req, res, next) {
   try {
     const { aperturaCajaId, items, montoRecibido, medioPago, clienteId, listaPrecioId, descuentoGlobal, estado } = req.body;
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const usuarioId = req.user.userId;
 
     if (!aperturaCajaId || !Number.isInteger(Number(aperturaCajaId))) {
@@ -72,7 +72,7 @@ async function crearVenta(req, res, next) {
 async function reporteVentas(req, res, next) {
   try {
     const { desde, hasta } = req.query;
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
 
     if (!desde || !hasta) {
       return res.status(400).json({ error: 'Los parámetros de consulta "desde" y "hasta" son obligatorios' });
@@ -100,7 +100,7 @@ async function reporteVentas(req, res, next) {
 async function obtenerPorId(req, res, next) {
   try {
     const { id } = req.params;
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const { PrismaClient } = require('@prisma/client');
     const prisma = require('../config/prisma');
 
@@ -139,7 +139,7 @@ async function obtenerPorId(req, res, next) {
 async function anularVenta(req, res, next) {
   try {
     const { id } = req.params;
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const usuarioId = req.user.userId;
 
     if (!id || isNaN(Number(id))) {
@@ -160,7 +160,7 @@ async function anularVenta(req, res, next) {
 async function emitirNotaCredito(req, res, next) {
   try {
     const { id } = req.params;
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const usuarioId = req.user.userId;
 
     if (!id || isNaN(Number(id))) {
@@ -195,7 +195,7 @@ async function emitirNotaCredito(req, res, next) {
 
 async function ventasElegiblesNC(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const prisma = require('../config/prisma');
 
     const ventas = await prisma.venta.findMany({
@@ -223,7 +223,7 @@ async function ventasElegiblesNC(req, res, next) {
 
 async function historialVentas(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const prisma = require('../config/prisma');
 
     const { search, page = 1, limit = 50, tab, filtroCae, fechaDesde, fechaHasta } = req.query;
@@ -296,7 +296,7 @@ async function historialVentas(req, res, next) {
 
 async function listarNotasCredito(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const prisma = require('../config/prisma');
 
     const { page = 1, limit = 50, fechaDesde, fechaHasta, puntoVentaId, search } = req.query;
@@ -371,7 +371,7 @@ async function listarNotasCredito(req, res, next) {
 
 async function aprobarRemito(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const usuarioId = req.user.userId;
     const ventaId = Number(req.params.id);
 
@@ -387,7 +387,7 @@ async function aprobarRemito(req, res, next) {
 
 async function facturarRemito(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const usuarioId = req.user.userId;
     const ventaId = Number(req.params.id);
     const { aperturaCajaId, medioPago, montoRecibido } = req.body;
@@ -408,7 +408,7 @@ async function facturarRemito(req, res, next) {
 
 async function aprobarYFacturarRemito(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const usuarioId = req.user.userId;
     const ventaId = Number(req.params.id);
     const { aperturaCajaId, medioPago, montoRecibido } = req.body;
@@ -432,7 +432,7 @@ async function aprobarYFacturarRemito(req, res, next) {
 
 async function facturarPresupuesto(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const usuarioId = req.user.userId;
     const ventaId = Number(req.params.id);
     const { aperturaCajaId, medioPago, montoRecibido } = req.body;
@@ -456,7 +456,7 @@ async function facturarPresupuesto(req, res, next) {
 
 async function convertirPresupuestoEnRemito(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const ventaId = Number(req.params.id);
     await ventaService.convertirPresupuestoEnRemito({ comercioId, ventaId });
     res.json({ success: true });
@@ -468,7 +468,7 @@ async function convertirPresupuestoEnRemito(req, res, next) {
 async function actualizarPresupuesto(req, res, next) {
   try {
     const { items, clienteId } = req.body;
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const usuarioId = req.user.userId;
     const ventaId = Number(req.params.id);
 
@@ -509,7 +509,7 @@ async function actualizarPresupuesto(req, res, next) {
 
 async function facturarAfip(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const ventaId = Number(req.params.id);
     const { clienteId, concepto, esVentaNueva } = req.body;
 
@@ -531,12 +531,13 @@ async function facturarAfip(req, res, next) {
       try {
         const prisma = require('../config/prisma');
         const ventaId = Number(req.params.id);
-        const comercioId = req.comercioId;
+        const comercioId = req.user.comercioId;
 
         // 1. Restaurar stock de los items
         const venta = await prisma.venta.findUnique({ where: { id: ventaId }, include: { items: true } });
         if (venta) {
           for (const item of venta.items) {
+            if (!item.productoId) continue; // Ítems manuales no tienen stock que devolver
             await prisma.producto.update({
               where: { id: item.productoId },
               data: { stockActual: { increment: item.cantidad } }
@@ -559,7 +560,7 @@ async function facturarAfip(req, res, next) {
 
 async function testArcaConnection(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const arcaService = require('../services/arca.service');
     const prisma = require('../config/prisma');
 

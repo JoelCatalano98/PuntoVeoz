@@ -19,7 +19,7 @@ async function ajustar(req, res, next) {
 
     const ajuste = await prisma.$transaction(async (tx) => {
       const producto = await tx.producto.findFirst({
-        where: { id: Number(productoId), comercioId: req.comercioId }
+        where: { id: Number(productoId), comercioId: req.user.comercioId }
       });
 
       if (!producto) {
@@ -33,7 +33,7 @@ async function ajustar(req, res, next) {
       // 1. Registro Inmutable
       const mov = await tx.movimientoStock.create({
         data: {
-          comercioId: req.comercioId,
+          comercioId: req.user.comercioId,
           productoId: Number(productoId),
           usuarioId: req.user.userId,
           tipo,
@@ -67,7 +67,7 @@ async function historial(req, res, next) {
   try {
     const { productoId, fechaDesde, fechaHasta } = req.query;
     
-    const where = { comercioId: req.comercioId };
+    const where = { comercioId: req.user.comercioId };
     
     if (productoId) {
       where.productoId = Number(productoId);
@@ -112,7 +112,7 @@ async function alertas(req, res, next) {
     const alertas = await prisma.$queryRaw`
       SELECT id, nombre, codigoBarras, stockActual, stockMinimo, categoriaId 
       FROM productos 
-      WHERE comercioId = ${req.comercioId} 
+      WHERE comercioId = ${req.user.comercioId} 
         AND activo = true 
         AND stockActual <= stockMinimo
         AND stockMinimo > 0
@@ -137,7 +137,7 @@ async function valorizado(req, res, next) {
     // Buscar productos activos con stockActual > 0
     const productos = await prisma.producto.findMany({
       where: {
-        comercioId: req.comercioId,
+        comercioId: req.user.comercioId,
         activo: true,
         stockActual: { gt: 0 }
       },

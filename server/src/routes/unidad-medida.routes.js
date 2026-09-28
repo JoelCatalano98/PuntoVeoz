@@ -1,12 +1,12 @@
 const { Router } = require('express');
 const unidadMedidaController = require('../controllers/unidad-medida.controller');
 const { requireAuth, requireRole } = require('../middlewares/auth.middleware');
-const { attachTenant } = require('../middlewares/tenant.middleware');
+
 
 const router = Router();
 
-// Todas las rutas protegidas y con attachTenant
-router.use(requireAuth, attachTenant);
+// Todas las rutas protegidas y con 
+router.use(requireAuth);
 
 router.get('/', unidadMedidaController.listar);
 router.post('/', requireRole('ADMIN', 'SUPERADMIN'), unidadMedidaController.crear);

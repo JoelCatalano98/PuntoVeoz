@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const productoController = require('../controllers/producto.controller');
 const { requireAuth, requireRole } = require('../middlewares/auth.middleware');
-const { attachTenant } = require('../middlewares/tenant.middleware');
+
 const multer = require('multer');
 const path = require('path');
 
@@ -19,8 +19,8 @@ const upload = multer({ storage: storage });
 
 const router = Router();
 
-// Todas las rutas protegidas y con attachTenant
-router.use(requireAuth, attachTenant);
+// Todas las rutas protegidas y con 
+router.use(requireAuth);
 
 router.get('/', productoController.listar);
 router.get('/codigo/:codigo', productoController.buscarPorCodigoBarras);

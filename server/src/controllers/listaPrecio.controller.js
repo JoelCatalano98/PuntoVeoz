@@ -3,7 +3,7 @@ const prisma = require('../config/prisma');
 async function listar(req, res, next) {
   try {
     const listas = await prisma.listaPrecio.findMany({
-      where: { comercioId: req.comercioId },
+      where: { comercioId: req.user.comercioId },
       orderBy: { nombre: 'asc' }
     });
     res.json(listas);
@@ -24,14 +24,14 @@ async function crear(req, res, next) {
       // Si la nueva lista es predeterminada, quitamos el flag a las demás
       if (esPredeterminada) {
         await tx.listaPrecio.updateMany({
-          where: { comercioId: req.comercioId, esPredeterminada: true },
+          where: { comercioId: req.user.comercioId, esPredeterminada: true },
           data: { esPredeterminada: false }
         });
       }
 
       return await tx.listaPrecio.create({
         data: {
-          comercioId: req.comercioId,
+          comercioId: req.user.comercioId,
           nombre,
           tipoModificador,
           valor: Number(valor),
@@ -52,7 +52,7 @@ async function actualizar(req, res, next) {
     const { nombre, tipoModificador, valor, esPredeterminada } = req.body;
 
     const existente = await prisma.listaPrecio.findFirst({
-      where: { id: Number(id), comercioId: req.comercioId }
+      where: { id: Number(id), comercioId: req.user.comercioId }
     });
 
     if (!existente) {
@@ -62,7 +62,7 @@ async function actualizar(req, res, next) {
     const listaActualizada = await prisma.$transaction(async (tx) => {
       if (esPredeterminada) {
         await tx.listaPrecio.updateMany({
-          where: { comercioId: req.comercioId, esPredeterminada: true, id: { not: Number(id) } },
+          where: { comercioId: req.user.comercioId, esPredeterminada: true, id: { not: Number(id) } },
           data: { esPredeterminada: false }
         });
       }
@@ -89,7 +89,7 @@ async function eliminar(req, res, next) {
     const { id } = req.params;
     
     const existente = await prisma.listaPrecio.findFirst({
-      where: { id: Number(id), comercioId: req.comercioId }
+      where: { id: Number(id), comercioId: req.user.comercioId }
     });
 
     if (!existente) {

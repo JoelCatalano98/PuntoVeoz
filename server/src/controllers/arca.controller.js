@@ -4,7 +4,7 @@ const path = require('path');
 
 async function getPuntosVenta(req, res, next) {
     try {
-        const comercioId = req.comercioId;
+        const comercioId = req.user.comercioId;
         const puntosVenta = await prisma.puntoVenta.findMany({
             where: { comercioId }
         });
@@ -17,7 +17,7 @@ async function getPuntosVenta(req, res, next) {
 async function getPuntoVenta(req, res, next) {
     try {
         const { id } = req.params;
-        const comercioId = req.comercioId;
+        const comercioId = req.user.comercioId;
         const puntoVenta = await prisma.puntoVenta.findFirst({
             where: { id: Number(id), comercioId }
         });
@@ -30,7 +30,7 @@ async function getPuntoVenta(req, res, next) {
 
 async function createPuntoVenta(req, res, next) {
     try {
-        const comercioId = req.comercioId;
+        const comercioId = req.user.comercioId;
         const { numero, descripcion, nombre, tipo, numeroArca, activo } = req.body;
         const newPuntoVenta = await prisma.puntoVenta.create({
             data: {
@@ -52,7 +52,7 @@ async function createPuntoVenta(req, res, next) {
 async function updatePuntoVenta(req, res, next) {
     try {
         const { id } = req.params;
-        const comercioId = req.comercioId;
+        const comercioId = req.user.comercioId;
         const { numero, descripcion, nombre, tipo, numeroArca, activo } = req.body;
 
         const puntoVenta = await prisma.puntoVenta.findFirst({
@@ -80,7 +80,7 @@ async function updatePuntoVenta(req, res, next) {
 async function deletePuntoVenta(req, res, next) {
     try {
         const { id } = req.params;
-        const comercioId = req.comercioId;
+        const comercioId = req.user.comercioId;
         
         const puntoVenta = await prisma.puntoVenta.findFirst({
             where: { id: Number(id), comercioId }

@@ -3,7 +3,7 @@ const prisma = require('../config/prisma');
 async function listar(req, res, next) {
   try {
     const categorias = await prisma.categoria.findMany({
-      where: { comercioId: req.comercioId, activo: true, categoriaPadreId: null },
+      where: { comercioId: req.user.comercioId, activo: true, categoriaPadreId: null },
       include: {
         subcategorias: {
           where: { activo: true },
@@ -30,7 +30,7 @@ async function crear(req, res, next) {
       data: {
         nombre: nombre.trim(),
         color: color || '#CCCCCC',
-        comercioId: req.comercioId,
+        comercioId: req.user.comercioId,
         categoriaPadreId: categoriaPadreId ? Number(categoriaPadreId) : null
       },
     });
@@ -50,7 +50,7 @@ async function actualizar(req, res, next) {
     const { nombre, color, categoriaPadreId } = req.body;
 
     const existente = await prisma.categoria.findFirst({
-      where: { id: Number(id), comercioId: req.comercioId },
+      where: { id: Number(id), comercioId: req.user.comercioId },
     });
 
     if (!existente) return res.status(404).json({ error: 'Categoría no encontrada' });
@@ -78,7 +78,7 @@ async function eliminar(req, res, next) {
     const { id } = req.params;
     
     const existente = await prisma.categoria.findFirst({
-      where: { id: Number(id), comercioId: req.comercioId },
+      where: { id: Number(id), comercioId: req.user.comercioId },
     });
 
     if (!existente) return res.status(404).json({ error: 'Categoría no encontrada' });

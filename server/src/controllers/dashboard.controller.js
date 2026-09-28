@@ -2,7 +2,7 @@ const prisma = require('../config/prisma');
 
 async function obtenerResumen(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     let { fechaDesde, fechaHasta } = req.query;
 
     const ahora = new Date();
@@ -72,7 +72,11 @@ async function obtenerResumen(req, res, next) {
     });
 
     // Como prisma groupBy no permite include, buscamos los nombres
-    const productoIds = agrupadoProductos.map(p => p.productoId);
+    // Filtramos los items manuales (productoId: null) para evitar el error 'Argument in is missing' de Prisma
+    const productoIds = agrupadoProductos
+      .map(p => p.productoId)
+      .filter(id => id !== null);
+      
     let topProductos = [];
 
     if (productoIds.length > 0) {

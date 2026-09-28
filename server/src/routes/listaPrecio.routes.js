@@ -1,12 +1,12 @@
 const { Router } = require('express');
 const listaPrecioController = require('../controllers/listaPrecio.controller');
 const { requireAuth, requireRole } = require('../middlewares/auth.middleware');
-const { attachTenant } = require('../middlewares/tenant.middleware');
+
 
 const router = Router();
 
 // Todos requieren autenticación y comercio
-router.use(requireAuth, attachTenant);
+router.use(requireAuth);
 
 // Endpoints (Solo Admin y Superadmin pueden gestionar listas de precios)
 router.get('/', listaPrecioController.listar);

@@ -2,9 +2,9 @@ const express = require('express');
 const router = express.Router();
 const proveedorController = require('../controllers/proveedor.controller');
 const { requireAuth, requireRole } = require('../middlewares/auth.middleware');
-const { attachTenant } = require('../middlewares/tenant.middleware');
 
-router.use(requireAuth, attachTenant);
+
+router.use(requireAuth);
 
 router.get('/', proveedorController.listar);
 router.get('/:id', proveedorController.obtener);

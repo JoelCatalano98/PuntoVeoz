@@ -5,7 +5,7 @@ const path = require('path');
 
 async function listar(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const parametros = await prisma.parametro.findMany({
       where: { comercioId }
     });
@@ -17,7 +17,7 @@ async function listar(req, res, next) {
 
 async function obtenerUno(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const { clave } = req.params;
 
     const parametro = await prisma.parametro.findUnique({
@@ -46,7 +46,7 @@ async function obtenerUno(req, res, next) {
 
 async function guardar(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const { clave } = req.params;
     const { valor } = req.body;
 
@@ -70,7 +70,7 @@ async function guardar(req, res, next) {
 
   async function generarCSR(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
 
     // Obtener CUIT y Razón Social del comercio
     const [comercio, razonSocialParam] = await Promise.all([
@@ -113,7 +113,7 @@ async function guardar(req, res, next) {
 
 async function getArcaConfig(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const comercio = await prisma.comercio.findUnique({ where: { id: comercioId } });
     if (!comercio) return res.status(404).json({ error: 'Comercio no encontrado' });
 
@@ -129,7 +129,7 @@ async function getArcaConfig(req, res, next) {
 
 async function updateArcaConfig(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const { arcaCuit, arcaPtoVta, arcaModo } = req.body;
 
     const comercio = await prisma.comercio.update({

@@ -9,7 +9,7 @@ async function listar(req, res) {
   const skip = (pageNum - 1) * limitNum;
 
   const whereClause = {
-    comercioId: req.comercioId,
+    comercioId: req.user.comercioId,
     activo: true
   };
 
@@ -66,7 +66,7 @@ async function listar(req, res) {
 async function buscarPorCodigoBarras(req, res) {
   const { codigo } = req.params;
   const producto = await prisma.producto.findFirst({
-    where: { comercioId: req.comercioId, codigoBarras: codigo, activo: true },
+    where: { comercioId: req.user.comercioId, codigoBarras: codigo, activo: true },
   });
   if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
   res.json(producto);
@@ -83,7 +83,7 @@ async function crear(req, res) {
   const result = await prisma.$transaction(async (tx) => {
     const p = await tx.producto.create({
       data: {
-        comercioId: req.comercioId,
+        comercioId: req.user.comercioId,
         nombre,
         descripcion,
         codigoBarras,
@@ -104,7 +104,7 @@ async function crear(req, res) {
     if (stockActual > 0) {
       await tx.movimientoStock.create({
         data: {
-          comercioId: req.comercioId,
+          comercioId: req.user.comercioId,
           productoId: p.id,
           usuarioId: req.user.userId,
           tipo: 'ENTRADA',
@@ -123,7 +123,7 @@ async function crear(req, res) {
 async function actualizar(req, res) {
   const { id } = req.params;
   const producto = await prisma.producto.findFirst({
-    where: { id: Number(id), comercioId: req.comercioId },
+    where: { id: Number(id), comercioId: req.user.comercioId },
   });
   if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
 
@@ -168,7 +168,7 @@ async function generarCodigoBarras(req, res, next) {
     }
 
     const producto = await prisma.producto.findFirst({
-      where: { id: Number(id), comercioId: req.comercioId },
+      where: { id: Number(id), comercioId: req.user.comercioId },
     });
     if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
 

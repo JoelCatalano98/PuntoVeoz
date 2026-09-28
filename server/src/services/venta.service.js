@@ -304,8 +304,8 @@ async function emitirNotaCreditoTotal(comercioId, usuarioId, ventaIdOriginal) {
   if (!ventaOriginal) throw new Error('Venta original no encontrada');
   if (ventaOriginal.anulada || ventaOriginal.estado === 'ANULADA') throw new Error('La venta ya se encuentra anulada');
   if (!ventaOriginal.cae || !ventaOriginal.nroFactura) throw new Error('Solo se pueden emitir Notas de Crédito fiscales para ventas con CAE y Nro. de Factura');
-  if (!ventaOriginal.concepto) throw new Error('No se puede emitir la Nota de Crédito: falta el concepto de facturación en la venta original');
-
+  
+  const conceptoAfip = ventaOriginal.concepto || 1;
   let tipoNC = 'NOTA_CREDITO_C';
   let tipoCmpAFIP = 13;
   if (ventaOriginal.tipoComprobante === 'FACTURA_A') { tipoNC = 'NOTA_CREDITO_A'; tipoCmpAFIP = 3; }
@@ -325,7 +325,7 @@ async function emitirNotaCreditoTotal(comercioId, usuarioId, ventaIdOriginal) {
     clienteDocTipo: docTipo,
     clienteDocNro: ventaOriginal.cliente ? Number(ventaOriginal.cliente.numeroDoc.replace(/\D/g, '')) : 0,
     total: ventaOriginal.total.toNumber(),
-    concepto: ventaOriginal.concepto,
+    concepto: conceptoAfip,
     nroFactura: ventaOriginal.nroFactura
   };
 
@@ -811,6 +811,7 @@ async function facturarAfip({ comercioId, ventaId, clienteId, concepto = 1 }) {
       tipoComprobante: 'FACTURA_C', // Asumido
       nroFactura: afipResponse.nroFactura,
       cae: afipResponse.cae,
+      concepto: concepto,
       vencimientoCae: afipResponse.vencimientoCae ? new Date(
         afipResponse.vencimientoCae.substring(0,4) + '-' +
         afipResponse.vencimientoCae.substring(4,6) + '-' +

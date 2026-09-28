@@ -8,7 +8,7 @@ async function listar(req, res) {
   const limitNum = Math.max(1, Number(limit));
   const skip = (pageNum - 1) * limitNum;
 
-  const whereClause = { comercioId: req.comercioId, activo: true };
+  const whereClause = { comercioId: req.user.comercioId, activo: true };
   if (q) {
     whereClause.OR = [
       { nombre: { contains: q } },
@@ -43,7 +43,7 @@ async function crear(req, res) {
 
   const cliente = await prisma.cliente.create({
     data: {
-      comercioId: req.comercioId,
+      comercioId: req.user.comercioId,
       nombre,
       razonSocial,
       tipoDoc,
@@ -61,7 +61,7 @@ async function crear(req, res) {
 async function actualizar(req, res) {
   const { id } = req.params;
   const cliente = await prisma.cliente.findFirst({
-    where: { id: Number(id), comercioId: req.comercioId },
+    where: { id: Number(id), comercioId: req.user.comercioId },
   });
   
   if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
@@ -86,7 +86,7 @@ async function consultarPadron(req, res) {
     }
     
     // Obtener el comercio para sacar el CUIT representada y el modo (isProduction)
-    const comercio = await prisma.comercio.findUnique({ where: { id: req.comercioId } });
+    const comercio = await prisma.comercio.findUnique({ where: { id: req.user.comercioId } });
     if (!comercio || !comercio.arcaCuit) {
         return res.status(200).json({ success: false, error: 'El comercio no tiene CUIT configurado para ARCA.' });
     }
@@ -96,7 +96,7 @@ async function consultarPadron(req, res) {
 
     console.log('Llamando al WS oficial de ARCA (PersonaServiceA5)...');
     
-    const result = await padronClient.consultarCUIT(req.comercioId, cuit, cuitRepresentada, isProduction);
+    const result = await padronClient.consultarCUIT(req.user.comercioId, cuit, cuitRepresentada, isProduction);
     
     // Devolvemos 200 siempre para que el frontend ataje el success: false amigablemente
     res.status(200).json(result);

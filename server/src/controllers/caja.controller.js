@@ -3,7 +3,7 @@ const cajaService = require('../services/caja.service');
 async function abrirCaja(req, res, next) {
   try {
     const { cajaId, montoInicial, observaciones } = req.body;
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const usuarioId = req.user.userId;
 
     if (!cajaId || isNaN(Number(cajaId))) {
@@ -33,7 +33,7 @@ async function abrirCaja(req, res, next) {
 
 async function obtenerEstado(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const db = require('../config/prisma');
     
     // Busca si el usuario actual tiene alguna caja abierta
@@ -96,7 +96,7 @@ async function registrarMovimiento(req, res, next) {
       return res.status(400).json({ error: 'El concepto es obligatorio' });
     }
 
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const movimiento = await cajaService.registrarMovimientoManual({
       comercioId,
       aperturaCajaId: Number(aperturaCajaId),
@@ -125,7 +125,7 @@ async function obtenerEsperado(req, res, next) {
       return res.status(400).json({ error: 'aperturaCajaId es obligatorio y debe ser válido' });
     }
 
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const totalEsperado = await cajaService.calcularTotalEsperadoEfectivo({
       comercioId,
       aperturaCajaId: Number(aperturaCajaId)
@@ -152,7 +152,7 @@ async function cerrarCaja(req, res, next) {
       return res.status(400).json({ error: 'totalContado debe ser un número mayor o igual a 0' });
     }
 
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const cierre = await cajaService.cerrarCaja({
       comercioId,
       aperturaCajaId: Number(aperturaCajaId),
@@ -177,7 +177,7 @@ async function listarMovimientos(req, res, next) {
   try {
     const { aperturaCajaId } = req.params;
     const { page, limit } = req.query;
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
 
     if (!aperturaCajaId || isNaN(Number(aperturaCajaId))) {
       return res.status(400).json({ error: 'aperturaCajaId es obligatorio y debe ser válido' });
@@ -201,7 +201,7 @@ async function listarMovimientos(req, res, next) {
 
 async function listarCierres(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const { fechaDesde, fechaHasta, page, limit } = req.query;
 
     const cierres = await cajaService.listarCierres({
@@ -220,7 +220,7 @@ async function listarCierres(req, res, next) {
 
 async function obtenerDetalleCierre(req, res, next) {
   try {
-    const comercioId = req.comercioId;
+    const comercioId = req.user.comercioId;
     const { id } = req.params;
 
     if (!id || isNaN(Number(id))) {

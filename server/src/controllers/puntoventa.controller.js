@@ -2,7 +2,7 @@ const prisma = require('../config/prisma');
 
 async function listar(req, res) {
   const puntosVenta = await prisma.puntoVenta.findMany({
-    where: { comercioId: req.comercioId, activo: true },
+    where: { comercioId: req.user.comercioId, activo: true },
     orderBy: { nombre: 'asc' },
   });
   res.json(puntosVenta);
@@ -17,7 +17,7 @@ async function crear(req, res) {
 
   const puntoVenta = await prisma.puntoVenta.create({
     data: {
-      comercioId: req.comercioId,
+      comercioId: req.user.comercioId,
       nombre,
       tipo: tipo || 'MANUAL', // 'MANUAL' es el default en prisma, nos aseguramos acá también si mandan null/vacio
     },
@@ -29,7 +29,7 @@ async function crear(req, res) {
 async function actualizar(req, res) {
   const { id } = req.params;
   const puntoVenta = await prisma.puntoVenta.findFirst({
-    where: { id: Number(id), comercioId: req.comercioId },
+    where: { id: Number(id), comercioId: req.user.comercioId },
   });
   
   if (!puntoVenta) return res.status(404).json({ error: 'Punto de venta no encontrado' });

@@ -6,7 +6,7 @@ const ROLES_VALIDOS = ['SUPERADMIN', 'ADMIN', 'CAJERO'];
 async function listar(req, res, next) {
   try {
     const usuarios = await prisma.usuario.findMany({
-      where: { comercioId: req.comercioId, activo: true },
+      where: { comercioId: req.user.comercioId, activo: true },
       select: {
         id: true,
         nombre: true,
@@ -56,7 +56,7 @@ async function crear(req, res, next) {
 
     const usuario = await prisma.usuario.create({
       data: {
-        comercioId: req.comercioId,
+        comercioId: req.user.comercioId,
         nombre,
         username,
         email,
@@ -78,7 +78,7 @@ async function actualizar(req, res, next) {
     const { nombre, username, email, password, rol, activo } = req.body;
 
     const usuario = await prisma.usuario.findFirst({
-      where: { id: Number(id), comercioId: req.comercioId }
+      where: { id: Number(id), comercioId: req.user.comercioId }
     });
 
     if (!usuario) {

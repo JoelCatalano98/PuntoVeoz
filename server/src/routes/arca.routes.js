@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const arcaController = require('../controllers/arca.controller');
 const { requireAuth, requireRole } = require('../middlewares/auth.middleware');
-const { attachTenant } = require('../middlewares/tenant.middleware');
+
 
 router.use(requireAuth);
-router.use(attachTenant);
+
 
 const soloAdmins = requireRole('ADMIN', 'SUPERADMIN');
 

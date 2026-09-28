@@ -3,7 +3,7 @@ const prisma = require('../config/prisma');
 async function listar(req, res, next) {
   try {
     const proveedores = await prisma.proveedor.findMany({
-      where: { comercioId: req.comercioId, activo: true },
+      where: { comercioId: req.user.comercioId, activo: true },
       orderBy: { razonSocial: 'asc' }
     });
     res.json(proveedores);
@@ -16,7 +16,7 @@ async function obtener(req, res, next) {
   try {
     const { id } = req.params;
     const proveedor = await prisma.proveedor.findFirst({
-      where: { id: Number(id), comercioId: req.comercioId }
+      where: { id: Number(id), comercioId: req.user.comercioId }
     });
     if (!proveedor) return res.status(404).json({ error: 'Proveedor no encontrado' });
     res.json(proveedor);
@@ -32,7 +32,7 @@ async function crear(req, res, next) {
 
     const proveedor = await prisma.proveedor.create({
       data: {
-        comercioId: req.comercioId,
+        comercioId: req.user.comercioId,
         razonSocial,
         cuit,
         telefono,
@@ -53,7 +53,7 @@ async function actualizar(req, res, next) {
     const { razonSocial, cuit, telefono, email, direccion, condicionIva } = req.body;
 
     const existe = await prisma.proveedor.findFirst({
-      where: { id: Number(id), comercioId: req.comercioId }
+      where: { id: Number(id), comercioId: req.user.comercioId }
     });
     if (!existe) return res.status(404).json({ error: 'Proveedor no encontrado' });
 
@@ -72,7 +72,7 @@ async function eliminar(req, res, next) {
     const { id } = req.params;
     
     const existe = await prisma.proveedor.findFirst({
-      where: { id: Number(id), comercioId: req.comercioId }
+      where: { id: Number(id), comercioId: req.user.comercioId }
     });
     if (!existe) return res.status(404).json({ error: 'Proveedor no encontrado' });
 

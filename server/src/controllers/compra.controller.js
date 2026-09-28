@@ -7,7 +7,7 @@ async function listar(req, res, next) {
     const limitNum = Math.max(1, Number(limit));
     const skip = (pageNum - 1) * limitNum;
 
-    const whereClause = { comercioId: req.comercioId };
+    const whereClause = { comercioId: req.user.comercioId };
     if (search) {
       whereClause.OR = [
         { numeroFactura: { contains: search } },
@@ -46,7 +46,7 @@ async function obtener(req, res, next) {
   try {
     const { id } = req.params;
     const compra = await prisma.compra.findFirst({
-      where: { id: Number(id), comercioId: req.comercioId },
+      where: { id: Number(id), comercioId: req.user.comercioId },
       include: {
         proveedor: true,
         usuario: { select: { nombre: true, username: true } },
@@ -74,7 +74,7 @@ async function crear(req, res, next) {
       // 1. Crear la cabecera
       const nuevaCompra = await tx.compra.create({
         data: {
-          comercioId: req.comercioId,
+          comercioId: req.user.comercioId,
           proveedorId: Number(proveedorId),
           usuarioId: req.user.userId,
           numeroFactura,
@@ -100,7 +100,7 @@ async function crear(req, res, next) {
         const aperturaActiva = await tx.aperturaCaja.findFirst({
           where: { 
             cajaId: Number(cajaId), 
-            comercioId: req.comercioId, 
+            comercioId: req.user.comercioId, 
             cierre: null 
           }
         });
@@ -134,7 +134,7 @@ async function crear(req, res, next) {
 
         await tx.movimientoStock.create({
           data: {
-            comercioId: req.comercioId,
+            comercioId: req.user.comercioId,
             productoId: Number(detalle.productoId),
             usuarioId: req.user.userId,
             tipo: 'ENTRADA',
@@ -148,7 +148,7 @@ async function crear(req, res, next) {
     });
 
     const compraCompleta = await prisma.compra.findFirst({
-      where: { id: compra.id, comercioId: req.comercioId },
+      where: { id: compra.id, comercioId: req.user.comercioId },
       include: {
         proveedor: true,
         usuario: { select: { nombre: true, username: true } },

@@ -3,7 +3,7 @@ const prisma = require('../config/prisma');
 async function listar(req, res, next) {
   try {
     const unidades = await prisma.unidadMedida.findMany({
-      where: { comercioId: req.comercioId, activo: true },
+      where: { comercioId: req.user.comercioId, activo: true },
       orderBy: { nombre: 'asc' },
     });
     res.json(unidades);
@@ -24,7 +24,7 @@ async function crear(req, res, next) {
       data: {
         nombre: nombre.trim(),
         abreviatura: abreviatura ? abreviatura.trim() : null,
-        comercioId: req.comercioId,
+        comercioId: req.user.comercioId,
       },
     });
 
@@ -43,7 +43,7 @@ async function actualizar(req, res, next) {
     const { nombre, abreviatura } = req.body;
 
     const existente = await prisma.unidadMedida.findFirst({
-      where: { id: Number(id), comercioId: req.comercioId },
+      where: { id: Number(id), comercioId: req.user.comercioId },
     });
 
     if (!existente) return res.status(404).json({ error: 'Unidad de medida no encontrada' });
@@ -70,7 +70,7 @@ async function eliminar(req, res, next) {
     const { id } = req.params;
     
     const existente = await prisma.unidadMedida.findFirst({
-      where: { id: Number(id), comercioId: req.comercioId },
+      where: { id: Number(id), comercioId: req.user.comercioId },
     });
 
     if (!existente) return res.status(404).json({ error: 'Unidad de medida no encontrada' });
