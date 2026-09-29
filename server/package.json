@@ -20,6 +20,7 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.4.0",
     "node-forge": "^1.4.0",
+    "node-windows": "^1.0.0-beta.8",
     "soap": "^1.13.0"
   },
   "devDependencies": {

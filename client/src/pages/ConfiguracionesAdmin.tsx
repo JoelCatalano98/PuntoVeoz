@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Server, Key, Save, CheckCircle, AlertTriangle, Plus, Trash2, Edit2, ShieldAlert, Search } from 'lucide-react';
+import { Server, Key, Save, CheckCircle, AlertTriangle, Plus, Trash2, Edit2, ShieldAlert, Search, Upload } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -20,6 +20,9 @@ export default function ConfiguracionesAdmin() {
   const [diagPtoVta, setDiagPtoVta] = useState('1');
   const [diagCbteTipo, setDiagCbteTipo] = useState('11');
   const [consultandoUltimo, setConsultandoUltimo] = useState(false);
+  const [certFile, setCertFile] = useState<File | null>(null);
+  const [keyFile, setKeyFile] = useState<File | null>(null);
+  const [subiendoCert, setSubiendoCert] = useState(false);
 
   // Puntos de Venta
   const [puntosVenta, setPuntosVenta] = useState<any[]>([]);
@@ -140,15 +143,81 @@ export default function ConfiguracionesAdmin() {
     }
   };
 
+  const subirCertificados = async () => {
+    if (!certFile || !keyFile) {
+      toast.error('Debe seleccionar ambos archivos (.crt y .key)');
+      return;
+    }
+    setSubiendoCert(true);
+    try {
+      const readAsText = (file: File): Promise<string> => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.onerror = reject;
+        reader.readAsText(file);
+      });
+
+      const certContent = await readAsText(certFile);
+      const keyContent = await readAsText(keyFile);
+
+      await api.post('/comercio/arca-config', {
+        cert: certContent,
+        key: keyContent,
+        cuit: arcaCuit,
+        modo: arcaModo
+      });
+
+      toast.success('✅ Certificados subidos y guardados correctamente');
+      setCertFile(null);
+      setKeyFile(null);
+      cargarConfiguraciones();
+    } catch (e: any) {
+      toast.error(`❌ Error al subir: ${e.response?.data?.error || e.message}`);
+    } finally {
+      setSubiendoCert(false);
+    }
+  };
+
   const testConexion = async () => {
     setTesteando(true);
+    
+    // Auto-detección del Punto de Venta si el input es el default '1' y el comercio tiene otros.
+    let ptoToSend = diagPtoVta;
+    if (puntosVenta.length > 0 && !puntosVenta.find(p => p.numero.toString() === diagPtoVta)) {
+      ptoToSend = puntosVenta[0].numero.toString();
+    }
+
     try {
-      await api.get('/ventas/test-arca');
+      await api.get('/ventas/test-arca', {
+        params: { ptoVta: ptoToSend, cbteTipo: diagCbteTipo }
+      });
       toast.success('✅ Conexión con AFIP Exitosa');
     } catch (e: any) {
-      toast.error(`❌ Fallo de conexión: ${e.response?.data?.error || e.message}`);
+      toast.error(`❌ Fallo de conexión: ${e.response?.data?.error || e.message}`, { duration: 6000 });
     } finally {
       setTesteando(false);
+    }
+  };
+
+  const generarCSR = async () => {
+    try {
+      toast.loading('Generando CSR y Key... Aguarde...', { id: 'csr' });
+      const res = await api.post('/parametros/generar-csr');
+      toast.dismiss('csr');
+      toast.success('✅ Certificados generados exitosamente.', { duration: 5000 });
+      
+      // Descarga automática de los certificados si vienen en la respuesta
+      if (res.data?.csrPem) {
+        const blob = new Blob([res.data.csrPem, '\n\n--- PRIVATE KEY ---\n', res.data.privateKeyPem], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Certificados_ARCA.txt';
+        a.click();
+      }
+    } catch (e: any) {
+      toast.dismiss('csr');
+      toast.error(`❌ Error al generar CSR: ${e.response?.data?.error || e.message}`, { duration: 6000 });
     }
   };
 
@@ -272,8 +341,41 @@ export default function ConfiguracionesAdmin() {
                   </span>
                 </div>
               </div>
+              <div className="flex flex-col gap-1 border-l pl-4 border-gray-300 dark:border-slate-600">
+                <span className="text-[10px] font-bold text-gray-500 uppercase">Subir / Reemplazar</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-gray-400 mb-0.5">.crt (Certificado)</span>
+                    <input 
+                      type="file" 
+                      accept=".crt,.pem" 
+                      onChange={e => setCertFile(e.target.files?.[0] || null)} 
+                      className="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-sm file:border-0 file:text-xs file:font-bold file:bg-gray-200 dark:file:bg-slate-700 file:text-gray-700 dark:file:text-slate-300 hover:file:bg-gray-300 dark:hover:file:bg-slate-600 cursor-pointer" 
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-gray-400 mb-0.5">.key (Llave Privada)</span>
+                    <input 
+                      type="file" 
+                      accept=".key,.pem" 
+                      onChange={e => setKeyFile(e.target.files?.[0] || null)} 
+                      className="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-sm file:border-0 file:text-xs file:font-bold file:bg-gray-200 dark:file:bg-slate-700 file:text-gray-700 dark:file:text-slate-300 hover:file:bg-gray-300 dark:hover:file:bg-slate-600 cursor-pointer" 
+                    />
+                  </div>
+                  <button 
+                    onClick={subirCertificados} 
+                    disabled={!certFile || !keyFile || subiendoCert} 
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 mt-3 text-sm font-bold flex items-center gap-2 border border-indigo-800 rounded-sm disabled:opacity-50 transition-colors"
+                  >
+                    <Upload size={14} /> {subiendoCert ? 'Subiendo...' : 'Subir'}
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="flex items-center gap-2">
+              <button onClick={generarCSR} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm font-bold flex items-center gap-2 border border-green-800 rounded-sm">
+                Generar Certificados / CSR
+              </button>
               <button onClick={testConexion} disabled={testeando} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-bold flex items-center gap-2 border border-blue-800 rounded-sm disabled:opacity-50">
                 <Server size={14} /> Probar Conexión (Ping)
               </button>

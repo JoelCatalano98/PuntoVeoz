@@ -55,6 +55,14 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'API de Punto Veloz funcionando' });
 });
 
+// Servir la carpeta compilada del frontend
+app.use(express.static(path.join(__dirname, '../../client/dist')));
+
+// Rutas de React Router (Comodín)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../client/dist/index.html'));
+});
+
 // Middleware de manejo de errores centralizado
 app.use((err, req, res, next) => {
   console.error('Error no controlado:', err);
