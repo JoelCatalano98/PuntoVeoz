@@ -56,6 +56,7 @@ const Caja = () => {
   const [showModalCierre, setShowModalCierre] = useState(false);
   const [montoContado, setMontoContado] = useState('');
   const [cerrandoCaja, setCerrandoCaja] = useState(false);
+  const [imprimirDetalle, setImprimirDetalle] = useState(false);
   const [ticketZData, setTicketZData] = useState<any>(null);
 
   // Nueva Caja
@@ -70,7 +71,18 @@ const Caja = () => {
 
   useEffect(() => {
     cargarEstado();
+    cargarPuntosVenta();
   }, []);
+
+  const cargarPuntosVenta = async () => {
+    try {
+      const res = await api.get('/arca/puntos-venta');
+      setPuntosVenta(res.data.filter((pv: any) => pv.tipo === 'MANUAL' && pv.activo !== false));
+      setNuevaCajaPuntoVentaId('');
+    } catch (e) {
+      console.error('Error al cargar puntos de venta:', e);
+    }
+  };
 
   const cargarEstado = async () => {
     try {
@@ -192,7 +204,9 @@ const Caja = () => {
         cajaNombre: apertura?.caja.nombre,
         esperado: totalEsperado,
         contado: res.data.totalContado,
-        diferencia: res.data.diferencia
+        diferencia: res.data.diferencia,
+        imprimirDetalle: imprimirDetalle,
+        movimientos: imprimirDetalle ? apertura?.movimientos : []
       });
 
       // Dar tiempo al DOM para renderizar el ticket antes de imprimir
@@ -387,8 +401,11 @@ const Caja = () => {
                     onChange={e => setNuevaCajaPuntoVentaId(e.target.value)}
                     required
                   >
+                    <option value="">Seleccionar punto de venta...</option>
                     {puntosVenta.map(pv => (
-                      <option key={pv.id} value={pv.id}>{pv.nombre}</option>
+                      <option key={pv.id} value={pv.id}>
+                        {pv.numero} - {pv.descripcion || pv.nombre || ''}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -606,6 +623,19 @@ const Caja = () => {
                 </div>
               </div>
 
+              <div className="flex items-center gap-2 px-1">
+                <input 
+                  type="checkbox" 
+                  id="chkDetalle" 
+                  checked={imprimirDetalle}
+                  onChange={(e) => setImprimirDetalle(e.target.checked)}
+                  className="w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 dark:focus:ring-red-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600 cursor-pointer"
+                />
+                <label htmlFor="chkDetalle" className="text-sm font-bold text-gray-700 dark:text-slate-300 cursor-pointer">
+                  Imprimir detalle de ventas y movimientos en el ticket
+                </label>
+              </div>
+
               <div className="mt-2 flex gap-3">
                 <button type="button" onClick={() => setShowModalCierre(false)} className="flex-1 py-3.5 text-gray-600 dark:text-slate-300 font-bold bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-xl transition-colors">
                   Cancelar
@@ -647,6 +677,18 @@ const Caja = () => {
               <span>${Number(ticketZData.diferencia).toFixed(2)}</span>
             </div>
           </div>
+
+          {ticketZData.imprimirDetalle && ticketZData.movimientos && ticketZData.movimientos.length > 0 && (
+            <div className="mb-4 mt-4 pt-2 border-t border-black border-dashed text-xs">
+              <h3 className="font-bold mb-2 text-center">DETALLE DE MOVIMIENTOS</h3>
+              {ticketZData.movimientos.map((mov: any) => (
+                <div key={mov.id} className="flex justify-between mb-1">
+                  <span className="truncate w-3/4">{mov.tipo === 'VENTA' ? `Venta #${mov.ventaId || ''}` : mov.descripcion || mov.tipo}</span>
+                  <span className="w-1/4 text-right">{mov.tipo === 'EGRESO_MANUAL' ? '-' : ''}${Number(mov.monto).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="text-center mt-8 text-xs">
             <p>_______________________</p>

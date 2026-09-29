@@ -1,0 +1,1 @@
+const arcaService = require('./src/services/arca.service'); async function test() { try { const r = await arcaService.obtenerPuntosVenta(1); console.log(JSON.stringify(r, null, 2)); } catch(e) { console.error(e); } process.exit(0); } test();

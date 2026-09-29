@@ -167,6 +167,11 @@ async function emitirNotaCredito(req, res, next) {
       return res.status(400).json({ error: 'id de venta es obligatorio y debe ser válido' });
     }
 
+    const { puntoVentaId } = req.body;
+    if (!puntoVentaId || isNaN(Number(puntoVentaId))) {
+      return res.status(400).json({ error: 'El puntoVentaId fiscal es obligatorio para emitir una Nota de Crédito' });
+    }
+
     const prisma = require('../config/prisma');
     const ventaOriginal = await prisma.venta.findFirst({
       where: { id: Number(id), comercioId }
@@ -182,7 +187,7 @@ async function emitirNotaCredito(req, res, next) {
       return res.status(400).json({ error: 'No se puede emitir NC para facturas con más de 15 días' });
     }
 
-    const nc = await ventaService.emitirNotaCreditoTotal(comercioId, usuarioId, Number(id));
+    const nc = await ventaService.emitirNotaCreditoTotal(comercioId, usuarioId, Number(id), Number(puntoVentaId));
 
     res.json(nc);
   } catch (error) {
@@ -511,17 +516,22 @@ async function facturarAfip(req, res, next) {
   try {
     const comercioId = req.user.comercioId;
     const ventaId = Number(req.params.id);
-    const { clienteId, concepto, esVentaNueva } = req.body;
+    const { clienteId, concepto, esVentaNueva, puntoVentaId } = req.body;
 
     if (!clienteId || isNaN(Number(clienteId))) {
       return res.status(400).json({ error: 'El clienteId es obligatorio y debe ser válido' });
+    }
+
+    if (!puntoVentaId || isNaN(Number(puntoVentaId))) {
+      return res.status(400).json({ error: 'El puntoVentaId es obligatorio' });
     }
 
     const ventaActualizada = await ventaService.facturarAfip({
       comercioId,
       ventaId,
       clienteId: Number(clienteId),
-      concepto: concepto ? Number(concepto) : 1
+      concepto: concepto ? Number(concepto) : 1,
+      puntoVentaId: Number(puntoVentaId)
     });
 
     res.json(ventaActualizada);
@@ -567,15 +577,20 @@ async function testArcaConnection(req, res, next) {
     let { ptoVta, cbteTipo } = req.query;
 
     if (!ptoVta || !cbteTipo) {
-      const comercio = await prisma.comercio.findUnique({ where: { id: comercioId } });
-      ptoVta = ptoVta || comercio?.arcaPtoVta;
-      
-      if (!ptoVta) {
-        return res.status(400).json({ error: 'No se pudo determinar el Punto de Venta' });
+      return res.status(400).json({ error: 'Se requiere Punto de Venta y Tipo de Comprobante' });
+    }
+
+    const pvValido = await prisma.puntoVenta.findFirst({
+      where: {
+        comercioId,
+        numero: Number(ptoVta),
+        tipo: 'WEBSERVICE',
+        activo: true
       }
-      if (!cbteTipo) {
-        return res.status(400).json({ error: 'No se indicó el Tipo de Comprobante' });
-      }
+    });
+
+    if (!pvValido) {
+      return res.status(400).json({ error: 'El Punto de Venta enviado no existe, no está habilitado o no es de tipo WEBSERVICE' });
     }
 
     const comercioActualizado = await prisma.comercio.findUnique({ where: { id: comercioId } });

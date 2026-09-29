@@ -1,0 +1,1 @@
+const arcaService = require('./src/services/arca.service'); const prisma = require('./src/config/prisma'); async function run() { try { const res = await arcaService.obtenerUltimoComprobante(1, 1, 11); console.log('Resultado:', res); process.exit(0); } catch (e) { console.error(e); process.exit(1); } } run();

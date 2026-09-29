@@ -17,7 +17,7 @@ export default function ConfiguracionesAdmin() {
   // Certificados & Diagnóstico
   const [certStatus, setCertStatus] = useState({ certExists: false, keyExists: false });
   const [testeando, setTesteando] = useState(false);
-  const [diagPtoVta, setDiagPtoVta] = useState('1');
+  const [diagPtoVta, setDiagPtoVta] = useState('');
   const [diagCbteTipo, setDiagCbteTipo] = useState('11');
   const [consultandoUltimo, setConsultandoUltimo] = useState(false);
   const [certFile, setCertFile] = useState<File | null>(null);
@@ -29,10 +29,25 @@ export default function ConfiguracionesAdmin() {
   const [cargandoPV, setCargandoPV] = useState(false);
   const [pvEditando, setPvEditando] = useState<any>(null);
   const [pvForm, setPvForm] = useState({ numero: '', descripcion: '', tipo: 'WEBSERVICE' });
+  const [syncResult, setSyncResult] = useState<any>(null);
 
   useEffect(() => {
     cargarTodo();
   }, []);
+
+  useEffect(() => {
+    const ws = puntosVenta.filter(p => p.tipo === 'WEBSERVICE' && p.activo !== false);
+    if (ws.length === 1) {
+      setDiagPtoVta(ws[0].numero.toString());
+    } else if (ws.length > 1) {
+      try {
+        const lastUsed = localStorage.getItem('last_diag_pto_vta');
+        if (lastUsed && ws.find(p => p.numero.toString() === lastUsed)) {
+          setDiagPtoVta(lastUsed);
+        }
+      } catch (e) {}
+    }
+  }, [puntosVenta]);
 
   const cargarTodo = async () => {
     try {
@@ -179,23 +194,46 @@ export default function ConfiguracionesAdmin() {
   };
 
   const testConexion = async () => {
-    setTesteando(true);
-    
-    // Auto-detección del Punto de Venta si el input es el default '1' y el comercio tiene otros.
-    let ptoToSend = diagPtoVta;
-    if (puntosVenta.length > 0 && !puntosVenta.find(p => p.numero.toString() === diagPtoVta)) {
-      ptoToSend = puntosVenta[0].numero.toString();
+    if (!diagPtoVta) {
+      return toast.error('Seleccione un Punto de Venta tipo WEBSERVICE para probar la conexión');
     }
+    
+    try {
+      localStorage.setItem('last_diag_pto_vta', diagPtoVta);
+    } catch (e) {}
+
+    setTesteando(true);
 
     try {
       await api.get('/ventas/test-arca', {
-        params: { ptoVta: ptoToSend, cbteTipo: diagCbteTipo }
+        params: { ptoVta: diagPtoVta, cbteTipo: diagCbteTipo }
       });
       toast.success('✅ Conexión con AFIP Exitosa');
     } catch (e: any) {
       toast.error(`❌ Fallo de conexión: ${e.response?.data?.error || e.message}`, { duration: 6000 });
     } finally {
       setTesteando(false);
+    }
+  };
+
+  const sincronizarPVs = async () => {
+    try {
+      setSyncResult(null);
+      toast.loading('Sincronizando puntos de venta con ARCA...', { id: 'sync' });
+      const res = await api.post('/arca/puntos-venta/sync');
+      toast.dismiss('sync');
+      
+      const { conflictos } = res.data;
+      if (conflictos && conflictos.length > 0) {
+        toast.error(`Sincronizado con conflictos. Revise el recuadro rojo abajo.`, { duration: 8000 });
+      } else {
+        toast.success(`✅ Sincronización exitosa. Se actualizaron ${res.data.count} puntos de venta.`, { duration: 5000 });
+      }
+      setSyncResult(res.data);
+      cargarPuntosVenta();
+    } catch (e: any) {
+      toast.dismiss('sync');
+      toast.error(`❌ Error al sincronizar: ${e.response?.data?.error || e.message}`, { duration: 6000 });
     }
   };
 
@@ -231,6 +269,9 @@ export default function ConfiguracionesAdmin() {
   };
 
   const consultarUltimoComprobante = async () => {
+    if (!diagPtoVta) {
+      return toast.error('Seleccione un Punto de Venta tipo WEBSERVICE para consultar');
+    }
     setConsultandoUltimo(true);
     try {
       const res = await api.get('/ventas/test-arca', {
@@ -390,12 +431,26 @@ export default function ConfiguracionesAdmin() {
             <div className="flex items-end gap-3">
               <div>
                 <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1">Punto de Venta</label>
-                <input 
-                  type="number" 
+                <select 
                   value={diagPtoVta} 
-                  onChange={e => setDiagPtoVta(e.target.value)} 
-                  className="w-24 p-2 text-sm border border-gray-400 dark:border-slate-600 rounded-sm bg-white dark:bg-slate-900 focus:outline-none" 
-                />
+                  onChange={e => {
+                    setDiagPtoVta(e.target.value);
+                    try { localStorage.setItem('last_diag_pto_vta', e.target.value); } catch(err){}
+                  }} 
+                  className="w-48 p-2 text-sm border border-gray-400 dark:border-slate-600 rounded-sm bg-white dark:bg-slate-900 focus:outline-none" 
+                >
+                  <option value="">Seleccionar punto de venta...</option>
+                  {puntosVenta.filter(p => p.tipo === 'WEBSERVICE' && p.activo !== false).map(pv => (
+                    <option key={pv.id} value={pv.numero.toString()}>
+                      {pv.numero} - {pv.descripcion || pv.nombre || ''}
+                    </option>
+                  ))}
+                </select>
+                {puntosVenta.filter(p => p.tipo === 'WEBSERVICE' && p.activo !== false).length === 0 && (
+                  <div className="mt-1 text-xs text-red-500">
+                    No hay webservices. <button onClick={sincronizarPVs} className="underline font-bold">Sincronizar</button>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1">Tipo de Comprobante</label>
@@ -422,19 +477,60 @@ export default function ConfiguracionesAdmin() {
         </div>
 
         {/* SECCIÓN INFERIOR: PUNTOS DE VENTA ABM */}
-        <div className="p-4 w-full flex-1 flex flex-col bg-white dark:bg-slate-900">
-          <div className="mb-2">
+        <div className="p-4 w-full flex-1 flex flex-col bg-white dark:bg-slate-900 overflow-y-auto">
+          <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-bold text-gray-600 dark:text-slate-400 uppercase tracking-wide">Puntos de Venta (ABM)</span>
+            <button onClick={sincronizarPVs} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-xs font-bold border border-blue-800 rounded-sm flex items-center gap-1">
+              <Server size={12} /> Sincronizar con ARCA
+            </button>
           </div>
 
-          <form onSubmit={guardarPv} className="grid grid-cols-6 gap-2 mb-4 bg-gray-50 dark:bg-slate-800 p-2 border border-gray-300 dark:border-slate-700 items-end">
+          {syncResult && (
+            <div className={`mb-4 p-3 border rounded-sm text-sm ${syncResult.conflictos?.length > 0 ? 'bg-red-50 border-red-300 dark:bg-red-900/30 dark:border-red-800' : 'bg-green-50 border-green-300 dark:bg-green-900/30 dark:border-green-800'}`}>
+              <div className="font-bold flex justify-between">
+                <span>Resultados de la sincronización ({syncResult.count} puntos)</span>
+                <button onClick={() => setSyncResult(null)}><X size={14} /></button>
+              </div>
+              
+              {syncResult.conflictos?.length > 0 && (
+                <div className="mt-2 text-red-700 dark:text-red-400">
+                  <p className="font-bold mb-1">⚠️ Conflictos (Atención Requerida):</p>
+                  <ul className="list-disc pl-5">
+                    {syncResult.conflictos.map((c: any, i: number) => (
+                      <li key={i}><strong>PV {c.numero}</strong>: {c.motivo}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {syncResult.procesados?.length > 0 && (
+                <div className="mt-2 text-green-700 dark:text-green-400">
+                  <p className="font-bold mb-1">✅ Procesados exitosamente:</p>
+                  <ul className="list-disc pl-5">
+                    {syncResult.procesados.map((p: any, i: number) => (
+                      <li key={i}><strong>PV {p.numero}</strong>: {p.motivo} {p.activo ? '(Activo)' : '(Inactivo)'}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          <form onSubmit={guardarPv} className="grid grid-cols-7 gap-2 mb-4 bg-gray-50 dark:bg-slate-800 p-2 border border-gray-300 dark:border-slate-700 items-end">
             <div className="col-span-1">
               <label className="block text-xs font-bold text-gray-600 dark:text-slate-400 mb-1">Nro Pto. Venta</label>
               <input type="number" required value={pvForm.numero} onChange={e => setPvForm({...pvForm, numero: e.target.value})} className="w-full p-1.5 text-sm border border-gray-400 dark:border-slate-600 bg-white dark:bg-slate-900 focus:outline-none" />
             </div>
-            <div className="col-span-3">
+            <div className="col-span-2">
               <label className="block text-xs font-bold text-gray-600 dark:text-slate-400 mb-1">Descripción</label>
               <input type="text" required value={pvForm.descripcion} onChange={e => setPvForm({...pvForm, descripcion: e.target.value})} className="w-full p-1.5 text-sm border border-gray-400 dark:border-slate-600 bg-white dark:bg-slate-900 focus:outline-none" />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-bold text-gray-600 dark:text-slate-400 mb-1">Tipo</label>
+              <select value={pvForm.tipo || 'WEBSERVICE'} onChange={e => setPvForm({...pvForm, tipo: e.target.value})} className="w-full p-1.5 text-sm border border-gray-400 dark:border-slate-600 bg-white dark:bg-slate-900 focus:outline-none">
+                <option value="MANUAL">MANUAL (Ticket Interno)</option>
+                <option value="WEBSERVICE">WEBSERVICE (Factura ARCA)</option>
+              </select>
             </div>
             <div className="col-span-2 flex gap-2">
               <button type="submit" className="flex-1 bg-gray-800 hover:bg-black text-white text-sm font-bold py-1.5 border border-gray-900 rounded-sm">

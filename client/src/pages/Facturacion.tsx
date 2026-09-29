@@ -67,9 +67,25 @@ export default function Facturacion() {
   const cargarPuntosVenta = async () => {
     try {
       const res = await api.get('/arca/puntos-venta');
-      const validPuntos = res.data.filter((pv: any) => pv.tipo === 'WEBSERVICE');
+      const validPuntos = res.data.filter((pv: any) => pv.tipo === 'WEBSERVICE' && pv.activo !== false);
       setPuntosVenta(validPuntos);
-      if (validPuntos.length > 0) setPuntoVentaId(validPuntos[0].id.toString());
+      
+      if (validPuntos.length === 1) {
+        setPuntoVentaId(validPuntos[0].id.toString());
+      } else if (validPuntos.length > 1) {
+        try {
+          const lastUsed = localStorage.getItem('last_factura_pto_vta');
+          if (lastUsed && validPuntos.find((p: any) => p.id.toString() === lastUsed)) {
+            setPuntoVentaId(lastUsed);
+          } else {
+            setPuntoVentaId('');
+          }
+        } catch (e) {
+          setPuntoVentaId('');
+        }
+      } else {
+        setPuntoVentaId('');
+      }
     } catch (err) {
       toast.error('Error al cargar puntos de venta. Revise sus permisos o conexión.');
     }
@@ -136,6 +152,10 @@ export default function Facturacion() {
       toast.error('Debe seleccionar un cliente con DNI/CUIT.');
       return;
     }
+    if (!puntoVentaId) {
+      toast.error('Debe seleccionar un Punto de Venta.');
+      return;
+    }
     if (items.length === 0) {
       toast.error('La factura debe tener al menos un ítem.');
       return;
@@ -185,7 +205,8 @@ export default function Facturacion() {
         fechaServicioDesde: concepto > 1 ? fechaDesde : undefined,
         fechaServicioHasta: concepto > 1 ? fechaHasta : undefined,
         vtoPago: concepto > 1 ? fechaHasta : undefined,
-        esVentaNueva: esVentaNueva
+        esVentaNueva: esVentaNueva,
+        puntoVentaId: Number(puntoVentaId)
       };
 
       try {
@@ -265,14 +286,24 @@ export default function Facturacion() {
                 <select 
                   disabled={facturaEmitida}
                   value={puntoVentaId}
-                  onChange={e => setPuntoVentaId(e.target.value)}
+                  onChange={e => {
+                    setPuntoVentaId(e.target.value);
+                    try { localStorage.setItem('last_factura_pto_vta', e.target.value); } catch(err){}
+                  }}
                   className="w-full p-2 text-sm border border-gray-400 dark:border-slate-600 rounded-sm bg-white dark:bg-slate-900 focus:outline-none focus:border-blue-500 disabled:opacity-50"
                 >
-                  {puntosVenta.filter(pv => pv.tipo === 'WEBSERVICE').map(pv => {
-                    const labelStr = pv.numero ? `${pv.numero} - ${pv.descripcion || pv.nombre || ''}` : (pv.nombre || pv.descripcion || `PV #${pv.id}`);
-                    return <option key={pv.id} value={pv.id}>{labelStr}</option>;
-                  })}
+                  <option value="">Seleccionar punto de venta...</option>
+                  {puntosVenta.map(pv => (
+                    <option key={pv.id} value={pv.id}>
+                      {pv.numero} - {pv.descripcion || pv.nombre || ''}
+                    </option>
+                  ))}
                 </select>
+                {puntosVenta.length === 0 && (
+                  <div className="mt-1 text-xs text-red-500">
+                    No hay webservices activos. Configure ARCA.
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1">Concepto</label>

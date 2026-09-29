@@ -25,6 +25,8 @@ export const NuevaNotaCreditoModal: React.FC<NuevaNotaCreditoModalProps> = ({ is
   const [cargando, setCargando] = useState(false);
   const [seleccionada, setSeleccionada] = useState<VentaElegible | null>(null);
   const [emitiendo, setEmitiendo] = useState(false);
+  const [puntosVenta, setPuntosVenta] = useState<any[]>([]);
+  const [puntoVentaId, setPuntoVentaId] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -38,8 +40,27 @@ export const NuevaNotaCreditoModal: React.FC<NuevaNotaCreditoModalProps> = ({ is
       setCargando(true);
       const res = await api.get('/ventas/elegibles-nc');
       setVentas(res.data);
+      
+      const resPv = await api.get('/arca/puntos-venta');
+      const validPuntos = resPv.data.filter((pv: any) => pv.tipo === 'WEBSERVICE' && pv.activo !== false);
+      setPuntosVenta(validPuntos);
+      
+      if (validPuntos.length === 1) {
+        setPuntoVentaId(validPuntos[0].id.toString());
+      } else if (validPuntos.length > 1) {
+        try {
+          const lastUsed = localStorage.getItem('last_factura_pto_vta');
+          if (lastUsed && validPuntos.find((p: any) => p.id.toString() === lastUsed)) {
+            setPuntoVentaId(lastUsed);
+          } else {
+            setPuntoVentaId('');
+          }
+        } catch (e) {
+          setPuntoVentaId('');
+        }
+      }
     } catch (error) {
-      toast.error('Error al cargar facturas elegibles');
+      toast.error('Error al cargar facturas elegibles o puntos de venta');
     } finally {
       setCargando(false);
     }
@@ -52,9 +73,11 @@ export const NuevaNotaCreditoModal: React.FC<NuevaNotaCreditoModalProps> = ({ is
 
   const handleEmitir = async () => {
     if (!seleccionada) return;
+    if (!puntoVentaId) return toast.error('Debe seleccionar un Punto de Venta fiscal para emitir la NC');
     try {
       setEmitiendo(true);
-      await api.post(`/ventas/${seleccionada.id}/nota-credito`);
+      await api.post(`/ventas/${seleccionada.id}/nota-credito`, { puntoVentaId });
+      try { localStorage.setItem('last_factura_pto_vta', puntoVentaId); } catch(e) {}
       toast.success('Nota de Crédito emitida con éxito');
       onSuccess();
       onClose();
@@ -189,6 +212,25 @@ export const NuevaNotaCreditoModal: React.FC<NuevaNotaCreditoModalProps> = ({ is
                   <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-slate-700 mt-3">
                     <span className="text-lg font-bold">Total a Devolver:</span>
                     <span className="text-2xl font-black text-brand-dark dark:text-brand-light">${Number(seleccionada.total).toFixed(2)}</span>
+                  </div>
+
+                  {/* SELECTOR DE PUNTO DE VENTA */}
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700">
+                    <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">
+                      Punto de Venta Fiscal (WEBSERVICE) para la NC:
+                    </label>
+                    <select
+                      className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-light bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200"
+                      value={puntoVentaId}
+                      onChange={e => setPuntoVentaId(e.target.value)}
+                    >
+                      <option value="">Seleccionar punto de venta...</option>
+                      {puntosVenta.map(pv => (
+                        <option key={pv.id} value={pv.id}>
+                          {pv.numero} - {pv.descripcion || pv.nombre || ''}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>

@@ -1,0 +1,1 @@
+const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); async function check() { const dups = await prisma.SELECT comercioId, numero, COUNT(*) as c FROM puntos_venta GROUP BY comercioId, numero HAVING COUNT(*) > 1; console.log(dups); process.exit(0); } check();

@@ -13,6 +13,7 @@ const soloAdmins = requireRole('ADMIN', 'SUPERADMIN');
 router.get('/status-certificados', soloAdmins, arcaController.getStatusCertificados);
 
 // Puntos de Venta CRUD (GET público para autenticados, resto solo admins)
+router.post('/puntos-venta/sync', soloAdmins, arcaController.sincronizarPuntosVenta);
 router.get('/puntos-venta', arcaController.getPuntosVenta);
 router.post('/puntos-venta', soloAdmins, arcaController.createPuntoVenta);
 router.get('/puntos-venta/:id', arcaController.getPuntoVenta);

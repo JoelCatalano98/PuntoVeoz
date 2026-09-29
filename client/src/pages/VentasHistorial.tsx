@@ -49,6 +49,8 @@ const VentasHistorial = () => {
 
   const [ventaAAnular, setVentaAAnular] = useState<Venta | null>(null);
   const [anulando, setAnulando] = useState(false);
+  const [puntosVenta, setPuntosVenta] = useState<any[]>([]);
+  const [puntoVentaId, setPuntoVentaId] = useState('');
 
   // Modal Facturar (Aplica a PRESUPUESTO y REMITO_APROBADO)
   const [ventaAFacturar, setVentaAFacturar] = useState<Venta | null>(null);
@@ -134,6 +136,25 @@ const VentasHistorial = () => {
       if (resRemito.data?.valor) setFmtRemito(resRemito.data.valor);
       if (resNC.data?.valor) setFmtNC(resNC.data.valor);
 
+      const resPv = await api.get('/arca/puntos-venta');
+      const validPuntos = resPv.data.filter((pv: any) => pv.tipo === 'WEBSERVICE' && pv.activo !== false);
+      setPuntosVenta(validPuntos);
+      
+      if (validPuntos.length === 1) {
+        setPuntoVentaId(validPuntos[0].id.toString());
+      } else if (validPuntos.length > 1) {
+        try {
+          const lastUsed = localStorage.getItem('last_factura_pto_vta');
+          if (lastUsed && validPuntos.find((p: any) => p.id.toString() === lastUsed)) {
+            setPuntoVentaId(lastUsed);
+          } else {
+            setPuntoVentaId('');
+          }
+        } catch (e) {
+          setPuntoVentaId('');
+        }
+      }
+
     } catch (error) {
       toast.error('Error al cargar historial de ventas');
     } finally {
@@ -143,10 +164,13 @@ const VentasHistorial = () => {
 
   const handleAnular = async () => {
     if (!ventaAAnular) return;
+    if (ventaAAnular.cae && !puntoVentaId) return toast.error('Debe seleccionar un Punto de Venta fiscal para emitir la NC');
+
     setAnulando(true);
     try {
       if (ventaAAnular.cae) {
-        await api.post(`/ventas/${ventaAAnular.id}/nota-credito`);
+        await api.post(`/ventas/${ventaAAnular.id}/nota-credito`, { puntoVentaId });
+        try { localStorage.setItem('last_factura_pto_vta', puntoVentaId); } catch(e) {}
         toast.success('Nota de Crédito emitida correctamente');
       } else {
         await api.post(`/ventas/${ventaAAnular.id}/anular`);
@@ -555,6 +579,26 @@ const VentasHistorial = () => {
                         </span>
                       </li>
                     </ul>
+
+                    {/* SELECTOR DE PUNTO DE VENTA */}
+                    <div className="mt-4 pt-4 border-t border-red-200 dark:border-red-800/50">
+                      <label className="block text-sm font-bold text-gray-800 dark:text-slate-200 mb-2">
+                        Punto de Venta Fiscal (WEBSERVICE) para la NC:
+                      </label>
+                      <select
+                        className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-brand-light bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200"
+                        value={puntoVentaId}
+                        onChange={e => setPuntoVentaId(e.target.value)}
+                      >
+                        <option value="">Seleccionar punto de venta...</option>
+                        {puntosVenta.map(pv => (
+                          <option key={pv.id} value={pv.id}>
+                            {pv.numero} - {pv.descripcion || pv.nombre || ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
                   </div>
                   <p className="text-sm text-red-600 dark:text-red-400 font-semibold flex items-center gap-2">
                     <AlertCircle size={16} /> Esta acción es irreversible y se informará a AFIP. ¿Confirmar?

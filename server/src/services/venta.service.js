@@ -288,7 +288,19 @@ async function anularVenta(comercioId, usuarioId, ventaId) {
   });
 }
 
-async function emitirNotaCreditoTotal(comercioId, usuarioId, ventaIdOriginal) {
+async function emitirNotaCreditoTotal(comercioId, usuarioId, ventaIdOriginal, puntoVentaId) {
+  if (!puntoVentaId) {
+    throw new Error('Debe proveer un puntoVentaId fiscal para la Nota de Crédito');
+  }
+
+  const pvFiscal = await prisma.puntoVenta.findFirst({
+    where: { id: puntoVentaId, comercioId, tipo: 'WEBSERVICE' }
+  });
+
+  if (!pvFiscal) {
+    throw new Error('El punto de venta indicado no existe, no pertenece a este comercio o no es de tipo WEBSERVICE');
+  }
+
   // PASO 1: Validar y armar datos (Solo DB local, sin lockeos)
   const ventaOriginal = await prisma.venta.findFirst({
     where: { id: ventaIdOriginal, comercioId },
@@ -320,7 +332,7 @@ async function emitirNotaCreditoTotal(comercioId, usuarioId, ventaIdOriginal) {
   const tipoCbteOriginal = ventaOriginal.tipoComprobante === 'FACTURA_A' ? 1 : (ventaOriginal.tipoComprobante === 'FACTURA_B' ? 6 : 11);
 
   const datosAfipNC = {
-    puntoVenta: Number(ventaOriginal.puntoVenta.numero),
+    puntoVenta: Number(pvFiscal.numero),
     tipoCbte: tipoCbteOriginal,
     clienteDocTipo: docTipo,
     clienteDocNro: ventaOriginal.cliente ? Number(ventaOriginal.cliente.numeroDoc.replace(/\D/g, '')) : 0,
@@ -756,7 +768,19 @@ const arcaService = require('./arca.service');
 
 // ... (other functions)
 
-async function facturarAfip({ comercioId, ventaId, clienteId, concepto = 1 }) {
+async function facturarAfip({ comercioId, ventaId, clienteId, concepto = 1, puntoVentaId }) {
+  if (!puntoVentaId) {
+    throw new Error('Debe proveer un puntoVentaId fiscal para facturar');
+  }
+
+  const pvFiscal = await prisma.puntoVenta.findFirst({
+    where: { id: puntoVentaId, comercioId, tipo: 'WEBSERVICE' }
+  });
+
+  if (!pvFiscal) {
+    throw new Error('El punto de venta indicado no existe, no pertenece a este comercio o no es de tipo WEBSERVICE');
+  }
+
   // 1. Validar venta y cliente fuera de la transacción si AFIP tarda
   const venta = await prisma.venta.findFirst({
     where: { id: ventaId, comercioId },
@@ -792,7 +816,7 @@ async function facturarAfip({ comercioId, ventaId, clienteId, concepto = 1 }) {
   else if (cliente.numeroDoc.length >= 7 && cliente.numeroDoc.length <= 8) docTipo = 96; // DNI
 
   const datosVenta = {
-    puntoVenta: Number(venta.puntoVenta.numero),
+    puntoVenta: Number(pvFiscal.numero),
     tipoCbte: 11, // Factura C
     clienteDocTipo: docTipo,
     clienteDocNro: Number(cliente.numeroDoc.replace(/\D/g, '')),
