@@ -10,8 +10,18 @@ async function main() {
     where: { email: 'admin@puntoveloz.com' }
   });
 
+  const plainPassword = 'Puntoveloz!!2026';
+  const saltRounds = 10;
+  const hashedPassword = await bcrypt.hash(plainPassword, saltRounds);
+
   if (existingAdmin) {
-    console.log('✅ El usuario administrador ya existe. (email: admin@puntoveloz.com)');
+    console.log('✅ El usuario administrador ya existe. Actualizando contraseña...');
+    await prisma.usuario.update({
+      where: { email: 'admin@puntoveloz.com' },
+      data: { password: hashedPassword }
+    });
+    console.log(`Email:    ${existingAdmin.email}`);
+    console.log(`Password: ${plainPassword}`);
     return;
   }
 
@@ -27,10 +37,6 @@ async function main() {
       }
     });
   }
-
-  const plainPassword = 'admin123';
-  const saltRounds = 10;
-  const hashedPassword = await bcrypt.hash(plainPassword, saltRounds);
 
   console.log('👤 Creando usuario administrador...');
   const newAdmin = await prisma.usuario.create({

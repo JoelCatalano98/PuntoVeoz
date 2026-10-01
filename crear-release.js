@@ -44,7 +44,7 @@ function init() {
     // 2. Preparar carpeta de destino
     console.log(`📁 Creando entorno aislado en ${RELEASE_DIR}...`);
     if (fs.existsSync(RELEASE_DIR)) {
-        fs.rmSync(RELEASE_DIR, { recursive: true, force: true });
+        fs.rmSync(RELEASE_DIR, { recursive: true, force: true, maxRetries: 10, retryDelay: 500 });
     }
     fs.mkdirSync(RELEASE_DIR, { recursive: true });
 
