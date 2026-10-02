@@ -65,12 +65,20 @@ function init() {
         path.join(RELEASE_DIR, 'client', 'dist')
     );
 
-    // 5. Copiar instalador batch
+    // 5. Copiar scripts ejecutables (.bat)
     console.log('📂 Copiando instalador interactivo (instalar.bat)...');
     fs.copyFileSync(
         path.join(PROJECT_ROOT, 'instalar.bat'),
         path.join(RELEASE_DIR, 'instalar.bat')
     );
+    
+    console.log('📂 Copiando forzador de backup manual (forzar-backup.bat)...');
+    if (fs.existsSync(path.join(PROJECT_ROOT, 'forzar-backup.bat'))) {
+        fs.copyFileSync(
+            path.join(PROJECT_ROOT, 'forzar-backup.bat'),
+            path.join(RELEASE_DIR, 'forzar-backup.bat')
+        );
+    }
 
     // 6. Copiar script de semilla (seed-admin.js) explícitamente
     console.log('📂 Copiando script de semilla (seed-admin.js)...');

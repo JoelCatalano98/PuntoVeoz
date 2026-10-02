@@ -19,13 +19,14 @@
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.4.0",
+    "node-cron": "^4.6.0",
     "node-forge": "^1.4.0",
     "node-windows": "^1.0.0-beta.8",
+    "prisma": "^5.20.0",
     "soap": "^1.13.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.4",
-    "prisma": "^5.20.0"
+    "nodemon": "^3.1.4"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

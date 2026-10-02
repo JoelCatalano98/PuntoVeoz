@@ -1,7 +1,7 @@
-require('dotenv').config({ override: true });
+const path = require('path');
+require('dotenv').config({ override: true, path: path.join(__dirname, '../.env') });
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
 
 // Importar rutas (las dejamos preparadas para los siguientes pasos)
 const authRoutes = require('./routes/auth.routes');
@@ -79,4 +79,8 @@ const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log(`Servidor de Punto Veloz corriendo en el puerto ${PORT}`);
+  
+  // Iniciar el servicio de backups en segundo plano
+  const backupService = require('./services/backup.service');
+  backupService.iniciarCron();
 });
