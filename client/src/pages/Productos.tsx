@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, X, AlertTriangle, Package, Barcode, FileSpreadsheet, Printer, Image as ImageIcon } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, X, AlertTriangle, Package, Barcode, FileSpreadsheet, Printer, Image as ImageIcon, FileUp } from 'lucide-react';
 import { Pagination } from '../components/Pagination';
 import { useLocation, useNavigate } from 'react-router-dom';
 import JsBarcode from 'jsbarcode';
@@ -84,6 +84,36 @@ const Productos = () => {
 
   const [imagenArchivo, setImagenArchivo] = useState<File | null>(null);
   const [imagenPreview, setImagenPreview] = useState<string | null>(null);
+
+  const [importando, setImportando] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('archivo', file);
+
+    setImportando(true);
+    const toastId = toast.loading('Importando productos, por favor espere...');
+    try {
+      const res = await api.post('/productos/importar-excel', formData);
+      toast.success(res.data.message || `Importación finalizada. ${res.data.processed} procesados.`, { id: toastId });
+      cargarProductos(1);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Error al importar excel', { id: toastId });
+    } finally {
+      setImportando(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   const [categoriasLista, setCategoriasLista] = useState<Categoria[]>([]);
   const [unidadesLista, setUnidadesLista] = useState<any[]>([]);
@@ -561,6 +591,13 @@ const Productos = () => {
               </tbody>
             </table>
           </div>
+          
+          <Pagination 
+            currentPage={page} 
+            totalPages={totalPages} 
+            totalCount={totalCount} 
+            onPageChange={cargarProductos} 
+          />
         </div>
 
         {/* COLUMNA DERECHA: FILTROS */}
@@ -988,6 +1025,29 @@ const Productos = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {puedeEditar && (
+        <>
+          <input
+            type="file"
+            accept=".xlsx, .xls"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <button
+            onClick={handleImportClick}
+            disabled={importando}
+            title="Importar Excel"
+            className="fixed bottom-8 right-8 bg-brand-dark dark:bg-slate-700 text-white p-4 rounded-full shadow-lg hover:bg-black dark:hover:bg-slate-600 transition-all z-40 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed group"
+          >
+            <FileUp size={24} />
+            <span className="absolute right-full mr-4 top-1/2 -translate-y-1/2 px-3 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 whitespace-nowrap transition-opacity pointer-events-none">
+              {importando ? 'Importando...' : 'Importar Excel'}
+            </span>
+          </button>
+        </>
       )}
 
     </div>

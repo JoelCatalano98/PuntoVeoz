@@ -99,6 +99,8 @@ export const TicketVenta: React.FC<TicketVentaProps> = ({ venta, onReadyToPrint 
     tituloDoc = "TICKET NO FISCAL";
   }
 
+  const isFiscal = !!venta.cae;
+  
   return (
     <div className={`hidden print:block font-mono text-black mx-auto bg-white`} style={{ width: anchoTicket, padding: `${margenTicket}mm`, fontSize: '12px', lineHeight: '1.4' }}>
       <div className="text-center mb-2">
@@ -106,17 +108,20 @@ export const TicketVenta: React.FC<TicketVentaProps> = ({ venta, onReadyToPrint 
         <p className="text-[10px] font-bold mb-2 uppercase">{subtitulo}</p>
         <h3 className="font-bold text-md mb-1">{empresaDatos.razonSocial}</h3>
         <p className="text-xs">{empresaDatos.direccion}</p>
-        <p className="text-xs">CUIT: {empresaDatos.cuit}</p>
-        <p className="text-xs">IVA: {empresaDatos.condicionIva}</p>
+        {isFiscal && <p className="text-xs">CUIT: {empresaDatos.cuit}</p>}
+        {isFiscal && <p className="text-xs">IVA: {empresaDatos.condicionIva}</p>}
         <p className="text-xs mt-1">--------------------------------</p>
       </div>
 
       <div className="mb-2">
         <p><strong>Fecha:</strong> {new Date(venta.createdAt).toLocaleString()}</p>
-        <p><strong>Ticket N°:</strong> {venta.nroFactura ? `${String(venta.puntoVenta?.numero || 1).padStart(4, '0')}-${String(venta.nroFactura).padStart(8, '0')}` : `0001-${venta.id.toString().padStart(8, '0')}`}</p>
+        <p><strong>Ticket N°:</strong> {`${String(venta.puntoVenta?.numero || venta.puntoVenta?.numeroArca || venta.puntoVentaId || 1).padStart(4, '0')}-${String(venta.nroFactura || venta.id).padStart(8, '0')}`}</p>
         <p><strong>Cajero:</strong> {venta.usuario?.nombre || 'Sin asignar'}</p>
         {venta.cliente && (
-          <p><strong>Cliente:</strong> {venta.cliente.nombre || venta.cliente.razonSocial} ({venta.cliente.numeroDoc})</p>
+          <p>
+            <strong>Cliente:</strong> {venta.cliente.nombre || venta.cliente.razonSocial}
+            {isFiscal && venta.cliente.numeroDoc ? ` (CUIT/DNI: ${venta.cliente.numeroDoc})` : ''}
+          </p>
         )}
       </div>
 

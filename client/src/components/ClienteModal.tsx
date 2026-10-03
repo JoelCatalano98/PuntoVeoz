@@ -87,7 +87,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect, clienteA
       return;
     }
     
-    if (requiereDatosFiscales) {
+    if (requiereDatosFiscales && nuevaCondicionIva !== 'Consumidor Final') {
       if (!nuevoDoc.trim()) {
         toast.error('El Documento/CUIT es obligatorio para facturación electrónica');
         return;
@@ -96,6 +96,9 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect, clienteA
         toast.error('La Dirección es obligatoria para facturación electrónica');
         return;
       }
+    }
+    
+    if (requiereDatosFiscales) {
       if (!nuevaCondicionIva || nuevaCondicionIva === 'Consumidor Final Sin Datos') {
         toast.error('La Condición de IVA es obligatoria para facturación electrónica');
         return;
@@ -170,7 +173,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect, clienteA
 
               <div className="flex-1 overflow-y-auto border dark:border-slate-700 rounded divide-y dark:divide-slate-700">
                 <button 
-                  onClick={() => onSelect(null)}
+                  onClick={() => onSelect({ id: 'CONSUMIDOR_FINAL_ANONIMO', nombre: 'Consumidor Final', docTipo: 99, numeroDoc: 0, condicionIva: 'Consumidor Final' })}
                   className="w-full text-left p-3 hover:bg-blue-50 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-slate-700 font-medium text-gray-800 dark:text-slate-200 transition-colors"
                 >
                   Consumidor Final
@@ -219,7 +222,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect, clienteA
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    required={requiereDatosFiscales}
+                    required={requiereDatosFiscales && nuevaCondicionIva !== 'Consumidor Final'}
                     className="flex-1 p-2 border dark:border-slate-600 rounded focus:outline-none focus:border-brand-light bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200"
                     value={nuevoDoc}
                     onChange={e => setNuevoDoc(e.target.value)}
@@ -244,7 +247,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({ onClose, onSelect, clienteA
                 </label>
                 <input
                   type="text"
-                  required={requiereDatosFiscales}
+                  required={requiereDatosFiscales && nuevaCondicionIva !== 'Consumidor Final'}
                   className="w-full p-2 border dark:border-slate-600 rounded focus:outline-none focus:border-brand-light bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-200"
                   value={nuevaDireccion}
                   onChange={e => setNuevaDireccion(e.target.value)}

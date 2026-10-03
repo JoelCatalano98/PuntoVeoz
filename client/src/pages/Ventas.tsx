@@ -47,7 +47,7 @@ const calcularPrecioFinal = (precioBase: number, lista: ListaPrecio | null): num
 
 const Ventas = () => {
   const navigate = useNavigate();
-  const { usuario } = useAuth();
+  const { usuario, arcaLimiteMonto } = useAuth();
   const [items, setItems] = useState<VentaItem[]>([]);
   const [montoRecibido, setMontoRecibido] = useState('');
   const [medioPago, setMedioPago] = useState('EFECTIVO');
@@ -383,6 +383,14 @@ const Ventas = () => {
       toast.error('No hay caja abierta');
       return;
     }
+
+    if (estadoVenta === 'COMPLETADA') {
+      const isConsumidorFinalSinDNI = !cliente || (cliente.condicionIva === 'Consumidor Final' && !cliente.numeroDoc);
+      if (isConsumidorFinalSinDNI && total >= arcaLimiteMonto) {
+        toast.error(`El monto supera el límite de ARCA ($${arcaLimiteMonto}) para facturar sin identificar. Debe ingresar el DNI del cliente.`, { duration: 6000 });
+        return;
+      }
+    }
     
     if (estadoVenta !== 'COMPLETADA' && !cliente) {
       toast.error('Debe seleccionar un cliente para generar este documento');
@@ -404,6 +412,18 @@ const Ventas = () => {
     setShowConfirmModal(false);
     setCobrando(true);
     try {
+      let clienteDocTipo = 99;
+      let clienteDocNro = '0';
+      if (cliente) {
+        if (!cliente.numeroDoc && cliente.condicionIva === 'Consumidor Final') {
+          clienteDocTipo = 99;
+          clienteDocNro = '0';
+        } else if (cliente.numeroDoc) {
+          clienteDocTipo = cliente.numeroDoc.length === 11 ? 80 : 96;
+          clienteDocNro = cliente.numeroDoc;
+        }
+      }
+
       const payload = {
         items: items.map(i => ({ 
           productoId: i.productoId, 
@@ -412,7 +432,9 @@ const Ventas = () => {
         })),
         montoRecibido: estadoVenta !== 'COMPLETADA' ? total : montoRecibidoNum,
         medioPago: estadoVenta !== 'COMPLETADA' ? 'OTRO' : medioPago,
-        clienteId: cliente?.id || null,
+        clienteId: cliente?.id === 'CONSUMIDOR_FINAL_ANONIMO' ? null : (cliente?.id || null),
+        clienteDocTipo,
+        clienteDocNro,
         aperturaCajaId: aperturaCajaId || -1, // Use -1 or valid ID for non-money tx
         listaPrecioId: (aplicarLista && listaSeleccionadaId) ? parseInt(listaSeleccionadaId, 10) : null,
         descuentoGlobal: descNum,

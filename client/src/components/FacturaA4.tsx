@@ -114,7 +114,7 @@ export const FacturaA4: React.FC<FacturaA4Props> = ({ venta, onReadyToPrint }) =
           <div>
             <p className="text-xs mb-1"><strong>Razón Social:</strong> {empresaDatos.razonSocial}</p>
             <p className="text-xs mb-1"><strong>Domicilio Comercial:</strong> {empresaDatos.direccion}</p>
-            <p className="text-xs"><strong>Condición frente al IVA:</strong> {empresaDatos.condicionIva}</p>
+            {isFiscal && <p className="text-xs"><strong>Condición frente al IVA:</strong> {empresaDatos.condicionIva}</p>}
           </div>
         </div>
 
@@ -123,13 +123,13 @@ export const FacturaA4: React.FC<FacturaA4Props> = ({ venta, onReadyToPrint }) =
           <div>
             <h1 className="text-2xl font-black uppercase tracking-tight">{tituloDoc}</h1>
             <div className="text-lg font-bold mt-1 mb-3">
-              N° {venta.nroFactura ? `${String(venta.puntoVenta?.numero || 1).padStart(4, '0')}-${String(venta.nroFactura).padStart(8, '0')}` : `0001-${venta.id.toString().padStart(8, '0')}`}
+              N° {`${String(venta.puntoVenta?.numero || venta.puntoVenta?.numeroArca || venta.puntoVentaId || 1).padStart(4, '0')}-${String(venta.nroFactura || venta.id).padStart(8, '0')}`}
             </div>
             <p className="text-sm font-bold mb-3">Fecha de Emisión: {new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(venta.createdAt))}</p>
           </div>
           <div>
-            <p className="text-xs mb-1"><strong>CUIT:</strong> {empresaDatos.cuit}</p>
-            <p className="text-xs mb-1"><strong>Ingresos Brutos:</strong> {empresaDatos.cuit}</p>
+            {isFiscal && <p className="text-xs mb-1"><strong>CUIT:</strong> {empresaDatos.cuit}</p>}
+            {isFiscal && <p className="text-xs mb-1"><strong>Ingresos Brutos:</strong> {empresaDatos.cuit}</p>}
             <p className="text-xs"><strong>Inicio de Actividades:</strong> -</p>
           </div>
         </div>
@@ -138,8 +138,8 @@ export const FacturaA4: React.FC<FacturaA4Props> = ({ venta, onReadyToPrint }) =
       {/* DATOS DEL CLIENTE */}
       <div className="border-2 border-black rounded mb-2 p-3 flex justify-between text-xs">
         <div className="flex flex-col gap-1 w-1/2">
-          <p><strong>CUIT / DNI:</strong> {venta.cliente?.numeroDoc || 'Consumidor Final'}</p>
-          <p><strong>Condición frente al IVA:</strong> {venta.cliente?.condicionIva || 'Consumidor Final'}</p>
+          {isFiscal && <p><strong>CUIT / DNI:</strong> {venta.cliente?.numeroDoc || 'Consumidor Final'}</p>}
+          {isFiscal && <p><strong>Condición frente al IVA:</strong> {venta.cliente?.condicionIva || 'Consumidor Final'}</p>}
           <p><strong>Condición de venta:</strong> {venta.medioPago || 'Efectivo'}</p>
         </div>
         <div className="flex flex-col gap-1 w-1/2 pl-4">

@@ -11,7 +11,7 @@ set /p MYSQL_PASS="Ingrese la contrasena del usuario root de MySQL: "
 echo.
 echo [1/5] Generando archivo de configuracion .env...
 
-node -e "const fs=require('fs'); const pass = process.env.MYSQL_PASS || ''; const urlPass = encodeURIComponent(pass); fs.writeFileSync('server/.env', `PORT=4000\nDATABASE_URL=\"mysql://root:${urlPass}@localhost:3306/puntoveloz_produccion\"\nJWT_SECRET=\"clave_segura_jwt_123_qwe_asd\"\nCERT_ENCRYPTION_KEY=\"mi_clave_secreta_para_cert_32_b!\"`);"
+node -e "const fs=require('fs'); const pass = process.env.MYSQL_PASS || ''; const urlPass = encodeURIComponent(pass); fs.writeFileSync('server/.env', `PORT=4000\nDATABASE_URL=\"mysql://root:${urlPass}@localhost:3306/puntoveloz_produccion\"\nJWT_SECRET=\"clave_segura_jwt_123_qwe_asd\"\nCERT_ENCRYPTION_KEY=\"mi_clave_secreta_para_cert_32_b!\"\nPUNTO_VENTA_IMPRESION=5`);"
 
 echo [2/5] Instalando dependencias del sistema...
 cd server

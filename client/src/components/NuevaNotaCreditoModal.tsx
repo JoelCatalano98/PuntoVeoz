@@ -135,7 +135,7 @@ export const NuevaNotaCreditoModal: React.FC<NuevaNotaCreditoModalProps> = ({ is
                       const dias = calcularDias(v.createdAt);
                       const isVencida = dias > 15;
                       const nombreCmp = v.tipoComprobante?.replace('FACTURA_', 'FACTURA ') || 'FACTURA';
-                      const nroFormateado = `${String(v.puntoVenta?.numero || 1).padStart(4, '0')}-${String(v.nroFactura || v.id).padStart(8, '0')}`;
+                      const nroFormateado = `${String(v.puntoVenta?.numero || v.puntoVenta?.numeroArca || v.puntoVentaId || 1).padStart(4, '0')}-${String(v.nroFactura || v.id).padStart(8, '0')}`;
 
                       return (
                         <tr key={v.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
@@ -195,11 +195,11 @@ export const NuevaNotaCreditoModal: React.FC<NuevaNotaCreditoModalProps> = ({ is
                 <div className="space-y-3 text-sm text-gray-800 dark:text-slate-200">
                   <div className="flex justify-between">
                     <span className="font-semibold text-gray-500">Factura Original:</span>
-                    <span className="font-mono">{seleccionada.tipoComprobante?.replace('FACTURA_', '')} {String(seleccionada.puntoVenta?.numero || 1).padStart(4, '0')}-{String(seleccionada.nroFactura || seleccionada.id).padStart(8, '0')}</span>
+                    <span className="font-mono">{seleccionada.tipoComprobante?.replace('FACTURA_', '')} {`${String(seleccionada.puntoVenta?.numero || seleccionada.puntoVenta?.numeroArca || seleccionada.puntoVentaId || 1).padStart(4, '0')}-${String(seleccionada.nroFactura || seleccionada.id).padStart(8, '0')}`}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-semibold text-gray-500">Punto de Venta Original:</span>
-                    <span className="font-bold">{seleccionada.puntoVenta?.numero}</span>
+                    <span className="font-bold">{seleccionada.puntoVenta?.numero || seleccionada.puntoVenta?.numeroArca || seleccionada.puntoVentaId || 1}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-semibold text-gray-500">Cliente:</span>

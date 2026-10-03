@@ -68,7 +68,7 @@ const EtiquetasImpresion = () => {
       cargarProductos();
     }, 500);
     return () => clearTimeout(timeoutId);
-  }, [filtroCategoria, filtroFechaDesde, filtroFechaHasta]);
+  }, [busqueda, filtroCategoria, filtroFechaDesde, filtroFechaHasta]);
 
   const generarVistaPrevia = () => {
     const svgNode = document.getElementById('barcode-preview');
@@ -129,6 +129,7 @@ const EtiquetasImpresion = () => {
   const cargarProductos = async () => {
     try {
       const params = new URLSearchParams();
+      if (busqueda) params.append('busqueda', busqueda);
       if (filtroCategoria) params.append('categoriaId', filtroCategoria);
       if (filtroFechaDesde) params.append('fechaDesde', filtroFechaDesde);
       if (filtroFechaHasta) params.append('fechaHasta', filtroFechaHasta);

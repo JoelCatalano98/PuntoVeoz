@@ -54,6 +54,15 @@ async function crearVenta(req, res, next) {
       estado
     });
 
+    const ptoVtaEnv = process.env.PUNTO_VENTA_IMPRESION ? Number(process.env.PUNTO_VENTA_IMPRESION) : null;
+    if (ptoVtaEnv) {
+        venta.puntoVentaId = ptoVtaEnv;
+        if (venta.puntoVenta) {
+            venta.puntoVenta.numero = ptoVtaEnv;
+            venta.puntoVenta.numeroArca = ptoVtaEnv;
+        }
+    }
+
     res.status(201).json(venta);
   } catch (error) {
     if (
@@ -120,6 +129,7 @@ async function obtenerPorId(req, res, next) {
           }
         },
         cliente: true,
+        puntoVenta: true,
         usuario: {
           select: { id: true, nombre: true }
         }
@@ -128,6 +138,15 @@ async function obtenerPorId(req, res, next) {
 
     if (!venta) {
       return res.status(404).json({ error: 'Venta no encontrada' });
+    }
+
+    const ptoVtaEnv = process.env.PUNTO_VENTA_IMPRESION ? Number(process.env.PUNTO_VENTA_IMPRESION) : null;
+    if (ptoVtaEnv) {
+        venta.puntoVentaId = ptoVtaEnv;
+        if (venta.puntoVenta) {
+            venta.puntoVenta.numero = ptoVtaEnv;
+            venta.puntoVenta.numeroArca = ptoVtaEnv;
+        }
     }
 
     res.json(venta);
@@ -188,6 +207,15 @@ async function emitirNotaCredito(req, res, next) {
     }
 
     const nc = await ventaService.emitirNotaCreditoTotal(comercioId, usuarioId, Number(id), Number(puntoVentaId));
+
+    const ptoVtaEnv = process.env.PUNTO_VENTA_IMPRESION ? Number(process.env.PUNTO_VENTA_IMPRESION) : null;
+    if (ptoVtaEnv) {
+        nc.puntoVentaId = ptoVtaEnv;
+        if (nc.puntoVenta) {
+            nc.puntoVenta.numero = ptoVtaEnv;
+            nc.puntoVenta.numeroArca = ptoVtaEnv;
+        }
+    }
 
     res.json(nc);
   } catch (error) {

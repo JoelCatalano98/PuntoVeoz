@@ -24,6 +24,7 @@ router.use(requireAuth);
 
 router.get('/', productoController.listar);
 router.get('/codigo/:codigo', productoController.buscarPorCodigoBarras);
+router.post('/importar-excel', requireRole('ADMIN', 'SUPERADMIN'), upload.single('archivo'), productoController.importarExcel);
 router.post('/', requireRole('ADMIN', 'SUPERADMIN'), upload.single('imagen'), productoController.crear);
 router.put('/:id', requireRole('ADMIN', 'SUPERADMIN'), upload.single('imagen'), productoController.actualizar);
 router.post('/:id/codigo-barras', requireRole('ADMIN', 'SUPERADMIN'), productoController.generarCodigoBarras);

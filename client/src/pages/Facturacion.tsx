@@ -6,8 +6,10 @@ import ClienteModal from '../components/ClienteModal';
 import { FacturaA4 } from '../components/FacturaA4';
 import { TicketVenta } from '../components/TicketVenta';
 import ConfirmacionEmision from '../components/ConfirmacionEmision';
+import { useAuth } from '../context/AuthContext';
 
 export default function Facturacion() {
+  const { arcaLimiteMonto } = useAuth();
   const [loading, setLoading] = useState(false);
   const [facturando, setFacturando] = useState(false);
   const [facturaEmitida, setFacturaEmitida] = useState(false);
@@ -148,8 +150,10 @@ export default function Facturacion() {
   };
 
   const handleEmitir = async () => {
-    if (!cliente || !cliente.numeroDoc) {
-      toast.error('Debe seleccionar un cliente con DNI/CUIT.');
+    const isConsumidorFinalSinDNI = !cliente || (cliente.condicionIva === 'Consumidor Final' && (!cliente.numeroDoc || cliente.numeroDoc === 0));
+    
+    if (isConsumidorFinalSinDNI && total >= arcaLimiteMonto) {
+      toast.error(`ARCA exige DNI/CUIT para facturar montos iguales o mayores a $${arcaLimiteMonto}.`);
       return;
     }
     if (!puntoVentaId) {
@@ -187,7 +191,7 @@ export default function Facturacion() {
           })),
           montoRecibido: items.reduce((acc, i) => acc + i.subtotal, 0),
           medioPago: medioPago,
-          clienteId: cliente.id,
+          clienteId: cliente.id === 'CONSUMIDOR_FINAL_ANONIMO' ? null : cliente.id,
           aperturaCajaId: aperturaCajaId,
           descuentoGlobal: 0,
           estado: 'COMPLETADA'
@@ -200,7 +204,7 @@ export default function Facturacion() {
 
       // 2. Llamar a AFIP
       const payloadAfip = {
-        clienteId: cliente.id,
+        clienteId: cliente.id === 'CONSUMIDOR_FINAL_ANONIMO' ? null : cliente.id,
         concepto: concepto,
         fechaServicioDesde: concepto > 1 ? fechaDesde : undefined,
         fechaServicioHasta: concepto > 1 ? fechaHasta : undefined,

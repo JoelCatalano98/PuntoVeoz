@@ -232,7 +232,7 @@ const NotasCredito: React.FC = () => {
                       <td className="py-4 text-gray-900 dark:text-slate-200">
                         <span className="font-bold">NC "{letraNC}"</span>
                         <div className="text-xs text-gray-500 dark:text-slate-400 mt-1">
-                          Nº {nc.puntoVenta?.numero ? String(nc.puntoVenta.numero).padStart(4, '0') : 'N/D'}-{String(nc.nroFactura || nc.id).padStart(8, '0')}
+                          Nº {`${String(nc.puntoVenta?.numero || nc.puntoVenta?.numeroArca || nc.puntoVentaId || 1).padStart(4, '0')}-${String(nc.nroFactura || nc.id).padStart(8, '0')}`}
                         </div>
                       </td>
                       <td className="py-4 text-gray-600 dark:text-slate-300 font-mono">
@@ -245,7 +245,7 @@ const NotasCredito: React.FC = () => {
                               {nc.ventaOriginal.tipoComprobante.replace('_', ' ')}
                             </span>
                             <span className="font-bold">
-                              Nº {nc.ventaOriginal?.puntoVenta?.numero ? String(nc.ventaOriginal.puntoVenta.numero).padStart(4, '0') : 'N/D'}-{String(nc.ventaOriginal?.nroFactura || nc.ventaOriginal?.id || 0).padStart(8, '0')}
+                              Nº {`${String(nc.ventaOriginal?.puntoVenta?.numero || nc.ventaOriginal?.puntoVenta?.numeroArca || nc.ventaOriginal?.puntoVentaId || 1).padStart(4, '0')}-${String(nc.ventaOriginal?.nroFactura || nc.ventaOriginal?.id || 0).padStart(8, '0')}`}
                             </span>
                           </div>
                         ) : (

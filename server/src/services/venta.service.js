@@ -165,6 +165,7 @@ async function crearVenta({ comercioId, usuarioId, aperturaCajaId, clienteId, it
       },
       include: {
         cliente: true,
+        puntoVenta: true,
         usuario: { select: { id: true, nombre: true } },
         items: {
           include: {
@@ -229,7 +230,8 @@ async function anularVenta(comercioId, usuarioId, ventaId) {
       where: { id: ventaId, comercioId },
       include: {
         items: true,
-        movimientoCaja: true
+        movimientoCaja: true,
+        puntoVenta: true
       }
     });
 
@@ -324,9 +326,16 @@ async function emitirNotaCreditoTotal(comercioId, usuarioId, ventaIdOriginal, pu
   else if (ventaOriginal.tipoComprobante === 'FACTURA_B') { tipoNC = 'NOTA_CREDITO_B'; tipoCmpAFIP = 8; }
 
   let docTipo = 99;
-  if (ventaOriginal.cliente && ventaOriginal.cliente.numeroDoc) {
-    if (ventaOriginal.cliente.numeroDoc.length === 11) docTipo = 80;
-    else if (ventaOriginal.cliente.numeroDoc.length >= 7 && ventaOriginal.cliente.numeroDoc.length <= 8) docTipo = 96;
+  let docNro = 0;
+  if (ventaOriginal.cliente) {
+    if (!ventaOriginal.cliente.numeroDoc && ventaOriginal.cliente.condicionIva === 'Consumidor Final') {
+      docTipo = 99;
+      docNro = 0;
+    } else if (ventaOriginal.cliente.numeroDoc) {
+      if (ventaOriginal.cliente.numeroDoc.length === 11) docTipo = 80;
+      else if (ventaOriginal.cliente.numeroDoc.length >= 7 && ventaOriginal.cliente.numeroDoc.length <= 8) docTipo = 96;
+      docNro = Number(ventaOriginal.cliente.numeroDoc.replace(/\D/g, ''));
+    }
   }
 
   const tipoCbteOriginal = ventaOriginal.tipoComprobante === 'FACTURA_A' ? 1 : (ventaOriginal.tipoComprobante === 'FACTURA_B' ? 6 : 11);
@@ -335,7 +344,7 @@ async function emitirNotaCreditoTotal(comercioId, usuarioId, ventaIdOriginal, pu
     puntoVenta: Number(pvFiscal.numero),
     tipoCbte: tipoCbteOriginal,
     clienteDocTipo: docTipo,
-    clienteDocNro: ventaOriginal.cliente ? Number(ventaOriginal.cliente.numeroDoc.replace(/\D/g, '')) : 0,
+    clienteDocNro: docNro,
     total: ventaOriginal.total.toNumber(),
     concepto: conceptoAfip,
     nroFactura: ventaOriginal.nroFactura
@@ -807,19 +816,36 @@ async function facturarAfip({ comercioId, ventaId, clienteId, concepto = 1, punt
     throw new Error('El cliente indicado no existe o no pertenece a este comercio');
   }
 
-  if (!cliente.numeroDoc || !cliente.condicionIva) {
-    throw new Error('El cliente debe tener Documento y Condición de IVA para facturar electrónicamente');
+  if (cliente.condicionIva !== 'Consumidor Final' && !cliente.numeroDoc) {
+    throw new Error('El cliente debe tener Documento para la condición de IVA seleccionada al facturar electrónicamente');
   }
 
   let docTipo = 99;
-  if (cliente.numeroDoc.length === 11) docTipo = 80; // CUIT
-  else if (cliente.numeroDoc.length >= 7 && cliente.numeroDoc.length <= 8) docTipo = 96; // DNI
+  let docNro = 0;
+
+  if (!cliente.numeroDoc && cliente.condicionIva === 'Consumidor Final') {
+    docTipo = 99;
+    docNro = 0;
+  } else if (cliente.numeroDoc) {
+    if (cliente.numeroDoc.length === 11) docTipo = 80; // CUIT
+    else if (cliente.numeroDoc.length >= 7 && cliente.numeroDoc.length <= 8) docTipo = 96; // DNI
+    docNro = Number(cliente.numeroDoc.replace(/\D/g, ''));
+  }
+
+  const paramLimite = await prisma.parametro.findUnique({
+    where: { comercioId_clave: { comercioId, clave: 'arcaLimiteMonto' } }
+  });
+  const limiteMontoAfip = paramLimite && !isNaN(Number(paramLimite.valor)) ? Number(paramLimite.valor) : 10000000;
+
+  if (docTipo === 99 && venta.total.toNumber() >= limiteMontoAfip) {
+    throw new Error(`ARCA exige identificar al cliente con DNI/CUIT para comprobantes iguales o mayores a $${limiteMontoAfip}`);
+  }
 
   const datosVenta = {
     puntoVenta: Number(pvFiscal.numero),
     tipoCbte: 11, // Factura C
     clienteDocTipo: docTipo,
-    clienteDocNro: Number(cliente.numeroDoc.replace(/\D/g, '')),
+    clienteDocNro: docNro,
     total: venta.total.toNumber(),
     concepto
   };

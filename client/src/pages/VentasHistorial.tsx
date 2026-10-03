@@ -561,7 +561,7 @@ const VentasHistorial = () => {
             {ventaAAnular.cae ? (() => {
               const letraOrig = ventaAAnular.tipoComprobante?.replace('FACTURA_', '') || 'C';
               const letraNC = letraOrig;
-              const nroOrigStr = `${String(ventaAAnular.puntoVenta?.numero || 1).padStart(4, '0')}-${String(ventaAAnular.nroFactura || ventaAAnular.id).padStart(8, '0')}`;
+              const nroOrigStr = `${String(ventaAAnular.puntoVenta?.numero || ventaAAnular.puntoVenta?.numeroArca || ventaAAnular.puntoVentaId || 1).padStart(4, '0')}-${String(ventaAAnular.nroFactura || ventaAAnular.id).padStart(8, '0')}`;
               
               return (
                 <>

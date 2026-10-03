@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Server, Key, Save, CheckCircle, AlertTriangle, Plus, Trash2, Edit2, ShieldAlert, Search, Upload } from 'lucide-react';
+import { Server, Key, Save, CheckCircle, AlertTriangle, Plus, Trash2, Edit2, ShieldAlert, Search, Upload, X } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -23,6 +23,7 @@ export default function ConfiguracionesAdmin() {
   const [certFile, setCertFile] = useState<File | null>(null);
   const [keyFile, setKeyFile] = useState<File | null>(null);
   const [subiendoCert, setSubiendoCert] = useState(false);
+  const [certInfo, setCertInfo] = useState<any>(null);
 
   // Puntos de Venta
   const [puntosVenta, setPuntosVenta] = useState<any[]>([]);
@@ -155,6 +156,17 @@ export default function ConfiguracionesAdmin() {
       cargarPuntosVenta();
     } catch (e) {
       toast.error('Error al eliminar');
+    }
+  };
+
+  const analizarCert = async () => {
+    try {
+      const res = await api.get('/arca/analizar-certificado');
+      setCertInfo(res.data);
+      toast.success('Certificado analizado correctamente');
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || 'Error al analizar certificado');
+      setCertInfo(null);
     }
   };
 
@@ -414,17 +426,35 @@ export default function ConfiguracionesAdmin() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button onClick={analizarCert} className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 text-sm font-bold flex items-center gap-2 border border-purple-800 rounded-sm">
+                <Search size={14} /> Analizar
+              </button>
               <button onClick={generarCSR} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm font-bold flex items-center gap-2 border border-green-800 rounded-sm">
-                Generar Certificados / CSR
+                Generar Cert / CSR
               </button>
               <button onClick={testConexion} disabled={testeando} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-bold flex items-center gap-2 border border-blue-800 rounded-sm disabled:opacity-50">
-                <Server size={14} /> Probar Conexión (Ping)
+                <Server size={14} /> Ping ARCA
               </button>
               <button onClick={purgarCache} className="bg-gray-800 hover:bg-black text-white px-4 py-2 text-sm font-bold flex items-center gap-2 border border-gray-900 rounded-sm">
-                <Key size={14} /> Purgar Caché WSAA
+                <Key size={14} /> Purgar WSAA
               </button>
             </div>
           </div>
+          
+          {certInfo && (
+            <div className="mt-2 p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-sm text-sm">
+              <div className="flex justify-between items-start mb-2">
+                <h4 className="font-bold text-purple-800 dark:text-purple-300">Información del Certificado</h4>
+                <button onClick={() => setCertInfo(null)} className="text-purple-500 hover:text-purple-700"><X size={16}/></button>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><span className="font-bold text-gray-600 dark:text-slate-400">Alias (CN):</span> {certInfo.alias}</div>
+                <div><span className="font-bold text-gray-600 dark:text-slate-400">CUIT (serial):</span> {certInfo.cuit}</div>
+                <div><span className="font-bold text-gray-600 dark:text-slate-400">Válido Desde:</span> {new Date(certInfo.validoDesde).toLocaleString()}</div>
+                <div><span className="font-bold text-gray-600 dark:text-slate-400">Válido Hasta:</span> {new Date(certInfo.validoHasta).toLocaleString()}</div>
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-col pt-3 border-t border-gray-300 dark:border-slate-700">
             <span className="text-xs font-bold text-gray-600 dark:text-slate-400 uppercase tracking-wide mb-2">Diagnóstico: Último Comprobante Autorizado</span>

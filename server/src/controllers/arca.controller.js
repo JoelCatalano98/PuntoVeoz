@@ -1,6 +1,7 @@
 const prisma = require('../config/prisma');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 async function getPuntosVenta(req, res, next) {
     try {
@@ -205,6 +206,44 @@ async function getStatusCertificados(req, res, next) {
     }
 }
 
+async function analizarCertificado(req, res, next) {
+    try {
+        const certPath = path.resolve(__dirname, '../../certs/arca.crt');
+        if (!fs.existsSync(certPath)) {
+            return res.status(404).json({ error: 'El certificado arca.crt no se encuentra en el servidor.' });
+        }
+
+        const certContent = fs.readFileSync(certPath);
+        const cert = new crypto.X509Certificate(certContent);
+        
+        let alias = '';
+        let cuit = '';
+        
+        // El subject suele venir como un string multilinea o separado por comas
+        // Ej: "CN=Ventas_2026\nserialNumber=CUIT 20414926305"
+        const subjectLines = cert.subject.split('\n');
+        for (const line of subjectLines) {
+            if (line.startsWith('CN=')) alias = line.substring(3).trim();
+            if (line.startsWith('serialNumber=')) {
+                // Extraer solo los digitos
+                const matches = line.match(/\d+/);
+                if (matches) cuit = matches[0];
+            }
+        }
+
+        res.json({
+            alias: alias || 'Desconocido',
+            cuit: cuit || 'Desconocido',
+            validoDesde: cert.validFrom,
+            validoHasta: cert.validTo,
+            subjectOriginal: cert.subject
+        });
+    } catch (error) {
+        console.error('Error al analizar certificado:', error);
+        res.status(500).json({ error: 'No se pudo analizar el certificado. Asegúrese de que tenga formato PEM válido.' });
+    }
+}
+
 module.exports = {
     getPuntosVenta,
     getPuntoVenta,
@@ -212,5 +251,6 @@ module.exports = {
     updatePuntoVenta,
     deletePuntoVenta,
     sincronizarPuntosVenta,
-    getStatusCertificados
+    getStatusCertificados,
+    analizarCertificado
 };
